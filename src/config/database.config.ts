@@ -15,7 +15,15 @@ export const getDatabaseConfig = (configService: ConfigService): SequelizeModule
       },
     },
     autoLoadModels: true,
-    synchronize: false,
-    logging: (msg) => logger.debug(msg),
+    synchronize: configService.get<string>('NODE_ENV') !== 'production',
+    sync: {
+      alter: configService.get<string>('NODE_ENV') !== 'production',
+    },
+    define: {
+      underscored: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+    },
+    logging: false,
   };
 };

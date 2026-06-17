@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
 import { Appointment } from './appointment.model';
 import { User } from '../../auth/entities/user.model';
 
@@ -37,8 +37,13 @@ export class AppointmentStatusHistory extends Model {
   @Column(DataType.TEXT)
   reason: string;
 
-  @AllowNull(false)
+  @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;
+
+
+  @UpdatedAt
+  @Column(DataType.DATE)
+  updated_at: Date;
 
 }
