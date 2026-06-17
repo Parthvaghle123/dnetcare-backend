@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
 import { User } from './user.model';
 import { Branch } from '../../organization/entities/branch.model';
 
@@ -29,8 +29,11 @@ export class UserBranch extends Model {
   @Column(DataType.BOOLEAN)
   is_primary: boolean;
 
-  @AllowNull(false)
+  @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;
 
+  @UpdatedAt
+  @Column(DataType.DATE)
+  updated_at: Date;
 }

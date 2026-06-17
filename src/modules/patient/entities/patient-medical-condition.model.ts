@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
 import { Patient } from './patient.model';
 import { MedicalConditionMaster } from './medical-condition-master.model';
 import { User } from '../../auth/entities/user.model';
@@ -38,8 +38,13 @@ export class PatientMedicalCondition extends Model {
   @BelongsTo(() => User)
   recorded_by_relation: User;
 
-  @AllowNull(false)
+  @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;
+
+
+  @UpdatedAt
+  @Column(DataType.DATE)
+  updated_at: Date;
 
 }

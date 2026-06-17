@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
 import { User } from '../../auth/entities/user.model';
 import { Branch } from '../../organization/entities/branch.model';
 
@@ -49,8 +49,13 @@ export class DoctorLeave extends Model {
   @BelongsTo(() => User)
   created_by_relation: User;
 
-  @AllowNull(false)
+  @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;
+
+
+  @UpdatedAt
+  @Column(DataType.DATE)
+  updated_at: Date;
 
 }

@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
 
 @Table({ tableName: 'organizations', timestamps: true })
 export class Organization extends Model {
@@ -23,11 +23,11 @@ export class Organization extends Model {
   @Column(DataType.BOOLEAN)
   is_active: boolean;
 
-  @AllowNull(false)
+  @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;
 
-  @AllowNull(false)
+  @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
 

@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
 
 @Table({ tableName: 'procedure_categories', timestamps: true })
 export class ProcedureCategory extends Model {
@@ -15,8 +15,13 @@ export class ProcedureCategory extends Model {
   @Column(DataType.BOOLEAN)
   is_active: boolean;
 
-  @AllowNull(false)
+  @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;
+
+
+  @UpdatedAt
+  @Column(DataType.DATE)
+  updated_at: Date;
 
 }

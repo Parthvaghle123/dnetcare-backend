@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
 import { User } from '../../auth/entities/user.model';
 
 @Table({ tableName: 'doctor_profiles', timestamps: true })
@@ -36,11 +36,11 @@ export class DoctorProfile extends Model {
   @Column(DataType.DECIMAL(10, 2))
   default_consultation_fee: number;
 
-  @AllowNull(false)
+  @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;
 
-  @AllowNull(false)
+  @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
 

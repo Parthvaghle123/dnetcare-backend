@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
 import { Consultation } from '../../consultation/entities/consultation.model';
 import { Patient } from '../../patient/entities/patient.model';
 import { User } from '../../auth/entities/user.model';
@@ -38,11 +38,11 @@ export class Prescription extends Model {
   @Column(DataType.TEXT)
   advice: string;
 
-  @AllowNull(false)
+  @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;
 
-  @AllowNull(false)
+  @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
 

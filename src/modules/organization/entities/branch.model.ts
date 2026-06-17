@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
 import { Organization } from './organization.model';
 
 @Table({ tableName: 'branches', timestamps: true })
@@ -44,19 +44,20 @@ export class Branch extends Model {
   @Column(DataType.STRING)
   whatsapp_number: string;
 
-  @AllowNull(true)
-  @Column(DataType.STRING)
+  @AllowNull(false)
+  @Default('#3B82F6')
+  @Column(DataType.STRING(7))
   color_code: string;
 
   @AllowNull(false)
   @Column(DataType.BOOLEAN)
   is_active: boolean;
 
-  @AllowNull(false)
+  @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;
 
-  @AllowNull(false)
+  @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
 

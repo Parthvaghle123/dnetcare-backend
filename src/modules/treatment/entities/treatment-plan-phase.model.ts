@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
 import { TreatmentPlan } from './treatment-plan.model';
 import { Appointment } from '../../appointment/entities/appointment.model';
 import { ProcedureCatalog } from '../../catalog/entities/procedure-catalog.model';
@@ -86,11 +86,11 @@ export class TreatmentPlanPhase extends Model {
   @BelongsTo(() => User)
   completed_by_relation: User;
 
-  @AllowNull(false)
+  @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;
 
-  @AllowNull(false)
+  @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
 

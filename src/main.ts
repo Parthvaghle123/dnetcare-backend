@@ -15,6 +15,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,
+    transform: true,
   }));
 
   const configService = app.get(ConfigService);
@@ -22,6 +23,7 @@ async function bootstrap() {
   
   await app.listen(port);
   logger.log(`🚀 Application successfully started and listening on port ${port}`);
-  logger.log(`Global API Prefix is set to: api/v1`);
 }
 bootstrap();
+ 
+ 

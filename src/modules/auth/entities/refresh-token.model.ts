@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
 import { User } from './user.model';
 
 @Table({ tableName: 'refresh_tokens', timestamps: true })
@@ -36,8 +36,11 @@ export class RefreshToken extends Model {
   @Column(DataType.STRING)
   user_agent: string;
 
-  @AllowNull(false)
+  @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;
 
+  @UpdatedAt
+  @Column(DataType.DATE)
+  updated_at: Date;
 }
