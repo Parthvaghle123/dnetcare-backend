@@ -1,5 +1,6 @@
 import { Injectable, HttpException } from '@nestjs/common';
 import { StatusCode } from '../../common/enums/status-code.enum';
+import { ErrorCode } from '../../common/enums/error-code.enum';
 import { InjectModel } from '@nestjs/sequelize';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -110,12 +111,14 @@ export class AuthService {
   async register(dto: RegisterDto) {
     const existingUser = await this.userModel.findOne({ where: { email: dto.email } });
     if (existingUser) {
-      throw new HttpException('An account with this email already exists', StatusCode.CONFLICT);
+      throw new HttpException({ message: 'An account with this email already exists', error: ErrorCode.DUPLICATE_EMAIL }, StatusCode.CONFLICT);
     }
 
-    const existingPhone = await this.userModel.findOne({ where: { phone: dto.phone } });
-    if (existingPhone) {
-      throw new HttpException('An account with this phone already exists', StatusCode.CONFLICT);
+    if (dto.phone) {
+      const existingPhone = await this.userModel.findOne({ where: { phone: dto.phone } });
+      if (existingPhone) {
+        throw new HttpException({ message: 'An account with this phone already exists', error: ErrorCode.DUPLICATE_PHONE }, StatusCode.CONFLICT);
+      }
     }
 
     const transaction = await this.sequelize.transaction();
@@ -180,17 +183,17 @@ export class AuthService {
     try {
       const user = await this.userModel.findOne({ where: { email: dto.email } });
       if (!user) {
-        throw new HttpException('No account found with this email', StatusCode.NOT_FOUND);
+        throw new HttpException({ message: 'No account found with this email', error: ErrorCode.ACCOUNT_NOT_FOUND }, StatusCode.NOT_FOUND);
       }
 
       if (user.status === UserStatus.PENDING && !user.invite_token) {
         // Registered but unverified — allow OTP resend
       } else if (user.status === UserStatus.PENDING) {
-        throw new HttpException('Account not activated. Please use your invite link.', StatusCode.FORBIDDEN);
+        throw new HttpException({ message: 'Account not activated. Please use your invite link.', error: ErrorCode.ACCOUNT_NOT_ACTIVATED }, StatusCode.FORBIDDEN);
       }
 
       if (user.status === UserStatus.INACTIVE || !user.is_active) {
-        throw new HttpException('Your account has been disabled. Contact your clinic admin.', StatusCode.FORBIDDEN);
+        throw new HttpException({ message: 'Your account has been disabled. Contact your clinic admin.', error: ErrorCode.ACCOUNT_DISABLED }, StatusCode.FORBIDDEN);
       }
 
       const otp = this.generateOtp();
@@ -220,26 +223,26 @@ export class AuthService {
     try {
       const user = await this.userModel.findOne({ where: { email: dto.email } });
       if (!user) {
-        throw new HttpException('No account found with this email', StatusCode.NOT_FOUND);
+        throw new HttpException({ message: 'No account found with this email', error: ErrorCode.ACCOUNT_NOT_FOUND }, StatusCode.NOT_FOUND);
       }
 
       if (!user.otp_code) {
-        throw new HttpException('No OTP requested. Please request a new OTP first.', StatusCode.BAD_REQUEST);
+        throw new HttpException({ message: 'No OTP requested. Please request a new OTP first.', error: ErrorCode.NO_OTP_REQUESTED }, StatusCode.BAD_REQUEST);
       }
 
       if (user.otp_attempts >= 3) {
         // Technically throws 429 TooManyRequests
-        throw new HttpException('Too many wrong attempts. Please request a new OTP.', StatusCode.TOO_MANY_REQUESTS);
+        throw new HttpException({ message: 'Too many wrong attempts. Please request a new OTP.', error: ErrorCode.TOO_MANY_OTP_ATTEMPTS }, StatusCode.TOO_MANY_REQUESTS);
       }
 
       if (new Date() > user.otp_expires_at) {
         await user.update({ otp_code: null, otp_expires_at: null, otp_attempts: 0 });
-        throw new HttpException('OTP has expired. Please request a new OTP.', StatusCode.BAD_REQUEST);
+        throw new HttpException({ message: 'OTP has expired. Please request a new OTP.', error: ErrorCode.OTP_EXPIRED }, StatusCode.BAD_REQUEST);
       }
 
       if (String(dto.otp) !== user.otp_code) {
         await user.update({ otp_attempts: user.otp_attempts + 1 });
-        throw new HttpException('Invalid OTP.', StatusCode.UNAUTHORIZED);
+        throw new HttpException({ message: 'Invalid OTP.', error: ErrorCode.INVALID_OTP }, StatusCode.UNAUTHORIZED);
       }
 
       await user.update({
@@ -280,11 +283,11 @@ export class AuthService {
     try {
       const user = await this.userModel.findByPk(dto.user_id);
       if (!user) {
-        throw new HttpException('Invalid session.', StatusCode.UNAUTHORIZED);
+        throw new HttpException({ message: 'Invalid session.', error: ErrorCode.INVALID_SESSION }, StatusCode.UNAUTHORIZED);
       }
 
       if (user.status !== UserStatus.ACTIVE) {
-        throw new HttpException('Account is not active. Please contact administration.', StatusCode.FORBIDDEN);
+        throw new HttpException({ message: 'Account is not active. Please contact administration.', error: ErrorCode.ACCOUNT_DISABLED }, StatusCode.FORBIDDEN);
       }
 
       const activeSessions = await this.refreshTokenModel.findAll({
@@ -305,7 +308,7 @@ export class AuthService {
       }
 
       if (!validSession) {
-        throw new HttpException('Session expired. Please login again.', StatusCode.UNAUTHORIZED);
+        throw new HttpException({ message: 'Session expired. Please login again.', error: ErrorCode.SESSION_EXPIRED }, StatusCode.UNAUTHORIZED);
       }
 
       await validSession.update({ is_revoked: true });
@@ -346,13 +349,13 @@ export class AuthService {
       const inviterBranchIds = reqUser.branch_ids;
 
       if (dto.role === Role.OWNER) {
-        throw new HttpException('Cannot invite a user with OWNER role.', StatusCode.FORBIDDEN);
+        throw new HttpException({ message: 'Cannot invite a user with OWNER role.', error: ErrorCode.CANNOT_INVITE_OWNER }, StatusCode.FORBIDDEN);
       }
 
       if (inviterRole === Role.BRANCH_ADMIN) {
         const hasAccessToAll = dto.branch_ids.every(id => inviterBranchIds.includes(id));
         if (!hasAccessToAll) {
-          throw new HttpException('You can only invite staff to your own branch.', StatusCode.FORBIDDEN);
+          throw new HttpException({ message: 'You can only invite staff to your own branch.', error: ErrorCode.BRANCH_ACCESS_DENIED }, StatusCode.FORBIDDEN);
         }
       }
 
@@ -361,12 +364,12 @@ export class AuthService {
         if (dto.branch_ids.length === 1) {
           primaryBranchId = dto.branch_ids[0];
         } else {
-          throw new HttpException('Please select a primary branch when assigning multiple branches to this user.', StatusCode.BAD_REQUEST);
+          throw new HttpException({ message: 'Please select a primary branch when assigning multiple branches to this user.', error: ErrorCode.PRIMARY_BRANCH_REQUIRED }, StatusCode.BAD_REQUEST);
         }
       }
 
       if (!dto.branch_ids.includes(primaryBranchId)) {
-        throw new HttpException('The selected primary branch must be one of the assigned branches.', StatusCode.BAD_REQUEST);
+        throw new HttpException({ message: 'The selected primary branch must be one of the assigned branches.', error: ErrorCode.PRIMARY_BRANCH_INVALID }, StatusCode.BAD_REQUEST);
       }
 
       const existingUser = await this.userModel.findOne({
@@ -374,7 +377,7 @@ export class AuthService {
       });
 
       if (existingUser) {
-        throw new HttpException('A user with this email already exists in your clinic.', StatusCode.CONFLICT);
+        throw new HttpException({ message: 'A user with this email already exists in your clinic.', error: ErrorCode.DUPLICATE_EMAIL }, StatusCode.CONFLICT);
       }
 
       const inviteToken = crypto.randomBytes(32).toString('hex');
@@ -423,15 +426,15 @@ export class AuthService {
     try {
       const user = await this.userModel.findOne({ where: { invite_token: dto.invite_token } });
       if (!user) {
-        throw new HttpException('Invalid or expired invite link.', StatusCode.BAD_REQUEST);
+        throw new HttpException({ message: 'Invalid or expired invite link.', error: ErrorCode.INVITE_EXPIRED_OR_INVALID }, StatusCode.BAD_REQUEST);
       }
 
       if (user.email !== dto.email) {
-        throw new HttpException('Email does not match the invited email address.', StatusCode.BAD_REQUEST);
+        throw new HttpException({ message: 'Email does not match the invited email address.', error: ErrorCode.EMAIL_MISMATCH }, StatusCode.BAD_REQUEST);
       }
 
       if (user.status !== UserStatus.PENDING) {
-        throw new HttpException('This invite has already been used. Please login directly.', StatusCode.BAD_REQUEST);
+        throw new HttpException({ message: 'This invite has already been used. Please login directly.', error: ErrorCode.INVITE_ALREADY_USED }, StatusCode.BAD_REQUEST);
       }
 
       await user.update({
@@ -469,7 +472,7 @@ export class AuthService {
       });
 
       if (!user) {
-        throw new HttpException('User not found.', StatusCode.UNAUTHORIZED);
+        throw new HttpException({ message: 'User not found.', error: ErrorCode.ACCOUNT_NOT_FOUND }, StatusCode.UNAUTHORIZED);
       }
 
       const userBranches = await this.userBranchModel.findAll({

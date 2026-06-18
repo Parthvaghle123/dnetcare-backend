@@ -19,11 +19,11 @@ export class RegisterDto {
   @IsEmail({}, { message: 'Please provide a valid email address' })
   email: string;
 
-  @IsNotEmpty({ message: 'Phone is required' })
+  @IsOptional()
   @IsString({ message: 'Phone must be text' })
   @Matches(/^[0-9]+$/, { message: 'Phone must contain only numbers' })
   @Length(10, 10, { message: 'Phone must be exactly 10 digits' })
-  phone: string;
+  phone?: string;
 
   @IsOptional()
   @IsString({ message: 'Branch Name must be text' })

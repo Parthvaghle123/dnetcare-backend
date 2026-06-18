@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { OrganizationModule } from './modules/organization/organization.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
@@ -15,6 +16,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     }),
     DatabaseModule,
     AuthModule,
+    OrganizationModule,
   ],
   controllers: [AppController],
   providers: [
