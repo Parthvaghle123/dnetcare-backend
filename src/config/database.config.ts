@@ -15,6 +15,13 @@ export const getDatabaseConfig = (configService: ConfigService): SequelizeModule
         rejectUnauthorized: false,
       },
     },
+    pool: {
+      max: 2,
+      min: 0,
+      idle: 0,
+      acquire: 3000,
+      evict: 0,
+    },
     autoLoadModels: true,
     synchronize: configService.get<string>('NODE_ENV') !== 'production',
     sync: {
