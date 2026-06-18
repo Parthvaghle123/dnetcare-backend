@@ -8,6 +8,7 @@ export const getDatabaseConfig = (configService: ConfigService): SequelizeModule
 
   return {
     dialect: 'postgres',
+    dialectModule: require('pg'),
     uri: configService.get<string>('DATABASE_URL'),
     dialectOptions: {
       ssl: {

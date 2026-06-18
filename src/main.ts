@@ -3,9 +3,6 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 
-// Force Vercel's NFT bundler to include the pg module
-import * as pg from 'pg';
-
 let cachedApp: any;
 
 async function bootstrapServer() {
