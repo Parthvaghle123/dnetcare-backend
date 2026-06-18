@@ -20,6 +20,7 @@ CHANGED: src/modules/auth/dto/register.dto.ts → Made `phone` field optional.
 CHANGED: src/modules/auth/auth.service.ts → Wrapped phone duplication check with if condition for optional phone in registration.
 CHANGED: src/modules/organization/dto/update-organization.dto.ts → Added optional `logo_url` field.
 CHANGED: src/modules/organization/organization.service.ts → Handled `logo_url` in get and update organization operations.
+CHANGED: src/main.ts → Fixed Vercel deployment by exporting a default serverless handler, importing `pg` to force bundling, and separating local bootstrap logic.
 ADDED: src/modules/organization/* → Created complete Organization and Branch module including DTOs, service, controller, and module wiring. Enforced role-based access control inside the service logic (OWNER, BRANCH_ADMIN, DOCTOR, RECEPTIONIST). Connected to app.module.ts.
 DELETED:
 FROZEN:
