@@ -34,7 +34,9 @@ export class UploadService {
           }
           resolve({
             public_id: result.public_id,
+            file_key: result.public_id,
             url: result.secure_url,
+            file_name: file.originalname,
             format: result.format,
             bytes: result.bytes,
             width: result.width,

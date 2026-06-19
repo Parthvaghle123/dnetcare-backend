@@ -12,6 +12,10 @@ import { UploadModule } from './modules/upload/upload.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { DoctorModule } from './modules/doctor/doctor.module';
 import { StaffModule } from './modules/staff/staff.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
+import { PatientModule } from './modules/patient/patient.module';
+import { ConsultationModule } from './modules/consultation/consultation.module';
+import { EntitiesModule } from './database/entities.module';
 
 @Module({
   imports: [
@@ -19,12 +23,16 @@ import { StaffModule } from './modules/staff/staff.module';
       isGlobal: true,
     }),
     DatabaseModule,
+    EntitiesModule,
     AuthModule,
     OrganizationModule,
     UploadModule,
     NotificationModule,
     DoctorModule,
     StaffModule,
+    CatalogModule,
+    PatientModule,
+    ConsultationModule,
   ],
   controllers: [AppController],
   providers: [

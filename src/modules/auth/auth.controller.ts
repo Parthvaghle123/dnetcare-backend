@@ -5,8 +5,6 @@ import { RegisterDto } from './dto/register.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { InviteStaffDto } from './dto/invite-staff.dto';
-import { AcceptInviteDto } from './dto/accept-invite.dto';
 
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -74,27 +72,6 @@ export class AuthController {
     return {
       message: 'Logged out successfully.',
       data: null
-    };
-  }
-
-  @Post('invite-staff')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.OWNER, Role.BRANCH_ADMIN)
-  async inviteStaff(@Body() dto: InviteStaffDto, @CurrentUser() user: any) {
-    const data = await this.authService.inviteStaff(dto, user);
-    return {
-      message: `Invitation sent to ${dto.email}`,
-      data
-    };
-  }
-
-  @Post('accept-invite')
-  @HttpCode(StatusCode.OK)
-  async acceptInvite(@Body() dto: AcceptInviteDto) {
-    const data = await this.authService.acceptInvite(dto);
-    return {
-      message: 'Account activated. OTP sent to your email to complete login.',
-      data
     };
   }
 

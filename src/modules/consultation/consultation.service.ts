@@ -1,0 +1,284 @@
+import { Injectable, HttpException, Logger } from '@nestjs/common';
+import { InjectModel } from '@nestjs/sequelize';
+import { StatusCode } from '../../common/enums/status-code.enum';
+import { ErrorCode } from '../../common/enums/error-code.enum';
+
+import { Consultation } from './entities/consultation.model';
+import { DentalChartEntry } from './entities/dental-chart-entry.model';
+import { ConsultationDocument } from './entities/consultation-document.model';
+import { Patient } from '../patient/entities/patient.model';
+import { Branch } from '../organization/entities/branch.model';
+import { User } from '../auth/entities/user.model';
+import { Role } from '../../common/enums/role.enum';
+
+import { CreateConsultationDto } from './dto/create-consultation.dto';
+import { UpdateConsultationDto } from './dto/update-consultation.dto';
+import { BulkDentalChartDto } from './dto/dental-chart.dto';
+import { BulkConsultationDocumentDto } from './dto/consultation-document.dto';
+
+@Injectable()
+export class ConsultationService {
+  private readonly logger = new Logger(ConsultationService.name);
+
+  constructor(
+    @InjectModel(Consultation) private consultationModel: typeof Consultation,
+    @InjectModel(DentalChartEntry) private dentalChartEntryModel: typeof DentalChartEntry,
+    @InjectModel(ConsultationDocument) private consultationDocModel: typeof ConsultationDocument,
+    @InjectModel(Patient) private patientModel: typeof Patient,
+    @InjectModel(Branch) private branchModel: typeof Branch,
+    @InjectModel(User) private userModel: typeof User,
+  ) {}
+
+  async createConsultation(user: any, dto: CreateConsultationDto) {
+    try {
+      const patient = await this.patientModel.findOne({
+        where: { id: dto.patient_id, organization_id: user.org_id }
+      });
+      if (!patient) {
+        throw new HttpException({ message: 'Patient not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      const branch = await this.branchModel.findOne({
+        where: { id: dto.branch_id, organization_id: user.org_id }
+      });
+      if (!branch) {
+        throw new HttpException({ message: 'Invalid branch.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      }
+
+      const doctor = await this.userModel.findOne({
+        where: { id: dto.doctor_id, organization_id: user.org_id, role: Role.DOCTOR }
+      });
+      if (!doctor) {
+        throw new HttpException({ message: 'Invalid doctor selected.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      }
+
+      const consultation = await this.consultationModel.create({
+        organization_id: user.org_id,
+        branch_id: dto.branch_id,
+        patient_id: dto.patient_id,
+        doctor_id: dto.doctor_id,
+        appointment_id: dto.appointment_id || null,
+        consultation_date: dto.consultation_date,
+        dental_chart_type: dto.dental_chart_type || 'ADULT',
+        chief_complaint: dto.chief_complaint || null,
+        clinical_findings: dto.clinical_findings || null,
+        diagnosis: dto.diagnosis || null,
+        advice: dto.advice || null,
+        notes_upper: dto.notes_upper || null,
+        notes_lower: dto.notes_lower || null,
+        follow_up_date: dto.follow_up_date || null,
+        is_completed: false
+      });
+
+      return consultation;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[createConsultation] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async getConsultationById(user: any, id: string) {
+    try {
+      const consultation = await this.consultationModel.findOne({
+        where: { id, organization_id: user.org_id }
+      });
+
+      if (!consultation) {
+        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      const patient = await this.patientModel.findOne({
+        where: { id: consultation.patient_id },
+        attributes: ['id', 'file_number', 'first_name', 'last_name', 'mobile', 'gender', 'age']
+      });
+
+      const doctor = await this.userModel.findOne({
+        where: { id: consultation.doctor_id },
+        attributes: ['id', 'first_name', 'last_name']
+      });
+
+      const branch = await this.branchModel.findOne({
+        where: { id: consultation.branch_id },
+        attributes: ['id', 'name', 'city', 'color_code']
+      });
+
+      const dental_chart = await this.dentalChartEntryModel.findAll({
+        where: { consultation_id: id },
+        order: [['created_at', 'ASC']],
+        attributes: ['id', 'tooth_number', 'condition', 'notes', 'created_at']
+      });
+
+      const documents = await this.consultationDocModel.findAll({
+        where: { consultation_id: id },
+        order: [['created_at', 'ASC']],
+        attributes: ['id', 'file_url', 'file_name', 'file_type', 'created_at']
+      });
+
+      return {
+        id: consultation.id,
+        consultation_date: consultation.consultation_date,
+        dental_chart_type: consultation.dental_chart_type,
+        chief_complaint: consultation.chief_complaint,
+        clinical_findings: consultation.clinical_findings,
+        diagnosis: consultation.diagnosis,
+        advice: consultation.advice,
+        notes_upper: consultation.notes_upper,
+        notes_lower: consultation.notes_lower,
+        follow_up_date: consultation.follow_up_date,
+        is_completed: consultation.is_completed,
+        patient,
+        doctor,
+        branch,
+        dental_chart,
+        documents,
+        created_at: consultation.created_at,
+        updated_at: consultation.updated_at
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[getConsultationById] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async updateConsultation(user: any, id: string, dto: UpdateConsultationDto) {
+    try {
+      const consultation = await this.consultationModel.findOne({
+        where: { id, organization_id: user.org_id }
+      });
+
+      if (!consultation) {
+        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      if (consultation.is_completed) {
+        throw new HttpException({ message: 'Cannot edit a completed consultation.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      }
+
+      if (Object.keys(dto).length === 0) {
+        throw new HttpException({ message: 'Provide at least one field to update.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      }
+
+      const updateData: any = {};
+      const allowedFields = ['chief_complaint', 'clinical_findings', 'diagnosis', 'advice', 'notes_upper', 'notes_lower', 'follow_up_date', 'dental_chart_type', 'consultation_date', 'is_completed'];
+      
+      for (const field of allowedFields) {
+        if (dto[field as keyof UpdateConsultationDto] !== undefined) {
+          updateData[field] = dto[field as keyof UpdateConsultationDto];
+        }
+      }
+
+      await consultation.update(updateData);
+      
+      // Return the updated data using the existing getConsultationById
+      return await this.getConsultationById(user, id);
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[updateConsultation] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async addDentalChartEntry(user: any, id: string, dto: BulkDentalChartDto) {
+    try {
+      const consultation = await this.consultationModel.findOne({
+        where: { id, organization_id: user.org_id }
+      });
+
+      if (!consultation) {
+        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      if (consultation.is_completed) {
+        throw new HttpException({ message: 'Cannot modify chart of a completed consultation.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      }
+
+      const results: any[] = [];
+
+      for (const item of dto.entries) {
+        let entry = await this.dentalChartEntryModel.findOne({
+          where: {
+            consultation_id: id,
+            tooth_number: item.tooth_number,
+            condition: item.condition
+          }
+        });
+
+        if (entry) {
+          await entry.update({ notes: item.notes || null });
+        } else {
+          entry = await this.dentalChartEntryModel.create({
+            consultation_id: id,
+            patient_id: consultation.patient_id,
+            tooth_number: item.tooth_number,
+            condition: item.condition,
+            notes: item.notes || null
+          });
+        }
+        
+        results.push({
+          id: entry.id,
+          tooth_number: entry.tooth_number,
+          condition: entry.condition,
+          notes: entry.notes,
+          created_at: entry.created_at,
+          updated_at: entry.updated_at
+        });
+      }
+
+      return results;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[addDentalChartEntry] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async addDocument(user: any, id: string, dto: BulkConsultationDocumentDto) {
+    try {
+      const consultation = await this.consultationModel.findOne({
+        where: { id, organization_id: user.org_id }
+      });
+
+      if (!consultation) {
+        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      const validTypes = ['XRAY', 'INTRAORAL_PHOTO', 'LAB_REPORT', 'OTHER'];
+      const results: any[] = [];
+
+      for (const item of dto.documents) {
+        if (!validTypes.includes(item.file_type)) {
+          throw new HttpException({ message: `Invalid file type: ${item.file_type}`, error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        }
+
+        const document = await this.consultationDocModel.create({
+          organization_id: user.org_id,
+          consultation_id: id,
+          patient_id: consultation.patient_id,
+          file_url: item.file_url,
+          file_key: item.file_key,
+          file_name: item.file_name,
+          file_type: item.file_type,
+          uploaded_by: user.sub
+        });
+
+        results.push({
+          id: document.id,
+          file_url: document.file_url,
+          file_name: document.file_name,
+          file_type: document.file_type,
+          uploaded_by: document.uploaded_by,
+          created_at: document.created_at
+        });
+      }
+
+      return results;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[addDocument] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+}

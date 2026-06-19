@@ -36,16 +36,20 @@ export class ConsultationDocument extends Model {
   patient: Patient;
 
   @AllowNull(false)
-  @Column(DataType.STRING)
+  @Column(DataType.TEXT)
   file_url: string;
 
   @AllowNull(true)
-  @Column(DataType.STRING)
+  @Column(DataType.ENUM('XRAY', 'INTRAORAL_PHOTO', 'LAB_REPORT', 'OTHER'))
   file_type: string;
+
+  @AllowNull(false)
+  @Column(DataType.STRING)
+  file_key: string;
 
   @AllowNull(true)
   @Column(DataType.STRING)
-  title: string;
+  file_name: string;
 
   @ForeignKey(() => User)
   @AllowNull(true)
