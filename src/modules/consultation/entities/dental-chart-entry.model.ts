@@ -34,7 +34,11 @@ export class DentalChartEntry extends Model {
   surface: string;
 
   @AllowNull(true)
-  @Column(DataType.STRING)
+  @Column(DataType.ENUM(
+    'CARIES', 'FRACTURE', 'MOBILITY', 'ROOT_STUMP',
+    'MISSING_TOOTH', 'IMPACTED', 'SUPRA_ERUPTED',
+    'PERIAPICAL_ABSCESS', 'RCT_DONE', 'CROWN', 'BRIDGE', 'IMPLANT'
+  ))
   condition: string;
 
   @AllowNull(true)

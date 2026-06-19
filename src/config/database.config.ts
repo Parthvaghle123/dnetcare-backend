@@ -23,9 +23,9 @@ export const getDatabaseConfig = (configService: ConfigService): SequelizeModule
       evict: 0,
     },
     autoLoadModels: true,
-    synchronize: configService.get<string>('NODE_ENV') !== 'production',
+    synchronize: false,
     sync: {
-      alter: configService.get<string>('NODE_ENV') !== 'production',
+      alter: false,
     },
     define: {
       underscored: true,

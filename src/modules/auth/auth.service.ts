@@ -278,15 +278,23 @@ export class AuthService {
       });
 
       let validSession: RefreshToken | null = null;
+      this.logger.log(`[refresh] Found ${activeSessions.length} active sessions for user ${user.id}`);
       for (const session of activeSessions) {
         if (new Date() > session.expires_at) {
+          this.logger.log(`[refresh] Session ${session.id} expired.`);
           await session.update({ is_revoked: true });
           continue;
         }
-        const isMatch = await argon2.verify(session.token, dto.refresh_token);
-        if (isMatch) {
-          validSession = session;
-          break;
+        
+        try {
+          const isMatch = await argon2.verify(session.token, dto.refresh_token.trim());
+          this.logger.log(`[refresh] Argon2 verify for session ${session.id}: ${isMatch}`);
+          if (isMatch) {
+            validSession = session;
+            break;
+          }
+        } catch (err) {
+          this.logger.error(`[refresh] Argon2 verify crashed for session ${session.id}:`, err);
         }
       }
 
@@ -364,29 +372,49 @@ export class AuthService {
       }
 
       const existingUser = await this.userModel.findOne({
-        where: { email: dto.email, organization_id: inviterOrgId }
+        where: { email: dto.email }
       });
-
-      if (existingUser) {
-        throw new HttpException({ message: 'A user with this email already exists in your clinic.', error: ErrorCode.DUPLICATE_EMAIL }, StatusCode.CONFLICT);
-      }
 
       const inviteToken = crypto.randomBytes(32).toString('hex');
+      let targetUserId: string;
 
-      const createdUser = await this.userModel.create({
-        organization_id: inviterOrgId,
-        first_name: dto.first_name,
-        last_name: dto.last_name,
-        email: dto.email,
-        role: dto.role as Role,
-        status: UserStatus.PENDING,
-        invite_token: inviteToken,
-        is_active: true
-      });
+      if (existingUser) {
+        if (existingUser.organization_id !== inviterOrgId) {
+          throw new HttpException({ message: 'A user with this email already belongs to another clinic.', error: ErrorCode.DUPLICATE_EMAIL }, StatusCode.CONFLICT);
+        }
+
+        if (existingUser.status === UserStatus.ACTIVE) {
+          throw new HttpException({ message: 'A user with this email already exists and is active in your clinic.', error: ErrorCode.DUPLICATE_EMAIL }, StatusCode.CONFLICT);
+        }
+
+        await existingUser.update({
+          first_name: dto.first_name,
+          last_name: dto.last_name,
+          role: dto.role as Role,
+          status: UserStatus.PENDING,
+          is_active: true,
+          invite_token: inviteToken
+        });
+
+        await this.userBranchModel.destroy({ where: { user_id: existingUser.id } });
+        targetUserId = existingUser.id;
+      } else {
+        const createdUser = await this.userModel.create({
+          organization_id: inviterOrgId,
+          first_name: dto.first_name,
+          last_name: dto.last_name,
+          email: dto.email,
+          role: dto.role as Role,
+          status: UserStatus.PENDING,
+          invite_token: inviteToken,
+          is_active: true
+        });
+        targetUserId = createdUser.id;
+      }
 
       for (const branchId of dto.branch_ids) {
         await this.userBranchModel.create({
-          user_id: createdUser.id,
+          user_id: targetUserId,
           branch_id: branchId,
           is_primary: branchId === primaryBranchId
         });
@@ -451,6 +479,47 @@ export class AuthService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[acceptInvite] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async getInviteDetails(token: string) {
+    try {
+      const user = await this.userModel.findOne({
+        where: { invite_token: token, status: UserStatus.PENDING },
+        include: [{ model: Organization, attributes: ['name', 'logo_url'] }]
+      });
+
+      if (!user) {
+        throw new HttpException({ message: 'Invalid or expired invite link.', error: ErrorCode.INVITE_EXPIRED_OR_INVALID }, StatusCode.BAD_REQUEST);
+      }
+
+      const userBranches = await this.userBranchModel.findAll({
+        where: { user_id: user.id },
+        include: [{ model: Branch, attributes: ['name', 'city', 'color_code'] }]
+      });
+
+      const branches = userBranches.map(ub => ({
+        name: ub.branch.name,
+        city: ub.branch.city,
+        color_code: ub.branch.color_code,
+        is_primary: ub.is_primary
+      }));
+
+      return {
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        role: user.role,
+        organization: {
+          name: user.organization?.name,
+          logo_url: user.organization?.logo_url || null
+        },
+        branches
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[getInviteDetails] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }

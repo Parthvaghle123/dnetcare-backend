@@ -58,6 +58,10 @@ export class Consultation extends Model {
   @BelongsTo(() => Appointment)
   appointment: Appointment;
 
+  @AllowNull(false)
+  @Column(DataType.DATEONLY)
+  consultation_date: Date;
+
   @AllowNull(true)
   @Column(DataType.TEXT)
   chief_complaint: string;

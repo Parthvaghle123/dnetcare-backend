@@ -29,9 +29,12 @@ export class StaffService {
       const limit = parseInt(filters.limit || '10', 10);
       const offset = (page - 1) * limit;
 
-      const whereClause: any = { organization_id: orgId };
+      const whereClause: any = { 
+        organization_id: orgId,
+        role: { [Op.ne]: Role.OWNER }
+      };
 
-      if (filters.role) {
+      if (filters.role && filters.role !== Role.OWNER) {
         whereClause.role = filters.role;
       }
       
