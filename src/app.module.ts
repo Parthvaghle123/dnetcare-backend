@@ -8,6 +8,10 @@ import { AuthModule } from './modules/auth/auth.module';
 import { OrganizationModule } from './modules/organization/organization.module';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { UploadModule } from './modules/upload/upload.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { DoctorModule } from './modules/doctor/doctor.module';
+import { StaffModule } from './modules/staff/staff.module';
 
 @Module({
   imports: [
@@ -17,6 +21,10 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
     DatabaseModule,
     AuthModule,
     OrganizationModule,
+    UploadModule,
+    NotificationModule,
+    DoctorModule,
+    StaffModule,
   ],
   controllers: [AppController],
   providers: [

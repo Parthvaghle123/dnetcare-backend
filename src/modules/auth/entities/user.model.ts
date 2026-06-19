@@ -1,5 +1,6 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey, CreatedAt, UpdatedAt, HasMany } from 'sequelize-typescript';
 import { Organization } from '../../organization/entities/organization.model';
+import { UserBranch } from './user-branch.model';
 
 export enum UserRole {
   OWNER = 'OWNER',
@@ -86,6 +87,9 @@ export class User extends Model {
   @AllowNull(true)
   @Column(DataType.DATE)
   last_login_at: Date;
+
+  @HasMany(() => UserBranch)
+  user_branches: UserBranch[];
 
   @CreatedAt
   @Column(DataType.DATE)

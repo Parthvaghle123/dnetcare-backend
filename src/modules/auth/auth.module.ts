@@ -13,10 +13,12 @@ import { UserBranch } from './entities/user-branch.model';
 import { RefreshToken } from './entities/refresh-token.model';
 import { Organization } from '../organization/entities/organization.model';
 import { Branch } from '../organization/entities/branch.model';
+import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([User, Organization, Branch, UserBranch, RefreshToken]),
+    SequelizeModule.forFeature([User, Organization, Branch, UserBranch, RefreshToken, DoctorProfile]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       inject: [ConfigService],
@@ -25,6 +27,7 @@ import { Branch } from '../organization/entities/branch.model';
         signOptions: { expiresIn: config.get<string>('JWT_ACCESS_EXPIRES_IN') as any },
       }),
     }),
+    NotificationModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

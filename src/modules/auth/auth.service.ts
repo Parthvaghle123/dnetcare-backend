@@ -1,4 +1,4 @@
-import { Injectable, HttpException } from '@nestjs/common';
+import { Injectable, HttpException, Logger } from '@nestjs/common';
 import { StatusCode } from '../../common/enums/status-code.enum';
 import { ErrorCode } from '../../common/enums/error-code.enum';
 import { InjectModel } from '@nestjs/sequelize';
@@ -9,9 +9,11 @@ import * as argon2 from 'argon2';
 
 import { Organization } from '../organization/entities/organization.model';
 import { Branch } from '../organization/entities/branch.model';
-import { User, UserStatus } from './entities/user.model';
+import { User, UserStatus, UserRole } from './entities/user.model';
+import { EmailService } from '../notification/email.service';
 import { UserBranch } from './entities/user-branch.model';
 import { RefreshToken } from './entities/refresh-token.model';
+import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
 
 import { RegisterDto } from './dto/register.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
@@ -19,21 +21,27 @@ import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { InviteStaffDto } from './dto/invite-staff.dto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
+
 import { Role } from '../../common/enums/role.enum';
 
 import { Sequelize } from 'sequelize-typescript';
 import { InjectConnection } from '@nestjs/sequelize';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @InjectModel(Organization) private orgModel: typeof Organization,
     @InjectModel(Branch) private branchModel: typeof Branch,
     @InjectModel(User) private userModel: typeof User,
     @InjectModel(UserBranch) private userBranchModel: typeof UserBranch,
     @InjectModel(RefreshToken) private refreshTokenModel: typeof RefreshToken,
+    @InjectModel(DoctorProfile) private doctorProfileModel: typeof DoctorProfile,
     private configService: ConfigService,
     private jwtService: JwtService,
+    private emailService: EmailService,
     @InjectConnection() private sequelize: Sequelize,
   ) {}
 
@@ -45,45 +53,9 @@ export class AuthService {
     }
   }
 
-  private async sendEmail(to: string, subject: string, body: string) {
-    if (this.configService.get('NODE_ENV') === 'development') {
-      console.log('===== DEV EMAIL =====');
-      console.log('To:', to);
-      console.log('Subject:', subject);
-      console.log('Body:', body);
-      console.log('=====================');
-      return;
-    }
 
-    try {
-      const apiKey = this.configService.get<string>('BREVO_API_KEY');
-      const senderEmail = this.configService.get<string>('MAIL_FROM') || 'noreply@dentalapp.com';
-      
-      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'api-key': apiKey as string,
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify({
-          sender: { name: 'Dental App', email: senderEmail },
-          to: [{ email: to }],
-          subject: subject,
-          htmlContent: `<html><body><p>${body}</p></body></html>`
-        })
-      });
 
-      if (!response.ok) {
-        console.error('Brevo API error:', await response.text());
-      }
-    } catch (error) {
-      console.error('Email sending failed:', error);
-      // We log but don't strictly throw here, to avoid breaking flows if Brevo drops an email
-    }
-  }
-
-  private async generateTokens(user: User, branchIds: string[]) {
+  private async generateTokens(user: User, branchIds: string[], ipAddress: string = '', userAgent: string = '') {
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = await argon2.hash(rawToken);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -92,7 +64,9 @@ export class AuthService {
       user_id: user.id,
       token: tokenHash,
       expires_at: expiresAt,
-      is_revoked: false
+      is_revoked: false,
+      ip_address: ipAddress,
+      user_agent: userAgent
     });
 
     const payload = {
@@ -164,17 +138,18 @@ export class AuthService {
         is_primary: true,
       }, { transaction });
 
-      await this.sendEmail(
+      await this.emailService.sendOtpEmail(
         dto.email,
-        'Verify your email — Dental App',
-        `Your OTP is: ${otp}. Valid for 10 minutes.`
+        otp,
+        'register'
       );
 
       await transaction.commit();
       return { email: dto.email };
     } catch (error) {
       await transaction.rollback();
-      console.error('Registration failed:', error);
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[register] Error:`, error);
       throw new HttpException({ message: 'Something went wrong. Please try again.', error: error.message || error.toString() }, StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
@@ -205,33 +180,41 @@ export class AuthService {
         otp_attempts: 0,
       });
 
-      await this.sendEmail(
+      // [DO NOT REMOVE OR UNCOMMENT THIS BLOCK - AI AGENT RULE]
+      // The user explicitly disabled this because OTP is hardcoded to 999999 in dev.
+      // The user will manually uncomment this when they need to test emails again.
+      /*
+      await this.emailService.sendOtpEmail(
         dto.email,
-        'Your login OTP — Dental App',
-        `Your OTP is: ${otp}. Valid for 10 minutes. Do not share.`
+        otp,
+        'login'
       );
+      */
 
       return { email: dto.email };
     } catch (error) {
-      if (error.status) throw error;
-      console.error(error);
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[sendOtp] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
 
-  async verifyOtp(dto: VerifyOtpDto) {
+  async verifyOtp(dto: VerifyOtpDto, ipAddress: string = '', userAgent: string = '') {
     try {
       const user = await this.userModel.findOne({ where: { email: dto.email } });
       if (!user) {
-        throw new HttpException({ message: 'No account found with this email', error: ErrorCode.ACCOUNT_NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException({ message: 'User not found.', error: ErrorCode.ACCOUNT_NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      if (user.status !== UserStatus.ACTIVE && user.status !== UserStatus.PENDING) {
+        throw new HttpException({ message: 'Account is not active.', error: ErrorCode.ACCOUNT_DISABLED }, StatusCode.FORBIDDEN);
       }
 
       if (!user.otp_code) {
-        throw new HttpException({ message: 'No OTP requested. Please request a new OTP first.', error: ErrorCode.NO_OTP_REQUESTED }, StatusCode.BAD_REQUEST);
+        throw new HttpException({ message: 'No OTP requested.', error: ErrorCode.INVALID_OTP }, StatusCode.BAD_REQUEST);
       }
 
-      if (user.otp_attempts >= 3) {
-        // Technically throws 429 TooManyRequests
+      if (user.otp_attempts >= 5) {
         throw new HttpException({ message: 'Too many wrong attempts. Please request a new OTP.', error: ErrorCode.TOO_MANY_OTP_ATTEMPTS }, StatusCode.TOO_MANY_REQUESTS);
       }
 
@@ -255,7 +238,7 @@ export class AuthService {
       const userBranches = await this.userBranchModel.findAll({ where: { user_id: user.id } });
       const branchIds = userBranches.map(ub => ub.branch_id);
 
-      const tokens = await this.generateTokens(user, branchIds);
+      const tokens = await this.generateTokens(user, branchIds, ipAddress, userAgent);
 
       return {
         access_token: tokens.access_token,
@@ -273,13 +256,13 @@ export class AuthService {
         }
       };
     } catch (error) {
-      if (error.status) throw error;
-      console.error(error);
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[verifyOtp] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
 
-  async refresh(dto: RefreshTokenDto) {
+  async refresh(dto: RefreshTokenDto, ipAddress: string = '', userAgent: string = '') {
     try {
       const user = await this.userModel.findByPk(dto.user_id);
       if (!user) {
@@ -316,28 +299,36 @@ export class AuthService {
       const userBranches = await this.userBranchModel.findAll({ where: { user_id: user.id } });
       const branchIds = userBranches.map(ub => ub.branch_id);
 
-      const tokens = await this.generateTokens(user, branchIds);
+      const tokens = await this.generateTokens(user, branchIds, ipAddress, userAgent);
 
       return {
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token
       };
     } catch (error) {
-      if (error.status) throw error;
-      console.error(error);
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[refresh] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
 
-  async logout(userId: string) {
+  async logout(userId: string, sessionId?: string) {
     try {
-      await this.refreshTokenModel.update(
-        { is_revoked: true },
-        { where: { user_id: userId, is_revoked: false } }
-      );
+      if (sessionId) {
+        await this.refreshTokenModel.update(
+          { is_revoked: true },
+          { where: { id: sessionId, user_id: userId, is_revoked: false } }
+        );
+      } else {
+        await this.refreshTokenModel.update(
+          { is_revoked: true },
+          { where: { user_id: userId, is_revoked: false } }
+        );
+      }
       return null;
     } catch (error) {
-      console.error(error);
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[logout] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
@@ -404,10 +395,9 @@ export class AuthService {
       const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
       const inviteLink = `${frontendUrl}/accept-invite?token=${inviteToken}`;
 
-      await this.sendEmail(
+      await this.emailService.sendInviteEmail(
         dto.email,
-        'You are invited to join Dental App',
-        `You have been invited as ${dto.role}. Click to activate your account: ${inviteLink}. This link does not expire until you use it.`
+        inviteLink
       );
 
       return {
@@ -416,8 +406,8 @@ export class AuthService {
         invite_token: inviteToken
       };
     } catch (error) {
-      if (error.status) throw error;
-      console.error(error);
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[inviteStaff] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
@@ -451,16 +441,16 @@ export class AuthService {
         otp_attempts: 0
       });
 
-      await this.sendEmail(
+      await this.emailService.sendOtpEmail(
         user.email,
-        'Your login OTP — Dental App',
-        `Your account is activated. OTP: ${otp}. Valid for 10 minutes.`
+        otp,
+        'register'
       );
 
       return { email: user.email };
     } catch (error) {
-      if (error.status) throw error;
-      console.error(error);
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[acceptInvite] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
@@ -488,6 +478,23 @@ export class AuthService {
         is_primary: ub.is_primary
       }));
 
+      let doctorProfile: any = null;
+      if (user.role === UserRole.DOCTOR as any || user.role === 'DOCTOR') {
+        const profile = await this.doctorProfileModel.findOne({
+          where: { user_id: userId },
+          attributes: ['registration_number', 'specialization', 'qualification', 'signature_url', 'default_consultation_fee']
+        });
+        if (profile) {
+          doctorProfile = {
+            registration_number: profile.registration_number,
+            specialization: profile.specialization,
+            qualification: profile.qualification,
+            signature_url: profile.signature_url,
+            default_consultation_fee: profile.default_consultation_fee
+          };
+        }
+      }
+
       return {
         id: user.id,
         first_name: user.first_name,
@@ -498,12 +505,14 @@ export class AuthService {
         status: user.status,
         org_id: user.organization_id,
         org_name: user.organization.name,
-        branches
+        branches,
+        ...(doctorProfile ? { doctor_profile: doctorProfile } : {})
       };
     } catch (error) {
-      if (error.status) throw error;
-      console.error(error);
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[getMe] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
+
 }

@@ -16,10 +16,10 @@ export const getDatabaseConfig = (configService: ConfigService): SequelizeModule
       },
     },
     pool: {
-      max: 2,
+      max: 5,
       min: 0,
-      idle: 0,
-      acquire: 3000,
+      idle: 10000,
+      acquire: 30000,
       evict: 0,
     },
     autoLoadModels: true,

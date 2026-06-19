@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { OrganizationService } from './organization.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -25,13 +25,22 @@ export class OrganizationController {
   }
 
   @Get('branches')
-  async getBranches(@CurrentUser() reqUser: any, @Query('is_active') is_active?: string) {
-    let activeParam: boolean | undefined;
-    if (is_active !== undefined) {
-      activeParam = is_active === 'true';
-    }
-    const data = await this.organizationService.getBranches(reqUser, activeParam);
-    return { message: 'Branches fetched successfully.', data };
+  async getBranches(
+    @CurrentUser() reqUser: any, 
+    @Query('is_active') is_active?: string,
+    @Query('city') city?: string,
+    @Query('state') state?: string,
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string
+  ) {
+    const filters = { is_active, city, state, search, page, limit };
+    const result = await this.organizationService.getBranches(reqUser, filters);
+    return { 
+      message: 'Branches fetched successfully.', 
+      data: result.records,
+      meta: result.meta 
+    };
   }
 
   @Post('branches')
@@ -57,5 +66,11 @@ export class OrganizationController {
     const data = await this.organizationService.updateBranchStatus(reqUser, id, dto);
     const message = dto.is_active ? 'Branch activated successfully.' : 'Branch deactivated successfully.';
     return { message, data };
+  }
+
+  @Delete('branches/:id')
+  async deleteBranch(@CurrentUser() reqUser: any, @Param('id') id: string) {
+    await this.organizationService.deleteBranch(reqUser, id);
+    return { message: 'Branch deleted successfully.' };
   }
 }
