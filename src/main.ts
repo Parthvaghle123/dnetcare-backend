@@ -9,6 +9,18 @@ async function bootstrapServer() {
   if (!cachedApp) {
     const app = await NestFactory.create(AppModule);
     
+    app.use((req: any, res: any, next: any) => {
+      console.log('======> req url:', req.url, '======> req method:', req.method);
+      next();
+    });
+
+    app.use('/', (req: any, res: any, next: any) => {
+      if (req.path === '/') {
+        return res.json('Dental Server working!');
+      }
+      next();
+    });
+    
     app.enableCors();
     app.setGlobalPrefix('api/v1');
     
@@ -28,6 +40,18 @@ async function bootstrapServer() {
 if (!process.env.VERCEL) {
   async function startLocal() {
     const app = await NestFactory.create(AppModule);
+    
+    app.use((req: any, res: any, next: any) => {
+      console.log('======> req url:', req.url, '======> req method:', req.method);
+      next();
+    });
+
+    app.use('/', (req: any, res: any, next: any) => {
+      if (req.path === '/') {
+        return res.json('Dental Server working!');
+      }
+      next();
+    });
     
     app.enableCors();
     app.setGlobalPrefix('api/v1');

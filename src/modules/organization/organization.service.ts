@@ -1,9 +1,11 @@
-import { Injectable, HttpException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/sequelize';
+import { Injectable, HttpException, Logger } from '@nestjs/common';
+import { InjectModel, InjectConnection } from '@nestjs/sequelize';
+import { Sequelize } from 'sequelize-typescript';
 import { StatusCode } from '../../common/enums/status-code.enum';
 import { Role } from '../../common/enums/role.enum';
 import { Organization } from './entities/organization.model';
 import { Branch } from './entities/branch.model';
+import { UserBranch } from '../auth/entities/user-branch.model';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
@@ -12,9 +14,13 @@ import { Op } from 'sequelize';
 
 @Injectable()
 export class OrganizationService {
+  private readonly logger = new Logger(OrganizationService.name);
+
   constructor(
     @InjectModel(Organization) private orgModel: typeof Organization,
     @InjectModel(Branch) private branchModel: typeof Branch,
+    @InjectModel(UserBranch) private userBranchModel: typeof UserBranch,
+    @InjectConnection() private sequelize: Sequelize,
   ) {}
 
   async getMyOrganization(reqUser: any) {
@@ -32,10 +38,11 @@ export class OrganizationService {
         phone: org.phone,
         logo_url: org.logo_url,
         is_active: org.is_active,
-        created_at: org.createdAt,
+        created_at: org.created_at,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
+      this.logger.error(`[getMyOrganization] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
@@ -72,32 +79,59 @@ export class OrganizationService {
         phone: updatedOrg!.phone,
         logo_url: updatedOrg!.logo_url,
         is_active: updatedOrg!.is_active,
-        created_at: updatedOrg!.createdAt,
+        created_at: updatedOrg!.created_at,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
+      this.logger.error(`[updateMyOrganization] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
 
-  async getBranches(reqUser: any, is_active?: boolean) {
+  async getBranches(reqUser: any, filters: { is_active?: string, city?: string, state?: string, search?: string, page?: string, limit?: string }) {
     try {
+      const page = parseInt(filters.page || '1', 10);
+      const limit = parseInt(filters.limit || '10', 10);
+      const offset = (page - 1) * limit;
+
       const whereClause: any = { organization_id: reqUser.org_id };
 
-      if (is_active !== undefined) {
-        whereClause.is_active = is_active;
+      if (filters.is_active !== undefined) {
+        whereClause.is_active = filters.is_active === 'true';
+      }
+
+      if (filters.city) {
+        whereClause.city = { [Op.iLike]: `%${filters.city}%` };
+      }
+
+      if (filters.state) {
+        whereClause.state = { [Op.iLike]: `%${filters.state}%` };
+      }
+
+      if (filters.search) {
+        whereClause[Op.or] = [
+          { name: { [Op.iLike]: `%${filters.search}%` } },
+          { city: { [Op.iLike]: `%${filters.search}%` } },
+          { state: { [Op.iLike]: `%${filters.search}%` } },
+          { phone: { [Op.iLike]: `%${filters.search}%` } },
+          { address: { [Op.iLike]: `%${filters.search}%` } }
+        ];
       }
 
       if (reqUser.role === Role.DOCTOR || reqUser.role === Role.RECEPTIONIST) {
         whereClause.id = { [Op.in]: reqUser.branch_ids };
       }
 
-      const branches = await this.branchModel.findAll({
+      const { rows, count } = await this.branchModel.findAndCountAll({
         where: whereClause,
-        order: [['createdAt', 'ASC']],
+        limit,
+        offset,
+        order: [['created_at', 'ASC']],
       });
 
-      return branches.map((branch) => ({
+      const totalPages = Math.ceil(count / limit);
+
+      const records = rows.map((branch) => ({
         id: branch.id,
         name: branch.name,
         city: branch.city,
@@ -107,10 +141,23 @@ export class OrganizationService {
         whatsapp_number: branch.whatsapp_number,
         color_code: branch.color_code,
         is_active: branch.is_active,
-        created_at: branch.createdAt,
+        created_at: branch.created_at,
       }));
+
+      return {
+        records,
+        meta: {
+          total_records: count,
+          current_page: page,
+          total_pages: totalPages,
+          limit: limit,
+          has_next: page < totalPages,
+          has_previous: page > 1
+        }
+      };
     } catch (error) {
       if (error instanceof HttpException) throw error;
+      this.logger.error(`[getBranches] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
@@ -151,10 +198,11 @@ export class OrganizationService {
         whatsapp_number: branch.whatsapp_number,
         color_code: branch.color_code,
         is_active: branch.is_active,
-        created_at: branch.createdAt,
+        created_at: branch.created_at,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
+      this.logger.error(`[createBranch] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
@@ -185,11 +233,12 @@ export class OrganizationService {
         whatsapp_number: branch.whatsapp_number,
         color_code: branch.color_code,
         is_active: branch.is_active,
-        created_at: branch.createdAt,
-        updated_at: branch.updatedAt,
+        created_at: branch.created_at,
+        updated_at: branch.updated_at,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
+      this.logger.error(`[getBranchById] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
@@ -257,11 +306,12 @@ export class OrganizationService {
         whatsapp_number: updatedBranch!.whatsapp_number,
         color_code: updatedBranch!.color_code,
         is_active: updatedBranch!.is_active,
-        created_at: updatedBranch!.createdAt,
-        updated_at: updatedBranch!.updatedAt,
+        created_at: updatedBranch!.created_at,
+        updated_at: updatedBranch!.updated_at,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
+      this.logger.error(`[updateBranch] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
@@ -293,6 +343,50 @@ export class OrganizationService {
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
+      this.logger.error(`[updateBranchStatus] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async deleteBranch(reqUser: any, id: string) {
+    const transaction = await this.sequelize.transaction();
+    try {
+      if (reqUser.role !== Role.OWNER) {
+        throw new HttpException('Only the clinic owner can delete a branch.', StatusCode.FORBIDDEN);
+      }
+
+      const branch = await this.branchModel.findOne({
+        where: { id, organization_id: reqUser.org_id },
+      });
+
+      if (!branch) {
+        throw new HttpException('Branch not found.', StatusCode.NOT_FOUND);
+      }
+
+      // Check if it's the last remaining branch
+      const totalBranches = await this.branchModel.count({
+        where: { organization_id: reqUser.org_id },
+      });
+
+      if (totalBranches <= 1) {
+        throw new HttpException('Cannot delete the last remaining branch of the organization.', StatusCode.BAD_REQUEST);
+      }
+
+      // Delete user branch assignments first
+      await this.userBranchModel.destroy({ where: { branch_id: id }, transaction });
+
+      // Then delete the branch
+      await this.branchModel.destroy({ where: { id }, transaction });
+
+      await transaction.commit();
+      return true;
+    } catch (error: any) {
+      await transaction.rollback();
+      if (error.name === 'SequelizeForeignKeyConstraintError') {
+        throw new HttpException('Cannot delete this branch because it contains active patients, appointments, or billing records. Please deactivate it instead.', StatusCode.CONFLICT);
+      }
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[deleteBranch] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
