@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import { Injectable, HttpException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { StatusCode } from '../../common/enums/status-code.enum';
@@ -278,6 +279,98 @@ export class ConsultationService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[addDocument] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+  async listConsultations(user: any, query: any) {
+    try {
+      const { patient_id, branch_id, doctor_id, date_from, date_to, is_completed, page = 1, limit = 10 } = query;
+      const offset = (Number(page) - 1) * Number(limit);
+
+      const whereClause: any = { organization_id: user.org_id };
+
+      if (patient_id) whereClause.patient_id = patient_id;
+      if (branch_id) whereClause.branch_id = branch_id;
+      if (doctor_id) whereClause.doctor_id = doctor_id;
+      
+      if (is_completed !== undefined) {
+        whereClause.is_completed = is_completed === 'true' || is_completed === true;
+      }
+
+      if (date_from && date_to) {
+        whereClause.consultation_date = { [Op.between]: [date_from, date_to] };
+      } else if (date_from) {
+        whereClause.consultation_date = { [Op.gte]: date_from };
+      } else if (date_to) {
+        whereClause.consultation_date = { [Op.lte]: date_to };
+      }
+
+      const { rows, count } = await this.consultationModel.findAndCountAll({
+        where: whereClause,
+        order: [['consultation_date', 'DESC']],
+        limit: Number(limit),
+        offset: Number(offset),
+        include: [
+          { model: this.patientModel, attributes: ['id', 'file_number', 'first_name', 'last_name'] },
+          { model: this.userModel, attributes: ['id', 'first_name', 'last_name'] },
+          { model: this.branchModel, attributes: ['id', 'name', 'color_code'] }
+        ]
+      });
+
+      const items = rows.map((row: any) => ({
+        id: row.id,
+        consultation_date: row.consultation_date,
+        chief_complaint: row.chief_complaint,
+        diagnosis: row.diagnosis,
+        dental_chart_type: row.dental_chart_type,
+        is_completed: row.is_completed,
+        follow_up_date: row.follow_up_date,
+        patient: row.patient,
+        doctor: row.doctor,
+        branch: row.branch,
+        created_at: row.created_at
+      }));
+
+      return {
+        items,
+        meta: {
+          total: count,
+          page: Number(page),
+          limit: Number(limit),
+          total_pages: Math.ceil(count / Number(limit))
+        }
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[listConsultations] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async completeConsultation(user: any, id: string) {
+    try {
+      const consultation = await this.consultationModel.findOne({
+        where: { id, organization_id: user.org_id }
+      });
+
+      if (!consultation) {
+        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      if (consultation.is_completed) {
+        throw new HttpException({ message: 'Consultation is already completed.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      }
+
+      await consultation.update({ is_completed: true });
+
+      return {
+        id: consultation.id,
+        is_completed: true,
+        updated_at: consultation.updated_at
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[completeConsultation] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }

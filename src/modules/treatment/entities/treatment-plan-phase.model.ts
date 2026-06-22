@@ -6,9 +6,10 @@ import { User } from '../../auth/entities/user.model';
 
 export enum TreatmentPlanPhaseStatus {
   PENDING = 'PENDING',
+  SCHEDULED = 'SCHEDULED',
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED',
+  SKIPPED = 'SKIPPED',
 }
 
 @Table({ tableName: 'treatment_plan_phases', timestamps: true })
@@ -70,8 +71,8 @@ export class TreatmentPlanPhase extends Model {
   @Column(DataType.TEXT)
   doctor_notes: string;
 
-  @AllowNull(false)
-  @Column(DataType.ENUM('PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'))
+  @Default(TreatmentPlanPhaseStatus.PENDING)
+  @Column(DataType.ENUM('PENDING', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'SKIPPED'))
   status: TreatmentPlanPhaseStatus;
 
   @AllowNull(true)

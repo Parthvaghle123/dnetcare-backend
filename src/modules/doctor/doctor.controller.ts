@@ -26,6 +26,13 @@ export class DoctorController {
     return { message: 'Doctor profile created successfully.', data };
   }
 
+  @Get(':id/profile')
+  @Roles(Role.OWNER, Role.BRANCH_ADMIN, Role.DOCTOR, Role.RECEPTIONIST)
+  async getDoctorProfile(@Param('id', ParseUUIDPipe) doctorId: string, @CurrentUser() user: any) {
+    const data = await this.doctorService.getDoctorProfile(user, doctorId);
+    return { message: 'Doctor profile fetched.', data };
+  }
+
   @Put(':id/profile')
   @Roles(Role.OWNER, Role.BRANCH_ADMIN, Role.DOCTOR)
   async updateProfile(@Param('id', ParseUUIDPipe) doctorId: string, @Body() dto: UpdateDoctorProfileDto, @CurrentUser() user: any) {

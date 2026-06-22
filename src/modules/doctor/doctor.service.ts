@@ -1,6 +1,7 @@
 import { Injectable, HttpException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { StatusCode } from '../../common/enums/status-code.enum';
+import { ErrorCode } from '../../common/enums/error-code.enum';
 import { DoctorProfile } from './entities/doctor-profile.model';
 import { DoctorSchedule } from './entities/doctor-schedule.model';
 import { DoctorLeave } from './entities/doctor-leave.model';
@@ -43,6 +44,44 @@ export class DoctorService {
     }
     
     return doctor;
+  }
+
+  async getDoctorProfile(user: any, doctorId: string) {
+    try {
+      const doctorUser = await this.userModel.findOne({
+        where: { id: doctorId, organization_id: user.org_id, role: Role.DOCTOR }
+      });
+
+      if (!doctorUser) {
+        throw new HttpException({ message: 'Doctor not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      const profile = await this.profileModel.findOne({
+        where: { user_id: doctorId }
+      });
+
+      if (!profile) {
+        throw new HttpException({ message: 'Doctor profile not set up yet.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      return {
+        user_id: doctorId,
+        first_name: doctorUser.first_name,
+        last_name: doctorUser.last_name,
+        email: doctorUser.email,
+        phone: doctorUser.phone,
+        registration_number: profile.registration_number,
+        specialization: profile.specialization,
+        qualification: profile.qualification,
+        signature_url: profile.signature_url,
+        default_consultation_fee: profile.default_consultation_fee,
+        created_at: profile.created_at
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[getDoctorProfile] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
   }
 
   // --- Profile Methods ---
