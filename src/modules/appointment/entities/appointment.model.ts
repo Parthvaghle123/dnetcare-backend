@@ -9,6 +9,7 @@ import { TreatmentPlanPhase } from '../../treatment/entities/treatment-plan-phas
 export enum AppointmentStatus {
   SCHEDULED = 'SCHEDULED',
   CONFIRMED = 'CONFIRMED',
+  IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
   RESCHEDULED = 'RESCHEDULED',
@@ -79,7 +80,7 @@ export class Appointment extends Model {
   duration_minutes: number;
 
   @AllowNull(false)
-  @Column(DataType.ENUM('SCHEDULED', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'RESCHEDULED', 'NO_SHOW'))
+  @Column(DataType.ENUM('SCHEDULED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'RESCHEDULED', 'NO_SHOW'))
   status: AppointmentStatus;
 
   @AllowNull(true)

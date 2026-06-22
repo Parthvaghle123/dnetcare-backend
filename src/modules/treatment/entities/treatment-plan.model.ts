@@ -6,10 +6,10 @@ import { Patient } from '../../patient/entities/patient.model';
 import { User } from '../../auth/entities/user.model';
 
 export enum TreatmentPlanStatus {
-  DRAFT = 'DRAFT',
   ACTIVE = 'ACTIVE',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
+  ON_HOLD = 'ON_HOLD',
 }
 
 @Table({ tableName: 'treatment_plans', timestamps: true })
@@ -84,8 +84,8 @@ export class TreatmentPlan extends Model {
   @Column(DataType.INTEGER)
   total_phases: number;
 
-  @AllowNull(false)
-  @Column(DataType.ENUM('DRAFT', 'ACTIVE', 'COMPLETED', 'CANCELLED'))
+  @Default(TreatmentPlanStatus.ACTIVE)
+  @Column(DataType.ENUM('ACTIVE', 'COMPLETED', 'CANCELLED', 'ON_HOLD'))
   status: TreatmentPlanStatus;
 
   @CreatedAt

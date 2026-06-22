@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { ConsultationService } from './consultation.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -41,5 +41,16 @@ export class ConsultationController {
   async addDocument(@Param('id', ParseUUIDPipe) id: string, @Body() dto: BulkConsultationDocumentDto, @CurrentUser() user: any) {
     const data = await this.consultationService.addDocument(user, id, dto);
     return { message: 'Documents attached to consultation.', data };
+  }
+  @Get()
+  async listConsultations(@Query() query: any, @CurrentUser() user: any) {
+    const data = await this.consultationService.listConsultations(user, query);
+    return { message: 'Consultations fetched successfully.', data };
+  }
+
+  @Patch(':id/complete')
+  async completeConsultation(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: any) {
+    const data = await this.consultationService.completeConsultation(user, id);
+    return { message: 'Consultation marked as completed.', data };
   }
 }
