@@ -24,6 +24,10 @@ export class PrescriptionMedicine extends Model {
   @Column(DataType.STRING)
   dosage: string;
 
+  @AllowNull(false)
+  @Column(DataType.INTEGER)
+  quantity: number;
+
   @AllowNull(true)
   @Column(DataType.STRING)
   timing: string;

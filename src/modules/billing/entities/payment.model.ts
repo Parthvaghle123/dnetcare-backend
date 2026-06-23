@@ -7,9 +7,10 @@ import { User } from '../../auth/entities/user.model';
 
 export enum PaymentMode {
   CASH = 'CASH',
+  ONLINE = 'ONLINE',
   CARD = 'CARD',
   UPI = 'UPI',
-  BANK_TRANSFER = 'BANK_TRANSFER',
+  CHEQUE = 'CHEQUE',
 }
 
 @Table({ tableName: 'payments', timestamps: true })
@@ -60,7 +61,7 @@ export class Payment extends Model {
   payment_date: Date;
 
   @AllowNull(false)
-  @Column(DataType.ENUM('CASH', 'CARD', 'UPI', 'BANK_TRANSFER'))
+  @Column(DataType.ENUM('CASH', 'ONLINE', 'CARD', 'UPI', 'CHEQUE'))
   payment_mode: PaymentMode;
 
   @AllowNull(true)

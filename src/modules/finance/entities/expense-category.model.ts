@@ -9,7 +9,7 @@ export class ExpenseCategory extends Model {
   declare id: string;
 
   @ForeignKey(() => Organization)
-  @AllowNull(false)
+  @AllowNull(true)
   @Column(DataType.UUID)
   organization_id: string;
 

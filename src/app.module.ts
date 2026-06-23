@@ -15,8 +15,11 @@ import { StaffModule } from './modules/staff/staff.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { PatientModule } from './modules/patient/patient.module';
 import { ConsultationModule } from './modules/consultation/consultation.module';
+import { PrescriptionModule } from './modules/prescription/prescription.module';
 import { TreatmentModule } from './modules/treatment/treatment.module';
+import { FinanceModule } from './modules/finance/finance.module';
 import { AppointmentModule } from './modules/appointment/appointment.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { EntitiesModule } from './database/entities.module';
 
 @Module({
@@ -35,8 +38,11 @@ import { EntitiesModule } from './database/entities.module';
     CatalogModule,
     PatientModule,
     ConsultationModule,
+    PrescriptionModule,
     TreatmentModule,
+    FinanceModule,
     AppointmentModule,
+    BillingModule,
   ],
   controllers: [AppController],
   providers: [

@@ -374,4 +374,46 @@ export class ConsultationService {
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
+
+  async getConsultationDocuments(id: string, user: any) {
+    try {
+      const consultation = await this.consultationModel.findOne({
+        where: { id, organization_id: user.org_id }
+      });
+
+      if (!consultation) {
+        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      const documents = await this.consultationDocModel.findAll({
+        where: { consultation_id: id },
+        order: [['created_at', 'ASC']],
+        include: [{
+          model: this.userModel,
+          as: 'uploaded_by_relation',
+          attributes: ['id', 'first_name', 'last_name']
+        }]
+      });
+
+      return documents.map((doc: any) => {
+        const u = doc.getDataValue('uploaded_by_relation');
+        return {
+          id: doc.id,
+          file_url: doc.file_url,
+          file_name: doc.file_name,
+          file_type: doc.file_type,
+          uploaded_by: u ? {
+            id: u.id,
+            first_name: u.first_name,
+            last_name: u.last_name
+          } : null,
+          created_at: doc.created_at
+        };
+      });
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[getConsultationDocuments] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

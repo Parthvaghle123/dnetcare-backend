@@ -8,8 +8,8 @@ import { User } from '../../auth/entities/user.model';
 
 export enum InvoiceStatus {
   DRAFT = 'DRAFT',
-  UNPAID = 'UNPAID',
-  PARTIAL = 'PARTIAL',
+  ISSUED = 'ISSUED',
+  PARTIALLY_PAID = 'PARTIALLY_PAID',
   PAID = 'PAID',
   CANCELLED = 'CANCELLED',
 }
@@ -110,7 +110,8 @@ export class Invoice extends Model {
   pending_amount: number;
 
   @AllowNull(false)
-  @Column(DataType.ENUM('DRAFT', 'UNPAID', 'PARTIAL', 'PAID', 'CANCELLED'))
+  @Default('ISSUED')
+  @Column(DataType.ENUM('DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'))
   status: InvoiceStatus;
 
   @ForeignKey(() => User)
