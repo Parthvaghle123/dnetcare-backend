@@ -6,8 +6,10 @@ import { User } from '../../auth/entities/user.model';
 
 export enum ExpensePaymentMode {
   CASH = 'CASH',
+  ONLINE = 'ONLINE',
   CARD = 'CARD',
   UPI = 'UPI',
+  CHEQUE = 'CHEQUE',
   BANK_TRANSFER = 'BANK_TRANSFER',
 }
 
@@ -51,7 +53,7 @@ export class Expense extends Model {
   expense_date: Date;
 
   @AllowNull(false)
-  @Column(DataType.ENUM('CASH', 'CARD', 'UPI', 'BANK_TRANSFER'))
+  @Column(DataType.ENUM('CASH', 'ONLINE', 'CARD', 'UPI', 'CHEQUE', 'BANK_TRANSFER'))
   payment_mode: ExpensePaymentMode;
 
   @AllowNull(true)

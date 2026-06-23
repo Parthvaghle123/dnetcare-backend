@@ -19,6 +19,12 @@ export class ConsultationController {
     return { message: 'Consultation created successfully.', data };
   }
 
+  @Get(':id/documents')
+  async getDocuments(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: any) {
+    const data = await this.consultationService.getConsultationDocuments(id, user);
+    return { message: 'Documents fetched.', data };
+  }
+
   @Get(':id')
   async getConsultationById(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: any) {
     const data = await this.consultationService.getConsultationById(user, id);

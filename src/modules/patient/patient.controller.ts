@@ -4,11 +4,15 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
+import { BillingService } from '../billing/billing.service';
 
 @Controller('patients')
 @UseGuards(JwtAuthGuard)
 export class PatientController {
-  constructor(private readonly patientService: PatientService) {}
+  constructor(
+    private readonly patientService: PatientService,
+    private readonly billingService: BillingService
+  ) {}
 
   @Post()
   async createPatient(@Body() dto: CreatePatientDto, @CurrentUser() user: any) {
@@ -20,6 +24,12 @@ export class PatientController {
   async getPatients(@Query() query: any, @CurrentUser() user: any) {
     const data = await this.patientService.getPatients(user, query);
     return { message: 'Patients fetched successfully.', data };
+  }
+
+  @Get(':id/pending-balance')
+  async getPatientPendingBalance(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: any) {
+    const data = await this.billingService.getPatientPendingBalance(user, id);
+    return { message: 'Patient balance fetched.', data };
   }
 
   @Get(':id')
