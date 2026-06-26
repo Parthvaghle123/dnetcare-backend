@@ -1,14 +1,15 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { BillingService } from './billing.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
+import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 
 @Controller('invoices')
 @UseGuards(JwtAuthGuard)
 export class BillingController {
-  constructor(private readonly billingService: BillingService) {}
+  constructor(private readonly billingService: BillingService) { }
 
   @Post()
   async createInvoice(@Body() dto: CreateInvoiceDto, @CurrentUser() user: any) {
@@ -20,6 +21,16 @@ export class BillingController {
   async getInvoices(@Query() query: any, @CurrentUser() user: any) {
     const data = await this.billingService.getInvoices(user, query);
     return { message: 'Invoices fetched successfully.', data };
+  }
+
+  @Put(':id')
+  async updateInvoice(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateInvoiceDto,
+    @CurrentUser() user: any
+  ) {
+    const data = await this.billingService.updateInvoice(user, id, dto);
+    return { message: 'Invoice updated successfully.', data };
   }
 
   @Get(':id')

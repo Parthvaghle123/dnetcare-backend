@@ -10,6 +10,7 @@ import { Patient } from '../patient/entities/patient.model';
 import { Branch } from '../organization/entities/branch.model';
 import { User } from '../auth/entities/user.model';
 import { Appointment } from '../appointment/entities/appointment.model';
+import { UploadModule } from '../upload/upload.module';
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { Appointment } from '../appointment/entities/appointment.model';
       Branch,
       User,
       Appointment
-    ])
+    ]),
+    UploadModule
   ],
   controllers: [ConsultationController],
   providers: [ConsultationService],

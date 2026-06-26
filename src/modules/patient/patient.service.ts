@@ -5,8 +5,15 @@ import { StatusCode } from '../../common/enums/status-code.enum';
 import { Patient } from './entities/patient.model';
 import { Branch } from '../organization/entities/branch.model';
 import { User } from '../auth/entities/user.model';
+import { MedicalConditionMaster } from './entities/medical-condition-master.model';
+import { PatientMedicalCondition } from './entities/patient-medical-condition.model';
+import { Consultation } from '../consultation/entities/consultation.model';
+import { DentalChartEntry } from '../consultation/entities/dental-chart-entry.model';
 import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
+import { UpdatePatientStatusDto } from './dto/update-patient-status.dto';
+import { AddMedicalConditionDto } from './dto/add-medical-condition.dto';
+import { CreateMedicalConditionDto } from './dto/create-medical-condition.dto';
 import { Op } from 'sequelize';
 
 @Injectable()
@@ -17,6 +24,10 @@ export class PatientService {
     @InjectModel(Patient) private patientModel: typeof Patient,
     @InjectModel(Branch) private branchModel: typeof Branch,
     @InjectModel(User) private userModel: typeof User,
+    @InjectModel(MedicalConditionMaster) private conditionMasterModel: typeof MedicalConditionMaster,
+    @InjectModel(PatientMedicalCondition) private patientConditionModel: typeof PatientMedicalCondition,
+    @InjectModel(Consultation) private consultationModel: typeof Consultation,
+    @InjectModel(DentalChartEntry) private dentalChartEntryModel: typeof DentalChartEntry,
     @InjectConnection() private sequelize: Sequelize,
   ) {}
 
@@ -260,6 +271,264 @@ export class PatientService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updatePatient] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+
+  async updatePatientStatus(reqUser: any, id: string, dto: UpdatePatientStatusDto) {
+    try {
+      const patient = await this.patientModel.findOne({
+        where: { id, organization_id: reqUser.org_id },
+      });
+
+      if (!patient) {
+        throw new HttpException('Patient not found.', StatusCode.NOT_FOUND);
+      }
+
+      await patient.update({ is_active: dto.is_active });
+
+      return {
+        id: patient.id,
+        file_number: patient.file_number,
+        first_name: patient.first_name,
+        last_name: patient.last_name,
+        is_active: patient.is_active,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[updatePatientStatus] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async getPatientMedicalConditions(reqUser: any, patientId: string) {
+    try {
+      const patient = await this.patientModel.findOne({
+        where: { id: patientId, organization_id: reqUser.org_id },
+      });
+
+      if (!patient) {
+        throw new HttpException('Patient not found.', StatusCode.NOT_FOUND);
+      }
+
+      const conditions = await this.patientConditionModel.findAll({
+        where: { patient_id: patientId },
+        include: [
+          { model: MedicalConditionMaster, attributes: ['id', 'name'] },
+          { model: User, attributes: ['id', 'first_name', 'last_name'] },
+        ],
+        order: [['created_at', 'DESC']],
+      });
+
+      return conditions.map((pc: any) => ({
+        id: pc.id,
+        condition_id: pc.condition_id,
+        condition_name: pc.condition?.name || null,
+        notes: pc.notes,
+        recorded_by: pc.recorded_by_relation ? {
+          id: pc.recorded_by_relation.id,
+          first_name: pc.recorded_by_relation.first_name,
+          last_name: pc.recorded_by_relation.last_name,
+        } : null,
+        created_at: pc.created_at,
+      }));
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[getPatientMedicalConditions] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async addPatientMedicalCondition(reqUser: any, patientId: string, dto: AddMedicalConditionDto) {
+    try {
+      const patient = await this.patientModel.findOne({
+        where: { id: patientId, organization_id: reqUser.org_id },
+      });
+
+      if (!patient) {
+        throw new HttpException('Patient not found.', StatusCode.NOT_FOUND);
+      }
+
+      const condition = await this.conditionMasterModel.findOne({
+        where: {
+          id: dto.condition_id,
+          is_active: true,
+          [Op.or]: [
+            { organization_id: null },
+            { organization_id: reqUser.org_id },
+          ],
+        },
+      });
+
+      if (!condition) {
+        throw new HttpException('Medical condition not found or not available for your organization.', StatusCode.NOT_FOUND);
+      }
+
+      const existing = await this.patientConditionModel.findOne({
+        where: { patient_id: patientId, condition_id: dto.condition_id },
+      });
+
+      if (existing) {
+        throw new HttpException('This condition is already assigned to the patient.', StatusCode.CONFLICT);
+      }
+
+      const record = await this.patientConditionModel.create({
+        patient_id: patientId,
+        condition_id: dto.condition_id,
+        notes: dto.notes || null,
+        recorded_by: reqUser.sub,
+      });
+
+      return {
+        id: record.id,
+        condition_id: record.condition_id,
+        condition_name: condition.name,
+        notes: record.notes,
+        created_at: record.created_at,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[addPatientMedicalCondition] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async removePatientMedicalCondition(reqUser: any, patientId: string, conditionRecordId: string) {
+    try {
+      const patient = await this.patientModel.findOne({
+        where: { id: patientId, organization_id: reqUser.org_id },
+      });
+
+      if (!patient) {
+        throw new HttpException('Patient not found.', StatusCode.NOT_FOUND);
+      }
+
+      const deleted = await this.patientConditionModel.destroy({
+        where: { id: conditionRecordId, patient_id: patientId },
+      });
+
+      if (!deleted) {
+        throw new HttpException('Medical condition record not found for this patient.', StatusCode.NOT_FOUND);
+      }
+
+      return true;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[removePatientMedicalCondition] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async getMedicalConditions(reqUser: any) {
+    try {
+      const conditions = await this.conditionMasterModel.findAll({
+        where: {
+          is_active: true,
+          [Op.or]: [
+            { organization_id: null },
+            { organization_id: reqUser.org_id },
+          ],
+        },
+        order: [['name', 'ASC']],
+      });
+
+      return conditions.map((c) => ({
+        id: c.id,
+        name: c.name,
+        is_system: c.organization_id === null,
+        is_active: c.is_active,
+      }));
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[getMedicalConditions] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async createMedicalCondition(reqUser: any, dto: CreateMedicalConditionDto) {
+    try {
+      const duplicate = await this.conditionMasterModel.findOne({
+        where: {
+          name: { [Op.iLike]: dto.name.trim() },
+          [Op.or]: [
+            { organization_id: null },
+            { organization_id: reqUser.org_id },
+          ],
+        },
+      });
+
+      if (duplicate) {
+        throw new HttpException('A condition with this name already exists.', StatusCode.CONFLICT);
+      }
+
+      const condition = await this.conditionMasterModel.create({
+        name: dto.name.trim(),
+        organization_id: reqUser.org_id,
+        is_active: true,
+      });
+
+      return {
+        id: condition.id,
+        name: condition.name,
+        is_system: false,
+        is_active: condition.is_active,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[createMedicalCondition] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async getToothHistory(reqUser: any, patientId: string, tooth: string) {
+    try {
+      const patient = await this.patientModel.findOne({
+        where: { id: patientId, organization_id: reqUser.org_id },
+      });
+
+      if (!patient) {
+        throw new HttpException('Patient not found.', StatusCode.NOT_FOUND);
+      }
+
+      const history = await this.dentalChartEntryModel.findAll({
+        where: { patient_id: patientId, tooth_number: tooth },
+        order: [['created_at', 'DESC']],
+        include: [
+          {
+            model: this.consultationModel,
+            attributes: ['id', 'consultation_date', 'doctor_id'],
+            include: [
+              {
+                model: this.userModel,
+                as: 'doctor', // the alias in Consultation model is 'doctor' (BelongsTo(() => User))
+                attributes: ['id', 'first_name', 'last_name']
+              }
+            ]
+          }
+        ]
+      });
+
+      return history.map((entry: any) => ({
+        id: entry.id,
+        tooth_number: entry.tooth_number,
+        condition: entry.condition,
+        notes: entry.notes,
+        consultation: entry.consultation ? {
+          id: entry.consultation.id,
+          consultation_date: entry.consultation.consultation_date,
+          doctor: entry.consultation.doctor ? {
+            id: entry.consultation.doctor.id,
+            first_name: entry.consultation.doctor.first_name,
+            last_name: entry.consultation.doctor.last_name
+          } : null
+        } : null,
+        created_at: entry.created_at,
+        updated_at: entry.updated_at
+      }));
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[getToothHistory] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }

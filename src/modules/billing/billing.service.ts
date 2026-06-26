@@ -12,6 +12,7 @@ import { ProcedureCatalog } from '../catalog/entities/procedure-catalog.model';
 import { Consultation } from '../consultation/entities/consultation.model';
 import { TreatmentPlan } from '../treatment/entities/treatment-plan.model';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
+import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 
 @Injectable()
@@ -28,7 +29,7 @@ export class BillingService {
     @InjectModel(Consultation) private consultationModel: typeof Consultation,
     @InjectModel(TreatmentPlan) private treatmentPlanModel: typeof TreatmentPlan,
     private sequelize: Sequelize,
-  ) {}
+  ) { }
 
   async createInvoice(user: any, dto: CreateInvoiceDto) {
     try {
@@ -80,13 +81,13 @@ export class BillingService {
         const quantity = item.quantity ?? 1;
         const discount = item.discount ?? 0;
         const lineSubtotal = (Number(item.unit_cost) * quantity) - Number(discount);
-        
+
         if (lineSubtotal < 0) {
           throw new BadRequestException('Line item discount cannot exceed cost.');
         }
 
         procedureAmount += lineSubtotal;
-        
+
         return {
           ...item,
           quantity,
@@ -140,7 +141,7 @@ export class BillingService {
             total: total,
             paid_amount: 0,
             pending_amount: total,
-            status: InvoiceStatus.ISSUED,
+            status: dto.status || InvoiceStatus.ISSUED,
             notes: dto.notes || null,
             created_by: user.sub,
           },
@@ -167,6 +168,152 @@ export class BillingService {
       this.logger.error(`Create Invoice Error: ${error.message}`, error.stack);
       if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException('Failed to create invoice.');
+    }
+  }
+
+  async updateInvoice(user: any, id: string, dto: UpdateInvoiceDto) {
+    try {
+      const invoice = await this.invoiceModel.findOne({
+        where: { id, organization_id: user.org_id },
+      });
+
+      if (!invoice) throw new NotFoundException('Invoice not found.');
+
+      if (invoice.status !== InvoiceStatus.DRAFT) {
+        throw new BadRequestException('Only DRAFT invoices can be updated.');
+      }
+
+      if (dto.status && dto.status !== InvoiceStatus.DRAFT && dto.status !== InvoiceStatus.ISSUED) {
+        throw new BadRequestException('Status can only be updated to DRAFT or ISSUED.');
+      }
+
+      const patientId = dto.patient_id ?? invoice.patient_id;
+      const branchId = dto.branch_id ?? invoice.branch_id;
+      const consultationId = dto.consultation_id !== undefined ? dto.consultation_id : invoice.consultation_id;
+      const treatmentPlanId = dto.treatment_plan_id !== undefined ? dto.treatment_plan_id : invoice.treatment_plan_id;
+
+      if (dto.patient_id && dto.patient_id !== invoice.patient_id) {
+        const patient = await this.patientModel.findOne({
+          where: { id: patientId, organization_id: user.org_id },
+        });
+        if (!patient) throw new NotFoundException('Patient not found.');
+      }
+
+      if (dto.branch_id && dto.branch_id !== invoice.branch_id) {
+        const branch = await this.branchModel.findOne({
+          where: { id: branchId, organization_id: user.org_id },
+        });
+        if (!branch) throw new BadRequestException('Invalid branch.');
+      }
+
+      if (dto.line_items) {
+        if (dto.line_items.length === 0) {
+          throw new BadRequestException('At least one line item is required.');
+        }
+
+        for (let i = 0; i < dto.line_items.length; i++) {
+          const item = dto.line_items[i];
+          if (item.procedure_id) {
+            const procedure = await this.procedureCatalogModel.findOne({
+              where: { id: item.procedure_id, organization_id: user.org_id, is_active: true },
+            });
+            if (!procedure) throw new BadRequestException(`Invalid procedure in line item ${i}.`);
+          }
+        }
+      }
+
+      const consultationFee = dto.consultation_fee ?? invoice.consultation_fee;
+      const otherAmount = dto.other_amount ?? invoice.other_amount;
+      const invoiceDiscount = dto.discount ?? invoice.discount;
+      const gstPercentage = dto.gst_percentage ?? invoice.gst_percentage;
+      const invoiceDate = dto.invoice_date ?? invoice.invoice_date;
+      const notes = dto.notes !== undefined ? dto.notes : invoice.notes;
+
+      let procedureAmount = Number(invoice.procedure_amount);
+      let parsedLineItems: any[] | null = null;
+
+      if (dto.line_items) {
+        procedureAmount = 0;
+        parsedLineItems = dto.line_items.map((item) => {
+          const quantity = item.quantity ?? 1;
+          const discount = item.discount ?? 0;
+          const lineSubtotal = (Number(item.unit_cost) * quantity) - Number(discount);
+          
+          if (lineSubtotal < 0) {
+            throw new BadRequestException('Line item discount cannot exceed cost.');
+          }
+
+          procedureAmount += lineSubtotal;
+          
+          return {
+            ...item,
+            quantity,
+            discount,
+            subtotal: lineSubtotal,
+          };
+        });
+      }
+
+      const subtotal = Number(consultationFee) + Number(otherAmount) + procedureAmount;
+
+      if (invoiceDiscount > subtotal) {
+        throw new BadRequestException('Invoice discount cannot exceed subtotal.');
+      }
+
+      const taxableAmount = subtotal - Number(invoiceDiscount);
+      const gstAmount = (taxableAmount * Number(gstPercentage)) / 100;
+      const total = taxableAmount + gstAmount;
+
+      return await this.sequelize.transaction(async (t) => {
+        await invoice.update(
+          {
+            patient_id: patientId,
+            branch_id: branchId,
+            consultation_id: consultationId || null,
+            treatment_plan_id: treatmentPlanId || null,
+            invoice_date: invoiceDate,
+            consultation_fee: consultationFee,
+            other_amount: otherAmount,
+            procedure_amount: procedureAmount,
+            subtotal: subtotal,
+            discount: invoiceDiscount,
+            gst_percentage: gstPercentage,
+            gst_amount: gstAmount,
+            total: total,
+            pending_amount: total, // DRAFT invoices have no payments yet
+            status: dto.status || invoice.status,
+            notes: notes || null,
+          },
+          { transaction: t },
+        );
+
+        if (parsedLineItems) {
+          await this.invoiceLineItemModel.destroy({
+            where: { invoice_id: invoice.id },
+            transaction: t,
+          });
+
+          const lineItemsToInsert = parsedLineItems.map((item) => ({
+            invoice_id: invoice.id,
+            description: item.description,
+            procedure_id: item.procedure_id || null,
+            plan_phase_id: item.treatment_plan_phase_id || null,
+            tooth_numbers: item.tooth_numbers || null,
+            quantity: item.quantity,
+            unit_cost: item.unit_cost,
+            discount: item.discount,
+            subtotal: item.subtotal,
+          }));
+
+          await this.invoiceLineItemModel.bulkCreate(lineItemsToInsert, { transaction: t });
+        }
+
+        return await this.getInvoiceById(user, invoice.id, t);
+      });
+    } catch (error) {
+      this.logger.error(`Update Invoice Error: ${error.message}`, error.stack);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
+      throw new InternalServerErrorException('Failed to update invoice.');
     }
   }
 

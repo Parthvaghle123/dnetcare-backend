@@ -5,6 +5,7 @@ import { Role } from '../../common/enums/role.enum';
 import { ProcedureCatalog } from './entities/procedure-catalog.model';
 import { CreateCatalogDto } from './dto/create-catalog.dto';
 import { UpdateCatalogDto } from './dto/update-catalog.dto';
+import { UpdateCatalogStatusDto } from './dto/update-catalog-status.dto';
 import { Op } from 'sequelize';
 
 @Injectable()
@@ -105,6 +106,83 @@ export class CatalogService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[createCatalog] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async updateCatalog(reqUser: any, id: string, dto: UpdateCatalogDto) {
+    try {
+      if (reqUser.role !== Role.OWNER && reqUser.role !== Role.BRANCH_ADMIN) {
+        throw new HttpException('Only the clinic owner or branch admin can update procedures.', StatusCode.FORBIDDEN);
+      }
+
+      const procedure = await this.catalogModel.findOne({
+        where: { id, organization_id: reqUser.org_id },
+      });
+
+      if (!procedure) {
+        throw new HttpException('Procedure not found.', StatusCode.NOT_FOUND);
+      }
+
+      if (dto.name && dto.name.toLowerCase() !== procedure.name.toLowerCase()) {
+        const existingProcedure = await this.catalogModel.findOne({
+          where: {
+            organization_id: reqUser.org_id,
+            name: { [Op.iLike]: dto.name },
+            id: { [Op.ne]: id }
+          },
+        });
+
+        if (existingProcedure) {
+          throw new HttpException('A procedure with this name already exists.', StatusCode.CONFLICT);
+        }
+      }
+
+      await procedure.update({
+        name: dto.name ?? procedure.name,
+        default_cost: dto.default_cost ?? procedure.default_cost,
+        duration_minutes: dto.duration_minutes ?? procedure.duration_minutes,
+      });
+
+      return {
+        id: procedure.id,
+        name: procedure.name,
+        default_cost: procedure.default_cost,
+        duration_minutes: procedure.duration_minutes,
+        is_active: procedure.is_active,
+        updated_at: procedure.updated_at,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[updateCatalog] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async updateCatalogStatus(reqUser: any, id: string, dto: UpdateCatalogStatusDto) {
+    try {
+      if (reqUser.role !== Role.OWNER && reqUser.role !== Role.BRANCH_ADMIN) {
+        throw new HttpException('Only the clinic owner or branch admin can update procedure status.', StatusCode.FORBIDDEN);
+      }
+
+      const procedure = await this.catalogModel.findOne({
+        where: { id, organization_id: reqUser.org_id },
+      });
+
+      if (!procedure) {
+        throw new HttpException('Procedure not found.', StatusCode.NOT_FOUND);
+      }
+
+      await procedure.update({ is_active: dto.is_active });
+
+      return {
+        id: procedure.id,
+        is_active: procedure.is_active,
+        updated_at: procedure.updated_at,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[updateCatalogStatus] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }

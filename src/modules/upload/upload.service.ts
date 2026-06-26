@@ -48,4 +48,20 @@ export class UploadService {
       streamifier.createReadStream(file.buffer).pipe(uploadStream);
     });
   }
+
+  async deleteFile(fileKey: string): Promise<any> {
+    if (!fileKey) {
+      throw new HttpException('No file key provided.', StatusCode.BAD_REQUEST);
+    }
+
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader.destroy(fileKey, (error, result) => {
+        if (error) {
+          this.logger.error('[deleteFile] Cloudinary delete error:', error);
+          return reject(new HttpException('File deletion failed.', StatusCode.INTERNAL_SERVER_ERROR));
+        }
+        resolve(result);
+      });
+    });
+  }
 }
