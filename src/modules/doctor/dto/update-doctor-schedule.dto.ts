@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsNumber, IsBoolean, Matches, IsOptional, IsUUID, IsArray, IsNotEmpty } from 'class-validator';
+import { IsString, IsEnum, IsNumber, IsBoolean, Matches, IsOptional, IsUUID, IsArray, IsNotEmpty, Min, Max } from 'class-validator';
 import { DayOfWeek } from '../entities/doctor-schedule.model';
 
 export class UpdateDoctorScheduleDto {
@@ -23,6 +23,8 @@ export class UpdateDoctorScheduleDto {
 
   @IsNumber()
   @IsOptional()
+  @Min(30)
+  @Max(120)
   slot_duration_minutes?: number;
 
   @IsBoolean()

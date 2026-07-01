@@ -7,6 +7,7 @@ import { UserBranch } from '../auth/entities/user-branch.model';
 import { Branch } from '../organization/entities/branch.model';
 import { RefreshToken } from '../auth/entities/refresh-token.model';
 import { Role } from '../../common/enums/role.enum';
+import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 import { UpdateStaffStatusDto } from './dto/update-staff-status.dto';
 
@@ -18,6 +19,7 @@ export class StaffService {
     @InjectModel(User) private userModel: typeof User,
     @InjectModel(UserBranch) private userBranchModel: typeof UserBranch,
     @InjectModel(RefreshToken) private refreshTokenModel: typeof RefreshToken,
+    @InjectModel(DoctorProfile) private doctorProfileModel: typeof DoctorProfile,
   ) { }
 
   async getStaffList(reqUser: any, filters: { branch_id?: string, role?: string, status?: string, is_active?: string, is_deleted?: string, is_pending?: string, search?: string, page?: string, limit?: string }) {
@@ -30,12 +32,31 @@ export class StaffService {
       const offset = (page - 1) * limit;
 
       const whereClause: any = {
-        organization_id: orgId,
-        role: { [Op.ne]: Role.OWNER }
+        organization_id: orgId
       };
 
-      if (filters.role && filters.role !== Role.OWNER) {
+      const doctorProfiles = await this.doctorProfileModel.findAll({ attributes: ['user_id'] });
+      const doctorUserIds = doctorProfiles.map(dp => dp.user_id);
+
+      if (filters.role === Role.DOCTOR) {
+        whereClause[Op.and] = whereClause[Op.and] || [];
+        whereClause[Op.and].push({
+          [Op.or]: [
+            { role: Role.DOCTOR },
+            { id: { [Op.in]: doctorUserIds } }
+          ]
+        });
+      } else if (filters.role && filters.role !== Role.OWNER) {
         whereClause.role = filters.role;
+      } else {
+        // No role filter - get all staff, plus owners who have a doctor profile
+        whereClause[Op.and] = whereClause[Op.and] || [];
+        whereClause[Op.and].push({
+          [Op.or]: [
+            { role: { [Op.ne]: Role.OWNER } },
+            { id: { [Op.in]: doctorUserIds } }
+          ]
+        });
       }
 
       if (filters.is_pending === 'true') {
@@ -93,7 +114,7 @@ export class StaffService {
         last_name: user.last_name,
         email: user.email,
         phone: user.phone,
-        role: user.role,
+        role: user.role === UserRole.OWNER ? Role.DOCTOR : user.role,
         status: user.status,
         is_active: user.is_active,
         is_deleted: user.is_deleted,

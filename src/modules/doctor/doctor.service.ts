@@ -1,5 +1,6 @@
 import { Injectable, HttpException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
+import { Op } from 'sequelize';
 import { StatusCode } from '../../common/enums/status-code.enum';
 import { ErrorCode } from '../../common/enums/error-code.enum';
 import { DoctorProfile } from './entities/doctor-profile.model';
@@ -28,7 +29,7 @@ export class DoctorService {
 
   private async verifyDoctorAccess(reqUser: any, doctorId: string) {
     const doctor = await this.userModel.findOne({
-      where: { id: doctorId, organization_id: reqUser.org_id, role: Role.DOCTOR },
+      where: { id: doctorId, organization_id: reqUser.org_id, role: { [Op.in]: [Role.DOCTOR, Role.OWNER] } },
       include: [{ model: UserBranch }]
     });
 
@@ -49,7 +50,7 @@ export class DoctorService {
   async getDoctorProfile(user: any, doctorId: string) {
     try {
       const doctorUser = await this.userModel.findOne({
-        where: { id: doctorId, organization_id: user.org_id, role: Role.DOCTOR }
+        where: { id: doctorId, organization_id: user.org_id, role: { [Op.in]: [Role.DOCTOR, Role.OWNER] } }
       });
 
       if (!doctorUser) {

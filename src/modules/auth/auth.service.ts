@@ -382,6 +382,31 @@ export class AuthService {
           throw new HttpException({ message: 'A user with this email already belongs to another clinic.', error: ErrorCode.DUPLICATE_EMAIL }, StatusCode.CONFLICT);
         }
 
+        if (existingUser.role === UserRole.OWNER && dto.role === Role.DOCTOR) {
+          const existingProfile = await this.doctorProfileModel.findOne({ where: { user_id: existingUser.id } });
+          if (!existingProfile) {
+            await this.doctorProfileModel.create({
+              user_id: existingUser.id
+            });
+          }
+          
+          await existingUser.update({ invite_token: inviteToken });
+
+          const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+          const inviteLink = `${frontendUrl}/accept-invite?token=${inviteToken}`;
+    
+          await this.emailService.sendInviteEmail(
+            existingUser.email,
+            inviteLink
+          );
+
+          return {
+            email: existingUser.email,
+            role: Role.DOCTOR,
+            invite_token: inviteToken
+          };
+        }
+
         if (existingUser.status === UserStatus.ACTIVE) {
           throw new HttpException({ message: 'A user with this email already exists and is active in your clinic.', error: ErrorCode.DUPLICATE_EMAIL }, StatusCode.CONFLICT);
         }
@@ -451,6 +476,14 @@ export class AuthService {
       }
 
       if (user.status !== UserStatus.PENDING) {
+        if (user.role === UserRole.OWNER) {
+          await user.update({ invite_token: null });
+          return {
+            message: 'Invite accepted successfully. You can now act as a Doctor in your clinic.',
+            email: user.email,
+            require_otp: false
+          };
+        }
         throw new HttpException({ message: 'This invite has already been used. Please login directly.', error: ErrorCode.INVITE_ALREADY_USED }, StatusCode.BAD_REQUEST);
       }
 
@@ -485,12 +518,16 @@ export class AuthService {
   async getInviteDetails(token: string) {
     try {
       const user = await this.userModel.findOne({
-        where: { invite_token: token, status: UserStatus.PENDING },
+        where: { invite_token: token },
         include: [{ model: Organization, attributes: ['name', 'logo_url'] }]
       });
 
       if (!user) {
         throw new HttpException({ message: 'Invalid or expired invite link.', error: ErrorCode.INVITE_EXPIRED_OR_INVALID }, StatusCode.BAD_REQUEST);
+      }
+
+      if (user.status !== UserStatus.PENDING && user.role !== UserRole.OWNER) {
+        throw new HttpException({ message: 'This invite has already been used.', error: ErrorCode.INVITE_ALREADY_USED }, StatusCode.BAD_REQUEST);
       }
 
       const userBranches = await this.userBranchModel.findAll({

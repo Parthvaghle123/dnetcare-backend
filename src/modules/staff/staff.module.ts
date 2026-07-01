@@ -5,11 +5,12 @@ import { StaffService } from './staff.service';
 import { User } from '../auth/entities/user.model';
 import { UserBranch } from '../auth/entities/user-branch.model';
 import { RefreshToken } from '../auth/entities/refresh-token.model';
+import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([User, UserBranch, RefreshToken]),
+    SequelizeModule.forFeature([User, UserBranch, RefreshToken, DoctorProfile]),
     AuthModule
   ],
   controllers: [StaffController],
