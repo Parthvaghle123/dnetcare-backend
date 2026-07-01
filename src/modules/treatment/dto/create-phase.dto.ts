@@ -17,9 +17,10 @@ export class CreatePhaseDto {
   @Min(1)
   quantity?: number = 1;
 
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  cost: number;
+  cost?: number;
 
   @IsOptional()
   @IsNumber()

@@ -16,7 +16,7 @@ export class CatalogService {
     @InjectModel(ProcedureCatalog) private catalogModel: typeof ProcedureCatalog,
   ) {}
 
-  async getCatalog(reqUser: any, filters: { search?: string, is_active?: string, page?: string, limit?: string }) {
+  async getCatalog(reqUser: any, filters: { search?: string, is_active?: string, is_deleted?: string, page?: string, limit?: string }) {
     try {
       const page = parseInt(filters.page || '1', 10);
       const limit = parseInt(filters.limit || '10', 10);
@@ -24,10 +24,14 @@ export class CatalogService {
 
       const whereClause: any = { organization_id: reqUser.org_id };
 
+      if (filters.is_deleted !== undefined) {
+        whereClause.is_deleted = filters.is_deleted === 'true';
+      } else {
+        whereClause.is_deleted = false;
+      }
+
       if (filters.is_active !== undefined) {
         whereClause.is_active = filters.is_active === 'true';
-      } else {
-        whereClause.is_active = true;
       }
 
       if (filters.search) {
@@ -49,6 +53,7 @@ export class CatalogService {
         default_cost: item.default_cost,
         duration_minutes: item.duration_minutes,
         is_active: item.is_active,
+        is_deleted: item.is_deleted,
         created_at: item.created_at,
       }));
 
@@ -183,6 +188,30 @@ export class CatalogService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updateCatalogStatus] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async deleteCatalog(reqUser: any, id: string) {
+    try {
+      if (reqUser.role !== Role.OWNER && reqUser.role !== Role.BRANCH_ADMIN) {
+        throw new HttpException('Only the clinic owner or branch admin can delete procedures.', StatusCode.FORBIDDEN);
+      }
+
+      const procedure = await this.catalogModel.findOne({
+        where: { id, organization_id: reqUser.org_id },
+      });
+
+      if (!procedure) {
+        throw new HttpException('Procedure not found.', StatusCode.NOT_FOUND);
+      }
+
+      await procedure.update({ is_deleted: true });
+
+      return true;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[deleteCatalog] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }

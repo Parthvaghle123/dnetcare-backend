@@ -45,6 +45,11 @@ export class ProcedureCatalog extends Model {
   @Column(DataType.BOOLEAN)
   is_active: boolean;
 
+  @AllowNull(false)
+  @Default(false)
+  @Column(DataType.BOOLEAN)
+  is_deleted: boolean;
+
   @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;

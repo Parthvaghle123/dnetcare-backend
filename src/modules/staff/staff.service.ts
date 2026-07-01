@@ -18,9 +18,9 @@ export class StaffService {
     @InjectModel(User) private userModel: typeof User,
     @InjectModel(UserBranch) private userBranchModel: typeof UserBranch,
     @InjectModel(RefreshToken) private refreshTokenModel: typeof RefreshToken,
-  ) {}
+  ) { }
 
-  async getStaffList(reqUser: any, filters: { branch_id?: string, role?: string, status?: string, is_active?: string, search?: string, page?: string, limit?: string }) {
+  async getStaffList(reqUser: any, filters: { branch_id?: string, role?: string, status?: string, is_active?: string, is_deleted?: string, is_pending?: string, search?: string, page?: string, limit?: string }) {
     try {
       const orgId = reqUser.org_id;
       let branchFilter = filters.branch_id ? [filters.branch_id] : reqUser.branch_ids;
@@ -29,7 +29,7 @@ export class StaffService {
       const limit = parseInt(filters.limit || '10', 10);
       const offset = (page - 1) * limit;
 
-      const whereClause: any = { 
+      const whereClause: any = {
         organization_id: orgId,
         role: { [Op.ne]: Role.OWNER }
       };
@@ -37,15 +37,23 @@ export class StaffService {
       if (filters.role && filters.role !== Role.OWNER) {
         whereClause.role = filters.role;
       }
-      
-      if (filters.status) {
+
+      if (filters.is_pending === 'true') {
+        whereClause.status = UserStatus.PENDING;
+      } else if (filters.status) {
         whereClause.status = filters.status;
+      } else {
+        whereClause.status = { [Op.ne]: UserStatus.PENDING };
+      }
+
+      if (filters.is_deleted !== undefined) {
+        whereClause.is_deleted = filters.is_deleted === 'true';
+      } else {
+        whereClause.is_deleted = false;
       }
 
       if (filters.is_active !== undefined) {
         whereClause.is_active = filters.is_active === 'true';
-      } else {
-        whereClause.is_active = true;
       }
 
       if (filters.search) {
@@ -66,13 +74,13 @@ export class StaffService {
       };
 
       if (reqUser.role === Role.OWNER && !filters.branch_id) {
-         queryOptions.include = [{ model: UserBranch, include: [Branch] }];
+        queryOptions.include = [{ model: UserBranch, include: [Branch] }];
       } else {
-         queryOptions.include = [{ 
-           model: UserBranch, 
-           where: { branch_id: branchFilter },
-           include: [Branch]
-         }];
+        queryOptions.include = [{
+          model: UserBranch,
+          where: { branch_id: branchFilter },
+          include: [Branch]
+        }];
       }
 
       const { rows, count } = await this.userModel.findAndCountAll(queryOptions);
@@ -88,6 +96,7 @@ export class StaffService {
         role: user.role,
         status: user.status,
         is_active: user.is_active,
+        is_deleted: user.is_deleted,
         branches: user.user_branches?.map((ub: any) => ({
           id: ub.branch.id,
           name: ub.branch.name,
@@ -278,7 +287,7 @@ export class StaffService {
 
       const deleted = await this.userBranchModel.destroy({ where: { user_id: staffId, branch_id: branchId } });
       if (!deleted) {
-         throw new HttpException('Staff is not assigned to this branch.', StatusCode.BAD_REQUEST);
+        throw new HttpException('Staff is not assigned to this branch.', StatusCode.BAD_REQUEST);
       }
       return true;
     } catch (error) {
@@ -340,8 +349,8 @@ export class StaffService {
         throw new HttpException('Cannot delete the organization owner.', StatusCode.FORBIDDEN);
       }
 
-      // Soft delete user
-      await staff.update({ is_active: false, status: UserStatus.INACTIVE });
+      // Soft delete user via is_deleted
+      await staff.update({ is_deleted: true, is_active: false, status: UserStatus.INACTIVE });
 
       // Revoke all active sessions
       await this.refreshTokenModel.update(

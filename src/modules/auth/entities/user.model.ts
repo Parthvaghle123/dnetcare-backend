@@ -85,6 +85,11 @@ export class User extends Model {
   @Column(DataType.BOOLEAN)
   is_active: boolean;
 
+  @AllowNull(false)
+  @Default(false)
+  @Column(DataType.BOOLEAN)
+  is_deleted: boolean;
+
   @AllowNull(true)
   @Column(DataType.DATE)
   last_login_at: Date;

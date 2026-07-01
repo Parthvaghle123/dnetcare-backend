@@ -28,11 +28,13 @@ export class StaffController {
     @Query('role') role?: string,
     @Query('status') status?: string,
     @Query('is_active') is_active?: string,
+    @Query('is_deleted') is_deleted?: string,
+    @Query('is_pending') is_pending?: string,
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string
   ) {
-    const filters = { branch_id, role, status, is_active, search, page, limit };
+    const filters = { branch_id, role, status, is_active, is_deleted, is_pending, search, page, limit };
     const result = await this.staffService.getStaffList(user, filters);
     return {
       message: 'Staff list fetched successfully.',

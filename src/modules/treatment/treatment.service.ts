@@ -68,13 +68,19 @@ export class TreatmentService {
             transaction,
           });
           if (!procedure) throw new HttpException({ message: `Invalid procedure selected in phase ${i}.`, error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+
+          if (phase.cost === undefined) {
+            phase.cost = Number(procedure.default_cost);
+          }
+        } else if (phase.cost === undefined) {
+          phase.cost = 0;
         }
       }
 
       let totalCost = 0;
       for (const phase of dto.phases) {
         const qty = phase.quantity || 1;
-        const phaseCost = phase.cost * qty;
+        const phaseCost = (phase.cost || 0) * qty;
         const phaseDiscount = phase.discount || 0;
         totalCost += (phaseCost - phaseDiscount);
       }
@@ -578,6 +584,10 @@ export class TreatmentService {
           transaction,
         });
         if (!procedure) throw new HttpException({ message: 'Invalid procedure selected.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+
+        if (dto.cost === undefined) {
+          dto.cost = Number(procedure.default_cost);
+        }
       }
 
       await phase.update({
