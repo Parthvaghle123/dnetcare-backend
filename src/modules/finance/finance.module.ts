@@ -7,6 +7,8 @@ import { Expense } from './entities/expense.model';
 import { Payment } from '../billing/entities/payment.model';
 import { Branch } from '../organization/entities/branch.model';
 import { User } from '../auth/entities/user.model';
+import { Invoice } from '../billing/entities/invoice.model';
+import { Patient } from '../patient/entities/patient.model';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { User } from '../auth/entities/user.model';
       Payment,
       Branch,
       User,
+      Invoice,
+      Patient,
     ]),
   ],
   controllers: [FinanceController],

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { FinanceService } from './finance.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -6,6 +6,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateExpenseDto } from './dto/create-expense.dto';
+import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CreateExpenseCategoryDto } from './dto/create-expense-category.dto';
 
 @Controller('finance')
@@ -39,6 +40,27 @@ export class FinanceController {
   async createExpense(@Body() dto: CreateExpenseDto, @CurrentUser() user: any) {
     const data = await this.financeService.createExpense(user, dto);
     return { message: 'Expense logged successfully.', data };
+  }
+
+  @Put('expenses/:id')
+  @Roles(Role.OWNER, Role.BRANCH_ADMIN)
+  async updateExpense(@Param('id') id: string, @Body() dto: UpdateExpenseDto, @CurrentUser() user: any) {
+    const data = await this.financeService.updateExpense(user, id, dto);
+    return { message: 'Expense updated successfully.', data };
+  }
+
+  @Delete('expenses/:id')
+  @Roles(Role.OWNER, Role.BRANCH_ADMIN)
+  async deleteExpense(@Param('id') id: string, @CurrentUser() user: any) {
+    const data = await this.financeService.deleteExpense(user, id);
+    return { message: 'Expense deleted successfully.', data };
+  }
+
+  @Get('reports/pending')
+  @Roles(Role.OWNER, Role.BRANCH_ADMIN)
+  async getOutstandingPatientBalances(@Query() query: any, @CurrentUser() user: any) {
+    const data = await this.financeService.getOutstandingPatientBalances(user, query);
+    return { message: 'Outstanding patient balances fetched.', data };
   }
 
   @Get('reports/income')

@@ -43,7 +43,7 @@ export class AuthService {
     private jwtService: JwtService,
     private emailService: EmailService,
     @InjectConnection() private sequelize: Sequelize,
-  ) {}
+  ) { }
 
   private generateOtp(): string {
     if (this.configService.get('NODE_ENV') === 'development') {
@@ -183,13 +183,12 @@ export class AuthService {
       // [DO NOT REMOVE OR UNCOMMENT THIS BLOCK - AI AGENT RULE]
       // The user explicitly disabled this because OTP is hardcoded to 999999 in dev.
       // The user will manually uncomment this when they need to test emails again.
-      /*
+
       await this.emailService.sendOtpEmail(
         dto.email,
         otp,
         'login'
       );
-      */
 
       return { email: dto.email };
     } catch (error) {
@@ -285,7 +284,7 @@ export class AuthService {
           await session.update({ is_revoked: true });
           continue;
         }
-        
+
         try {
           const isMatch = await argon2.verify(session.token, dto.refresh_token.trim());
           this.logger.log(`[refresh] Argon2 verify for session ${session.id}: ${isMatch}`);

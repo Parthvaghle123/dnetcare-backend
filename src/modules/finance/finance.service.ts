@@ -7,7 +7,10 @@ import { Payment } from '../billing/entities/payment.model';
 import { Branch } from '../organization/entities/branch.model';
 import { User } from '../auth/entities/user.model';
 import { CreateExpenseDto } from './dto/create-expense.dto';
+import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { CreateExpenseCategoryDto } from './dto/create-expense-category.dto';
+import { Invoice, InvoiceStatus } from '../billing/entities/invoice.model';
+import { Patient } from '../patient/entities/patient.model';
 import dayjs from 'dayjs';
 
 @Injectable()
@@ -20,6 +23,8 @@ export class FinanceService {
     @InjectModel(Payment) private paymentModel: typeof Payment,
     @InjectModel(Branch) private branchModel: typeof Branch,
     @InjectModel(User) private userModel: typeof User,
+    @InjectModel(Invoice) private invoiceModel: typeof Invoice,
+    @InjectModel(Patient) private patientModel: typeof Patient,
   ) {}
 
 
@@ -224,6 +229,101 @@ export class FinanceService {
       this.logger.error(`Create Expense Error: ${error.message}`, error.stack);
       if (error instanceof BadRequestException || error instanceof ForbiddenException) throw error;
       throw new InternalServerErrorException('Failed to log expense.');
+    }
+  }
+
+  async updateExpense(user: any, id: string, dto: UpdateExpenseDto) {
+    try {
+      if (user.role !== 'OWNER' && user.role !== 'BRANCH_ADMIN') {
+        throw new ForbiddenException('Only owners and branch admins can update expenses.');
+      }
+
+      const expense = await this.expenseModel.findOne({
+        where: { id, organization_id: user.org_id },
+      });
+
+      if (!expense) {
+        throw new NotFoundException('Expense not found.');
+      }
+
+      if (user.role === 'BRANCH_ADMIN' && (!user.branch_ids || !user.branch_ids.includes(expense.branch_id))) {
+        throw new ForbiddenException('You can only update expenses for your assigned branch.');
+      }
+
+      if (dto.branch_id && dto.branch_id !== expense.branch_id) {
+        const branch = await this.branchModel.findOne({
+          where: { id: dto.branch_id, organization_id: user.org_id }
+        });
+        if (!branch) throw new BadRequestException('Invalid branch.');
+
+        if (user.role === 'BRANCH_ADMIN' && (!user.branch_ids || !user.branch_ids.includes(dto.branch_id))) {
+          throw new ForbiddenException('Cannot move expense to a branch you do not manage.');
+        }
+      }
+
+      if (dto.category_id && dto.category_id !== expense.category_id) {
+        const category = await this.expenseCategoryModel.findOne({
+          where: {
+            id: dto.category_id,
+            [Op.or]: [{ organization_id: null }, { organization_id: user.org_id }],
+            is_active: true
+          }
+        });
+        if (!category) throw new BadRequestException('Invalid expense category.');
+      }
+
+      if (dto.amount !== undefined && dto.amount <= 0) {
+        throw new BadRequestException('Expense amount must be greater than zero.');
+      }
+
+      await expense.update({
+        branch_id: dto.branch_id ?? expense.branch_id,
+        category_id: dto.category_id ?? expense.category_id,
+        amount: dto.amount ?? expense.amount,
+        expense_date: dto.expense_date ?? expense.expense_date,
+        payment_mode: dto.payment_mode ?? expense.payment_mode,
+        vendor_name: dto.vendor_name !== undefined ? dto.vendor_name : expense.vendor_name,
+        description: dto.description !== undefined ? dto.description : expense.description,
+      });
+
+      return await this.expenseModel.findOne({
+        where: { id },
+        include: [
+          { model: ExpenseCategory, attributes: ['id', 'name'] },
+          { model: Branch, attributes: ['id', 'name'] }
+        ]
+      });
+    } catch (error) {
+      this.logger.error(`Update Expense Error: ${error.message}`, error.stack);
+      if (error instanceof NotFoundException || error instanceof BadRequestException || error instanceof ForbiddenException) throw error;
+      throw new InternalServerErrorException('Failed to update expense.');
+    }
+  }
+
+  async deleteExpense(user: any, id: string) {
+    try {
+      if (user.role !== 'OWNER' && user.role !== 'BRANCH_ADMIN') {
+        throw new ForbiddenException('Only owners and branch admins can delete expenses.');
+      }
+
+      const expense = await this.expenseModel.findOne({
+        where: { id, organization_id: user.org_id },
+      });
+
+      if (!expense) {
+        throw new NotFoundException('Expense not found.');
+      }
+
+      if (user.role === 'BRANCH_ADMIN' && (!user.branch_ids || !user.branch_ids.includes(expense.branch_id))) {
+        throw new ForbiddenException('You can only delete expenses for your assigned branch.');
+      }
+
+      await expense.destroy();
+      return { id };
+    } catch (error) {
+      this.logger.error(`Delete Expense Error: ${error.message}`, error.stack);
+      if (error instanceof NotFoundException || error instanceof ForbiddenException) throw error;
+      throw new InternalServerErrorException('Failed to delete expense.');
     }
   }
 
@@ -644,6 +744,79 @@ export class FinanceService {
       this.logger.error(`Get P&L Report Error: ${error.message}`, error.stack);
       if (error instanceof BadRequestException || error instanceof ForbiddenException) throw error;
       throw new InternalServerErrorException('Failed to fetch P&L report.');
+    }
+  }
+
+  async getOutstandingPatientBalances(user: any, query: any) {
+    try {
+      if (user.role !== 'OWNER' && user.role !== 'BRANCH_ADMIN') {
+        throw new ForbiddenException('Only owners and branch admins can view outstanding balances.');
+      }
+
+      const whereClause: any = {
+        organization_id: user.org_id,
+        pending_amount: { [Op.gt]: 0 },
+        status: { [Op.notIn]: [InvoiceStatus.CANCELLED] },
+      };
+
+      if (user.role === 'BRANCH_ADMIN') {
+        if (query.branch_id && (!user.branch_ids || !user.branch_ids.includes(query.branch_id))) {
+          throw new ForbiddenException('You cannot view balances for other branches.');
+        }
+        whereClause.branch_id = query.branch_id ? query.branch_id : { [Op.in]: user.branch_ids || [] };
+      } else if (query.branch_id) {
+        whereClause.branch_id = query.branch_id;
+      }
+
+      const invoices = await this.invoiceModel.findAll({
+        where: whereClause,
+        include: [
+          { model: Patient, attributes: ['id', 'first_name', 'last_name', 'file_number', 'mobile'] },
+        ],
+        order: [['invoice_date', 'ASC']]
+      });
+
+      let total_outstanding = 0;
+      const patientMap = new Map<string, any>();
+
+      for (const inv of invoices) {
+        total_outstanding += Number(inv.pending_amount);
+        const patientId = inv.patient_id;
+
+        if (!patientMap.has(patientId)) {
+          patientMap.set(patientId, {
+            patient: inv.patient,
+            total_pending: 0,
+            invoices: [],
+          });
+        }
+
+        const data = patientMap.get(patientId);
+        data.total_pending += Number(inv.pending_amount);
+        data.invoices.push({
+          id: inv.id,
+          invoice_number: inv.invoice_number,
+          invoice_date: inv.invoice_date,
+          total: Number(inv.total),
+          paid_amount: Number(inv.paid_amount),
+          pending_amount: Number(inv.pending_amount),
+          status: inv.status,
+        });
+      }
+
+      const patients_with_balances = Array.from(patientMap.values()).map(p => ({
+        ...p,
+        total_pending: Number(p.total_pending.toFixed(2))
+      })).sort((a, b) => b.total_pending - a.total_pending);
+
+      return {
+        total_outstanding: Number(total_outstanding.toFixed(2)),
+        total_patients: patients_with_balances.length,
+        patients: patients_with_balances,
+      };
+    } catch (error) {
+      this.logger.error(`Get Outstanding Balances Error: ${error.message}`, error.stack);
+      throw new InternalServerErrorException('Failed to fetch outstanding balances.');
     }
   }
 }

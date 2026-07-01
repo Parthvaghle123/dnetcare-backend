@@ -16,6 +16,7 @@ import { CreateConsultationDto } from './dto/create-consultation.dto';
 import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import { BulkDentalChartDto } from './dto/dental-chart.dto';
 import { BulkConsultationDocumentDto } from './dto/consultation-document.dto';
+import { UploadService } from '../upload/upload.service';
 
 @Injectable()
 export class ConsultationService {
@@ -28,6 +29,7 @@ export class ConsultationService {
     @InjectModel(Patient) private patientModel: typeof Patient,
     @InjectModel(Branch) private branchModel: typeof Branch,
     @InjectModel(User) private userModel: typeof User,
+    private uploadService: UploadService,
   ) {}
 
   async createConsultation(user: any, dto: CreateConsultationDto) {
@@ -413,6 +415,102 @@ export class ConsultationService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getConsultationDocuments] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async getDentalChartEntries(user: any, consultationId: string) {
+    try {
+      const consultation = await this.consultationModel.findOne({
+        where: { id: consultationId, organization_id: user.org_id }
+      });
+
+      if (!consultation) {
+        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      const entries = await this.dentalChartEntryModel.findAll({
+        where: { consultation_id: consultationId },
+        order: [['created_at', 'ASC']],
+        attributes: ['id', 'tooth_number', 'condition', 'notes', 'created_at', 'updated_at']
+      });
+
+      return entries;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[getDentalChartEntries] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async removeDentalChartEntry(user: any, consultationId: string, entryId: string) {
+    try {
+      const consultation = await this.consultationModel.findOne({
+        where: { id: consultationId, organization_id: user.org_id }
+      });
+
+      if (!consultation) {
+        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      if (consultation.is_completed) {
+        throw new HttpException({ message: 'Cannot modify chart of a completed consultation.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      }
+
+      const deleted = await this.dentalChartEntryModel.destroy({
+        where: { id: entryId, consultation_id: consultationId }
+      });
+
+      if (!deleted) {
+        throw new HttpException({ message: 'Chart entry not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      return true;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[removeDentalChartEntry] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async deleteConsultationDocument(user: any, consultationId: string, documentId: string) {
+    try {
+      const consultation = await this.consultationModel.findOne({
+        where: { id: consultationId, organization_id: user.org_id }
+      });
+
+      if (!consultation) {
+        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      if (consultation.is_completed) {
+        throw new HttpException({ message: 'Cannot delete documents of a completed consultation.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      }
+
+      const document = await this.consultationDocModel.findOne({
+        where: { id: documentId, consultation_id: consultationId }
+      });
+
+      if (!document) {
+        throw new HttpException({ message: 'Document not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      // Delete from Cloudinary
+      if (document.file_key) {
+        try {
+          await this.uploadService.deleteFile(document.file_key);
+        } catch (uploadError) {
+          this.logger.warn(`[deleteConsultationDocument] Failed to delete file from Cloudinary: ${document.file_key}`, uploadError);
+          // Proceed to delete DB record even if Cloudinary deletion fails (e.g., file already deleted from cloud)
+        }
+      }
+
+      await document.destroy();
+
+      return true;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[deleteConsultationDocument] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }

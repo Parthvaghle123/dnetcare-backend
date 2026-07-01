@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Patch, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { ConsultationService } from './consultation.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -58,5 +58,31 @@ export class ConsultationController {
   async completeConsultation(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: any) {
     const data = await this.consultationService.completeConsultation(user, id);
     return { message: 'Consultation marked as completed.', data };
+  }
+
+  @Get(':id/dental-chart')
+  async getDentalChartEntries(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: any) {
+    const data = await this.consultationService.getDentalChartEntries(user, id);
+    return { message: 'Dental chart entries fetched.', data };
+  }
+
+  @Delete(':id/dental-chart/:entryId')
+  async removeDentalChartEntry(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('entryId', ParseUUIDPipe) entryId: string,
+    @CurrentUser() user: any
+  ) {
+    await this.consultationService.removeDentalChartEntry(user, id, entryId);
+    return { message: 'Dental chart entry removed.', data: null };
+  }
+
+  @Delete(':id/documents/:documentId')
+  async deleteConsultationDocument(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @CurrentUser() user: any
+  ) {
+    await this.consultationService.deleteConsultationDocument(user, id, documentId);
+    return { message: 'Document deleted.', data: null };
   }
 }

@@ -15,6 +15,9 @@ import { Invoice } from '../billing/entities/invoice.model';
 
 import { CreateTreatmentPlanDto } from './dto/create-treatment-plan.dto';
 import { CreatePhaseDto } from './dto/create-phase.dto';
+import { UpdateTreatmentPlanDto } from './dto/update-treatment-plan.dto';
+import { UpdateTreatmentPlanStatusDto } from './dto/update-treatment-plan-status.dto';
+import { UpdatePhaseDto } from './dto/update-phase.dto';
 
 @Injectable()
 export class TreatmentService {
@@ -458,6 +461,239 @@ export class TreatmentService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[listTreatmentPlans] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async updateTreatmentPlan(user: any, id: string, dto: UpdateTreatmentPlanDto) {
+    try {
+      const plan = await this.treatmentPlanModel.findOne({
+        where: { id, organization_id: user.org_id },
+      });
+      if (!plan) throw new HttpException({ message: 'Treatment plan not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+
+      let finalCost = plan.final_cost;
+      if (dto.discount !== undefined) {
+        finalCost = Number(plan.total_cost) - Number(dto.discount);
+        if (finalCost < 0) {
+          throw new HttpException({ message: 'Discount cannot exceed total cost.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        }
+      }
+
+      await plan.update({
+        title: dto.title ?? plan.title,
+        notes: dto.notes ?? plan.notes,
+        discount: dto.discount ?? plan.discount,
+        final_cost: finalCost,
+      });
+
+      return {
+        id: plan.id,
+        title: plan.title,
+        notes: plan.notes,
+        total_cost: plan.total_cost,
+        discount: plan.discount,
+        final_cost: plan.final_cost,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('[updateTreatmentPlan] Error:', error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async updateTreatmentPlanStatus(user: any, id: string, dto: UpdateTreatmentPlanStatusDto) {
+    try {
+      const plan = await this.treatmentPlanModel.findOne({
+        where: { id, organization_id: user.org_id },
+      });
+      if (!plan) throw new HttpException({ message: 'Treatment plan not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+
+      await plan.update({ status: dto.status });
+
+      return {
+        id: plan.id,
+        status: plan.status,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('[updateTreatmentPlanStatus] Error:', error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async listPhases(user: any, planId: string) {
+    try {
+      const plan = await this.treatmentPlanModel.findOne({
+        where: { id: planId, organization_id: user.org_id },
+      });
+      if (!plan) throw new HttpException({ message: 'Treatment plan not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+
+      const phasesData = await this.phaseModel.findAll({
+        where: { treatment_plan_id: planId },
+        order: [['phase_number', 'ASC']],
+      });
+
+      return phasesData.map(p => ({
+        id: p.id,
+        phase_number: p.phase_number,
+        title: p.title,
+        procedure_id: p.procedure_id,
+        tooth_numbers: p.tooth_numbers,
+        quantity: p.quantity,
+        cost: p.cost,
+        discount: p.discount,
+        doctor_notes: p.doctor_notes,
+        status: p.status,
+        appointment_id: p.appointment_id,
+        completed_at: p.completed_at,
+        completed_by: p.completed_by,
+        created_at: p.created_at,
+      }));
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('[listPhases] Error:', error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async updatePhase(user: any, planId: string, phaseId: string, dto: UpdatePhaseDto) {
+    const transaction = await this.sequelize.transaction();
+    try {
+      const plan = await this.treatmentPlanModel.findOne({
+        where: { id: planId, organization_id: user.org_id },
+        transaction,
+      });
+      if (!plan) throw new HttpException({ message: 'Treatment plan not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+
+      const phase = await this.phaseModel.findOne({
+        where: { id: phaseId, treatment_plan_id: planId },
+        transaction,
+      });
+      if (!phase) throw new HttpException({ message: 'Phase not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+
+      if (dto.procedure_id) {
+        const procedure = await this.procedureModel.findOne({
+          where: { id: dto.procedure_id, organization_id: user.org_id, is_active: true },
+          transaction,
+        });
+        if (!procedure) throw new HttpException({ message: 'Invalid procedure selected.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      }
+
+      await phase.update({
+        title: dto.title ?? phase.title,
+        procedure_id: dto.procedure_id ?? phase.procedure_id,
+        tooth_numbers: dto.tooth_numbers ?? phase.tooth_numbers,
+        quantity: dto.quantity ?? phase.quantity,
+        cost: dto.cost ?? phase.cost,
+        discount: dto.discount ?? phase.discount,
+        doctor_notes: dto.doctor_notes ?? phase.doctor_notes,
+      }, { transaction });
+
+      // Recalculate plan total_cost
+      const allPhases = await this.phaseModel.findAll({
+        where: { treatment_plan_id: planId },
+        transaction,
+      });
+
+      let totalCost = 0;
+      for (const p of allPhases) {
+        const qty = p.quantity || 1;
+        const phaseCost = Number(p.cost) * qty;
+        const phaseDiscount = Number(p.discount) || 0;
+        totalCost += (phaseCost - phaseDiscount);
+      }
+
+      const finalCost = totalCost - Number(plan.discount || 0);
+
+      if (finalCost < 0) {
+        throw new HttpException({ message: 'Plan discount exceeds total cost.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      }
+
+      await plan.update({
+        total_cost: totalCost,
+        final_cost: finalCost,
+      }, { transaction });
+
+      await transaction.commit();
+
+      return {
+        id: phase.id,
+        title: phase.title,
+        cost: phase.cost,
+        discount: phase.discount,
+        quantity: phase.quantity,
+        total_cost: totalCost,
+        final_cost: finalCost,
+      };
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof HttpException) throw error;
+      this.logger.error('[updatePhase] Error:', error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async removePhase(user: any, planId: string, phaseId: string) {
+    const transaction = await this.sequelize.transaction();
+    try {
+      const plan = await this.treatmentPlanModel.findOne({
+        where: { id: planId, organization_id: user.org_id },
+        transaction,
+      });
+      if (!plan) throw new HttpException({ message: 'Treatment plan not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+
+      const phase = await this.phaseModel.findOne({
+        where: { id: phaseId, treatment_plan_id: planId },
+        transaction,
+      });
+      if (!phase) throw new HttpException({ message: 'Phase not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+
+      if (phase.status === TreatmentPlanPhaseStatus.COMPLETED) {
+        throw new HttpException({ message: 'Cannot remove a completed phase.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      }
+
+      await phase.destroy({ transaction });
+
+      // Recalculate plan costs and total_phases
+      const allPhases = await this.phaseModel.findAll({
+        where: { treatment_plan_id: planId },
+        order: [['phase_number', 'ASC']],
+        transaction,
+      });
+
+      let totalCost = 0;
+      for (let i = 0; i < allPhases.length; i++) {
+        const p = allPhases[i];
+        if (p.phase_number !== i + 1) {
+          await p.update({ phase_number: i + 1 }, { transaction });
+        }
+
+        const qty = p.quantity || 1;
+        const phaseCost = Number(p.cost) * qty;
+        const phaseDiscount = Number(p.discount) || 0;
+        totalCost += (phaseCost - phaseDiscount);
+      }
+
+      const finalCost = totalCost - Number(plan.discount || 0);
+
+      await plan.update({
+        total_phases: allPhases.length,
+        total_cost: totalCost,
+        final_cost: finalCost < 0 ? 0 : finalCost,
+      }, { transaction });
+
+      await transaction.commit();
+
+      return {
+        total_phases: allPhases.length,
+        total_cost: totalCost,
+        final_cost: finalCost < 0 ? 0 : finalCost,
+      };
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof HttpException) throw error;
+      this.logger.error('[removePhase] Error:', error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
