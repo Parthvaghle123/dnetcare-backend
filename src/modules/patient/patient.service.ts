@@ -14,6 +14,9 @@ import { UpdatePatientDto } from './dto/update-patient.dto';
 import { UpdatePatientStatusDto } from './dto/update-patient-status.dto';
 import { AddMedicalConditionDto } from './dto/add-medical-condition.dto';
 import { CreateMedicalConditionDto } from './dto/create-medical-condition.dto';
+import { UpdateMedicalConditionDto } from './dto/update-medical-condition.dto';
+import { UpdateMedicalConditionStatusDto } from './dto/update-medical-condition-status.dto';
+import { UpdatePatientMedicalConditionDto } from './dto/update-patient-medical-condition.dto';
 import { Op } from 'sequelize';
 
 @Injectable()
@@ -394,7 +397,46 @@ export class PatientService {
     }
   }
 
-  async removePatientMedicalCondition(reqUser: any, patientId: string, conditionRecordId: string) {
+  async updatePatientMedicalCondition(reqUser: any, patientId: string, conditionId: string, dto: UpdatePatientMedicalConditionDto) {
+    try {
+      const patient = await this.patientModel.findOne({
+        where: { id: patientId, organization_id: reqUser.org_id },
+      });
+
+      if (!patient) {
+        throw new HttpException('Patient not found.', StatusCode.NOT_FOUND);
+      }
+
+      const record = await this.patientConditionModel.findOne({
+        where: {
+          patient_id: patientId,
+          [Op.or]: [
+            { id: conditionId },
+            { condition_id: conditionId }
+          ]
+        },
+      });
+
+      if (!record) {
+        throw new HttpException('Medical condition record not found for this patient.', StatusCode.NOT_FOUND);
+      }
+
+      await record.update({ notes: dto.notes !== undefined ? dto.notes : record.notes });
+
+      return {
+        id: record.id,
+        condition_id: record.condition_id,
+        notes: record.notes,
+        updated_at: record.updated_at,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[updatePatientMedicalCondition] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async removePatientMedicalCondition(reqUser: any, patientId: string, conditionId: string) {
     try {
       const patient = await this.patientModel.findOne({
         where: { id: patientId, organization_id: reqUser.org_id },
@@ -405,7 +447,13 @@ export class PatientService {
       }
 
       const deleted = await this.patientConditionModel.destroy({
-        where: { id: conditionRecordId, patient_id: patientId },
+        where: {
+          patient_id: patientId,
+          [Op.or]: [
+            { id: conditionId },
+            { condition_id: conditionId }
+          ]
+        },
       });
 
       if (!deleted) {
@@ -477,6 +525,111 @@ export class PatientService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[createMedicalCondition] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async updateMedicalCondition(reqUser: any, id: string, dto: UpdateMedicalConditionDto) {
+    try {
+      const condition = await this.conditionMasterModel.findOne({
+        where: { id, organization_id: reqUser.org_id },
+      });
+
+      if (!condition) {
+        throw new HttpException('Medical condition not found or you do not have permission to edit it.', StatusCode.NOT_FOUND);
+      }
+
+      if (condition.organization_id === null) {
+        throw new HttpException('Cannot edit system default medical conditions.', StatusCode.FORBIDDEN);
+      }
+
+      const duplicate = await this.conditionMasterModel.findOne({
+        where: {
+          name: { [Op.iLike]: dto.name.trim() },
+          id: { [Op.ne]: id },
+          [Op.or]: [
+            { organization_id: null },
+            { organization_id: reqUser.org_id },
+          ],
+        },
+      });
+
+      if (duplicate) {
+        throw new HttpException('A condition with this name already exists.', StatusCode.CONFLICT);
+      }
+
+      await condition.update({ name: dto.name.trim() });
+
+      return {
+        id: condition.id,
+        name: condition.name,
+        is_system: false,
+        is_active: condition.is_active,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[updateMedicalCondition] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async updateMedicalConditionStatus(reqUser: any, id: string, dto: UpdateMedicalConditionStatusDto) {
+    try {
+      const condition = await this.conditionMasterModel.findOne({
+        where: { id, organization_id: reqUser.org_id },
+      });
+
+      if (!condition) {
+        throw new HttpException('Medical condition not found or you do not have permission to edit it.', StatusCode.NOT_FOUND);
+      }
+
+      if (condition.organization_id === null) {
+        throw new HttpException('Cannot edit system default medical conditions.', StatusCode.FORBIDDEN);
+      }
+
+      await condition.update({ is_active: dto.is_active });
+
+      return {
+        id: condition.id,
+        name: condition.name,
+        is_system: false,
+        is_active: condition.is_active,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[updateMedicalConditionStatus] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  async deleteMedicalCondition(reqUser: any, id: string) {
+    try {
+      const condition = await this.conditionMasterModel.findOne({
+        where: { id, organization_id: reqUser.org_id },
+      });
+
+      if (!condition) {
+        throw new HttpException('Medical condition not found or you do not have permission to delete it.', StatusCode.NOT_FOUND);
+      }
+
+      if (condition.organization_id === null) {
+        throw new HttpException('Cannot delete system default medical conditions.', StatusCode.FORBIDDEN);
+      }
+
+      const inUse = await this.patientConditionModel.count({
+        where: { condition_id: id }
+      });
+
+      if (inUse > 0) {
+        throw new HttpException('Cannot delete this condition as it is used by patients.', StatusCode.CONFLICT);
+      }
+
+      await condition.destroy();
+
+      return true;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[deleteMedicalCondition] Error:`, error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }

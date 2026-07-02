@@ -6,6 +6,7 @@ import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { UpdatePatientStatusDto } from './dto/update-patient-status.dto';
 import { AddMedicalConditionDto } from './dto/add-medical-condition.dto';
+import { UpdatePatientMedicalConditionDto } from './dto/update-patient-medical-condition.dto';
 import { BillingService } from '../billing/billing.service';
 
 @Controller('patients')
@@ -54,13 +55,24 @@ export class PatientController {
     return { message: 'Medical condition added successfully.', data };
   }
 
-  @Delete(':id/medical-conditions/:conditionRecordId')
-  async removePatientMedicalCondition(
-    @Param('id', ParseUUIDPipe) patientId: string, 
-    @Param('conditionRecordId', ParseUUIDPipe) conditionRecordId: string, 
+  @Put(':id/medical-conditions/:conditionId')
+  async updatePatientMedicalCondition(
+    @Param('id', ParseUUIDPipe) patientId: string,
+    @Param('conditionId', ParseUUIDPipe) conditionId: string,
+    @Body() dto: UpdatePatientMedicalConditionDto,
     @CurrentUser() user: any
   ) {
-    await this.patientService.removePatientMedicalCondition(user, patientId, conditionRecordId);
+    const data = await this.patientService.updatePatientMedicalCondition(user, patientId, conditionId, dto);
+    return { message: 'Medical condition notes updated successfully.', data };
+  }
+
+  @Delete(':id/medical-conditions/:conditionId')
+  async removePatientMedicalCondition(
+    @Param('id', ParseUUIDPipe) patientId: string, 
+    @Param('conditionId', ParseUUIDPipe) conditionId: string, 
+    @CurrentUser() user: any
+  ) {
+    await this.patientService.removePatientMedicalCondition(user, patientId, conditionId);
     return { message: 'Medical condition removed successfully.', data: null };
   }
 

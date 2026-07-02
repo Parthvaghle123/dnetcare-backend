@@ -1,3 +1,8 @@
+CHANGED: dental-bruno/Auth/✅ Verify OTP.yml, ✅ Refresh Token.yml → Added Bruno post-response scripts to automatically extract and set access_token, refresh_token, and user_id environment variables.
+CHANGED: src/modules/patient/medical-condition.controller.ts, patient.service.ts → Added update, status change, and delete routes for medical condition master.
+CHANGED: src/modules/patient/patient.controller.ts, patient.service.ts → Added update route for patient medical condition notes.
+ADDED: src/modules/patient/dto/* → Created UpdateMedicalConditionDto, UpdateMedicalConditionStatusDto, UpdatePatientMedicalConditionDto.
+ADDED: dental-bruno/Patient/* → Created 4 new Bruno API collection files for the newly added routes.
 CHANGED: src/modules/auth/dto/register.dto.ts → Refined validation and made branch_city optional
 CHANGED: src/modules/auth/auth.service.ts → Added database transaction and phone duplication check
 CHANGED: src/config/database.config.ts → Added global underscored definition and enabled `sync: { alter: true }` in development to automatically apply schema changes without dropping the database.
