@@ -140,6 +140,7 @@ export class OrganizationService {
         phone: branch.phone,
         whatsapp_number: branch.whatsapp_number,
         color_code: branch.color_code,
+        logo_url: branch.logo_url,
         is_active: branch.is_active,
         created_at: branch.created_at,
       }));
@@ -185,6 +186,7 @@ export class OrganizationService {
         state: dto.state || null,
         whatsapp_number: dto.whatsapp_number || null,
         color_code: dto.color_code,
+        logo_url: dto.logo_url || null,
         is_active: true,
       });
 
@@ -197,6 +199,7 @@ export class OrganizationService {
         phone: branch.phone,
         whatsapp_number: branch.whatsapp_number,
         color_code: branch.color_code,
+        logo_url: branch.logo_url,
         is_active: branch.is_active,
         created_at: branch.created_at,
       };
@@ -232,6 +235,7 @@ export class OrganizationService {
         phone: branch.phone,
         whatsapp_number: branch.whatsapp_number,
         color_code: branch.color_code,
+        logo_url: branch.logo_url,
         is_active: branch.is_active,
         created_at: branch.created_at,
         updated_at: branch.updated_at,
@@ -291,6 +295,7 @@ export class OrganizationService {
       if (dto.state !== undefined) updateData.state = dto.state;
       if (dto.whatsapp_number !== undefined) updateData.whatsapp_number = dto.whatsapp_number;
       if (dto.color_code !== undefined) updateData.color_code = dto.color_code;
+      if (dto.logo_url !== undefined) updateData.logo_url = dto.logo_url;
 
       await this.branchModel.update(updateData, { where: { id } });
 
@@ -305,6 +310,7 @@ export class OrganizationService {
         phone: updatedBranch!.phone,
         whatsapp_number: updatedBranch!.whatsapp_number,
         color_code: updatedBranch!.color_code,
+        logo_url: updatedBranch!.logo_url,
         is_active: updatedBranch!.is_active,
         created_at: updatedBranch!.created_at,
         updated_at: updatedBranch!.updated_at,

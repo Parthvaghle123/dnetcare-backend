@@ -49,6 +49,10 @@ export class Branch extends Model {
   @Column(DataType.STRING(7))
   color_code: string;
 
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  logo_url: string;
+
   @AllowNull(false)
   @Column(DataType.BOOLEAN)
   is_active: boolean;

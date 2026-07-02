@@ -35,4 +35,8 @@ export class CreateBranchDto {
   @IsString()
   @Matches(/^#[0-9A-Fa-f]{6}$/, { message: 'color_code must be a valid hex color code (e.g. #3B82F6)' })
   color_code: string;
+
+  @IsOptional()
+  @IsString()
+  logo_url?: string;
 }
