@@ -11,6 +11,8 @@ import { Consultation } from '../consultation/entities/consultation.model';
 import { ProcedureCatalog } from '../catalog/entities/procedure-catalog.model';
 import { User } from '../auth/entities/user.model';
 import { Invoice } from '../billing/entities/invoice.model';
+import { InvoiceLineItem } from '../billing/entities/invoice-line-item.model';
+import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
 
 @Module({
   imports: [
@@ -22,7 +24,9 @@ import { Invoice } from '../billing/entities/invoice.model';
       Consultation,
       ProcedureCatalog,
       User,
-      Invoice
+      Invoice,
+      InvoiceLineItem,
+      DoctorProfile
     ])
   ],
   controllers: [TreatmentController],

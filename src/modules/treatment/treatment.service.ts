@@ -11,7 +11,10 @@ import { Branch } from '../organization/entities/branch.model';
 import { Consultation } from '../consultation/entities/consultation.model';
 import { ProcedureCatalog } from '../catalog/entities/procedure-catalog.model';
 import { User } from '../auth/entities/user.model';
-import { Invoice } from '../billing/entities/invoice.model';
+import { Invoice, InvoiceStatus } from '../billing/entities/invoice.model';
+import { InvoiceLineItem } from '../billing/entities/invoice-line-item.model';
+import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
+import { Op } from 'sequelize';
 
 import { CreateTreatmentPlanDto } from './dto/create-treatment-plan.dto';
 import { CreatePhaseDto } from './dto/create-phase.dto';
@@ -32,6 +35,8 @@ export class TreatmentService {
     @InjectModel(ProcedureCatalog) private procedureModel: typeof ProcedureCatalog,
     @InjectModel(User) private userModel: typeof User,
     @InjectModel(Invoice) private invoiceModel: typeof Invoice,
+    @InjectModel(InvoiceLineItem) private invoiceLineItemModel: typeof InvoiceLineItem,
+    @InjectModel(DoctorProfile) private doctorProfileModel: typeof DoctorProfile,
     private sequelize: Sequelize,
   ) {}
 
@@ -383,6 +388,8 @@ export class TreatmentService {
         await plan.update({ status: TreatmentPlanStatus.COMPLETED });
       }
 
+      await this.generateInvoiceForPhase(user, plan, phase);
+
       const completedUser = await this.userModel.findOne({
         where: { id: user.sub },
         attributes: ['id', 'first_name', 'last_name'],
@@ -404,6 +411,104 @@ export class TreatmentService {
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
     }
   }
+
+  async generateInvoiceForPhase(user: any, plan: any, phase: any, doctorId?: string) {
+    const transaction = await this.sequelize.transaction();
+    try {
+      // Check if an invoice line item already exists for this phase
+      const existing = await this.invoiceLineItemModel.findOne({
+        where: { plan_phase_id: phase.id },
+        transaction
+      });
+
+      if (existing) {
+        await transaction.commit();
+        return; // Invoice already exists, do not create duplicate
+      }
+
+      // Fetch Doctor's Consultation Fee
+      let consultationFee = 0;
+      const targetDoctorId = doctorId || plan.created_by;
+      if (targetDoctorId) {
+        const doctorProfile = await this.doctorProfileModel.findOne({
+          where: { user_id: targetDoctorId },
+          transaction
+        });
+        if (doctorProfile && doctorProfile.default_consultation_fee) {
+          consultationFee = Number(doctorProfile.default_consultation_fee);
+        }
+      }
+
+      // Generate Invoice Number
+      const year = new Date().getFullYear();
+      const count = await this.invoiceModel.count({
+        where: {
+          organization_id: user.org_id,
+          invoice_number: { [Op.like]: `INV-${year}-%` },
+        },
+        transaction,
+      });
+
+      const sequence = count + 1;
+      const invoiceNumber = `INV-${year}-${String(sequence).padStart(5, '0')}`;
+
+      const quantity = phase.quantity || 1;
+      const discount = Number(phase.discount) || 0;
+      const unitCost = Number(phase.cost) || 0;
+      const procedureSubtotal = (unitCost * quantity) - discount;
+      
+      const invoiceSubtotal = procedureSubtotal + consultationFee;
+
+      // Create Invoice
+      const invoice = await this.invoiceModel.create(
+        {
+          organization_id: user.org_id,
+          branch_id: plan.branch_id,
+          patient_id: plan.patient_id,
+          consultation_id: plan.consultation_id || null,
+          treatment_plan_id: plan.id,
+          invoice_number: invoiceNumber,
+          invoice_date: new Date().toISOString().split('T')[0],
+          consultation_fee: consultationFee,
+          other_amount: 0,
+          procedure_amount: procedureSubtotal,
+          subtotal: invoiceSubtotal,
+          discount: 0,
+          gst_percentage: 0,
+          gst_amount: 0,
+          total: invoiceSubtotal,
+          paid_amount: 0,
+          pending_amount: invoiceSubtotal,
+          status: InvoiceStatus.ISSUED,
+          created_by: user.sub || user.id,
+        },
+        { transaction }
+      );
+
+      // Create Line Item
+      await this.invoiceLineItemModel.create(
+        {
+          invoice_id: invoice.id,
+          description: phase.title || 'Treatment Phase',
+          procedure_id: phase.procedure_id || null,
+          plan_phase_id: phase.id,
+          tooth_numbers: phase.tooth_numbers || null,
+          quantity: quantity,
+          unit_cost: unitCost,
+          discount: discount,
+          subtotal: procedureSubtotal,
+        },
+        { transaction }
+      );
+
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      this.logger.error(`[generateInvoiceForPhase] Error:`, error);
+      // We don't throw error to not interrupt the workflow, just log it.
+    }
+  }
+
   async listTreatmentPlans(user: any, query: any) {
     try {
       const { patient_id, branch_id, status, page = 1, limit = 10 } = query;

@@ -14,6 +14,7 @@ import { TreatmentPlan } from '../treatment/entities/treatment-plan.model';
 import { TreatmentPlanPhase } from '../treatment/entities/treatment-plan-phase.model';
 import { DoctorSchedule } from '../doctor/entities/doctor-schedule.model';
 import { DoctorLeave } from '../doctor/entities/doctor-leave.model';
+import { TreatmentService } from '../treatment/treatment.service';
 
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentStatusDto, UpdateAppointmentStatusEnum } from './dto/update-appointment-status.dto';
@@ -32,8 +33,9 @@ export class AppointmentService {
     @InjectModel(TreatmentPlanPhase) private phaseModel: typeof TreatmentPlanPhase,
     @InjectModel(DoctorSchedule) private doctorScheduleModel: typeof DoctorSchedule,
     @InjectModel(DoctorLeave) private doctorLeaveModel: typeof DoctorLeave,
+    private treatmentService: TreatmentService,
     private sequelize: Sequelize,
-  ) {}
+  ) { }
 
   private generateSlots(startTime: string, endTime: string, slotDuration: number): string[] {
     const startParts = startTime.split(':');
@@ -62,7 +64,11 @@ export class AppointmentService {
       }
 
       const doctor = await this.userModel.findOne({
-        where: { id: doctor_id, organization_id: user.org_id, role: Role.DOCTOR }
+          where: { 
+          id: doctor_id, 
+          organization_id: user.org_id, 
+          role: { [Op.in]: [Role.DOCTOR, Role.OWNER] } 
+        }
       });
       if (!doctor) throw new HttpException({ message: 'Doctor not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
 
@@ -231,7 +237,7 @@ export class AppointmentService {
       const branch = await this.branchModel.findOne({ where: { id: dto.branch_id, organization_id: user.org_id }, transaction });
       if (!branch) throw new HttpException({ message: 'Invalid branch.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
 
-      const doctor = await this.userModel.findOne({ where: { id: dto.doctor_id, organization_id: user.org_id, role: Role.DOCTOR }, transaction });
+      const doctor = await this.userModel.findOne({ where: { id: dto.doctor_id, organization_id: user.org_id }, transaction });
       if (!doctor) throw new HttpException({ message: 'Invalid doctor.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
 
       const scheduledAt = new Date(dto.scheduled_at);
@@ -477,7 +483,7 @@ export class AppointmentService {
       };
 
       if (!validFlows[appointment.status] || !validFlows[appointment.status].includes(dto.status)) {
-         throw new HttpException({ message: `Invalid status transition from ${appointment.status} to ${dto.status}.`, error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        throw new HttpException({ message: `Invalid status transition from ${appointment.status} to ${dto.status}.`, error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
       }
 
       if (dto.status === UpdateAppointmentStatusEnum.CANCELLED && !dto.cancellation_reason) {
@@ -498,11 +504,19 @@ export class AppointmentService {
       }
 
       if (dto.status === UpdateAppointmentStatusEnum.COMPLETED && appointment.plan_phase_id) {
+        const phase = await this.phaseModel.findByPk(appointment.plan_phase_id);
+        const plan = await this.treatmentPlanModel.findByPk(appointment.treatment_plan_id);
+
         await this.phaseModel.update({ status: 'COMPLETED', completed_at: new Date(), completed_by: user.sub }, { where: { id: appointment.plan_phase_id } });
         const allPhases = await this.phaseModel.findAll({ where: { treatment_plan_id: appointment.treatment_plan_id } });
         const allDone = allPhases.every((p: any) => p.status === 'COMPLETED' || p.status === 'SKIPPED');
         if (allDone && appointment.treatment_plan_id) {
           await this.treatmentPlanModel.update({ status: 'COMPLETED' }, { where: { id: appointment.treatment_plan_id } });
+        }
+
+        if (phase && plan) {
+          // Automatic invoice generation (only if one doesn't already exist for this phase)
+          await this.treatmentService.generateInvoiceForPhase(user, plan, phase, appointment.doctor_id);
         }
       }
 

@@ -12,6 +12,7 @@ import { DoctorSchedule } from '../doctor/entities/doctor-schedule.model';
 import { DoctorLeave } from '../doctor/entities/doctor-leave.model';
 import { TreatmentPlan } from '../treatment/entities/treatment-plan.model';
 import { TreatmentPlanPhase } from '../treatment/entities/treatment-plan-phase.model';
+import { TreatmentModule } from '../treatment/treatment.module';
 
 @Module({
   imports: [
@@ -25,7 +26,8 @@ import { TreatmentPlanPhase } from '../treatment/entities/treatment-plan-phase.m
       DoctorLeave,
       TreatmentPlan,
       TreatmentPlanPhase
-    ])
+    ]),
+    TreatmentModule
   ],
   controllers: [AppointmentController],
   providers: [AppointmentService],

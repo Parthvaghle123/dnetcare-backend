@@ -49,7 +49,11 @@ export class ConsultationService {
       }
 
       const doctor = await this.userModel.findOne({
-        where: { id: dto.doctor_id, organization_id: user.org_id, role: Role.DOCTOR }
+        where: { 
+          id: dto.doctor_id, 
+          organization_id: user.org_id, 
+          role: { [Op.in]: [Role.DOCTOR, Role.OWNER] } 
+        }
       });
       if (!doctor) {
         throw new HttpException({ message: 'Invalid doctor selected.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
