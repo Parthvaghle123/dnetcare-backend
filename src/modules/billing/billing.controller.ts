@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Patch, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
 import { BillingService } from './billing.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -64,5 +64,11 @@ export class BillingController {
   async cancelInvoice(@Param('id') id: string, @CurrentUser() user: any) {
     const data = await this.billingService.cancelInvoice(id, user);
     return { message: 'Invoice cancelled successfully.', data };
+  }
+
+  @Delete(':id')
+  async deleteInvoice(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: any) {
+    const data = await this.billingService.deleteInvoice(user, id);
+    return { message: 'Invoice deleted successfully.', data };
   }
 }

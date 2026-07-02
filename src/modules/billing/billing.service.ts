@@ -179,14 +179,6 @@ export class BillingService {
 
       if (!invoice) throw new NotFoundException('Invoice not found.');
 
-      if (invoice.status !== InvoiceStatus.DRAFT) {
-        throw new BadRequestException('Only DRAFT invoices can be updated.');
-      }
-
-      if (dto.status && dto.status !== InvoiceStatus.DRAFT && dto.status !== InvoiceStatus.ISSUED) {
-        throw new BadRequestException('Status can only be updated to DRAFT or ISSUED.');
-      }
-
       const patientId = dto.patient_id ?? invoice.patient_id;
       const branchId = dto.branch_id ?? invoice.branch_id;
       const consultationId = dto.consultation_id !== undefined ? dto.consultation_id : invoice.consultation_id;
@@ -319,12 +311,13 @@ export class BillingService {
 
   async getInvoices(user: any, query: any) {
     try {
-      const { patient_id, branch_id, status, date_from, date_to, page = 1, limit = 10 } = query;
+      const { patient_id, branch_id, status, treatment_plan_id, date_from, date_to, page = 1, limit = 10 } = query;
       const whereClause: any = { organization_id: user.org_id };
 
       if (patient_id) whereClause.patient_id = patient_id;
       if (branch_id) whereClause.branch_id = branch_id;
       if (status) whereClause.status = status;
+      if (treatment_plan_id) whereClause.treatment_plan_id = treatment_plan_id;
 
       if (date_from && date_to) {
         whereClause.invoice_date = { [Op.between]: [date_from, date_to] };
@@ -680,6 +673,41 @@ export class BillingService {
       this.logger.error(`Cancel Invoice Error: ${error.message}`, error.stack);
       if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException('Failed to cancel invoice.');
+    }
+  }
+
+  async deleteInvoice(user: any, id: string) {
+    try {
+      const invoice = await this.invoiceModel.findOne({
+        where: { id, organization_id: user.org_id },
+      });
+
+      if (!invoice) {
+        throw new NotFoundException('Invoice not found.');
+      }
+
+      const paymentCount = await this.paymentModel.count({
+        where: { invoice_id: id }
+      });
+
+      if (paymentCount > 0) {
+        throw new BadRequestException('Cannot delete invoice with recorded payments. Reverse the payments first.');
+      }
+
+      return await this.sequelize.transaction(async (t) => {
+        await this.invoiceLineItemModel.destroy({
+          where: { invoice_id: id },
+          transaction: t
+        });
+
+        await invoice.destroy({ transaction: t });
+
+        return { id };
+      });
+    } catch (error) {
+      this.logger.error(`Delete Invoice Error: ${error.message}`, error.stack);
+      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
+      throw new InternalServerErrorException('Failed to delete invoice.');
     }
   }
 }
