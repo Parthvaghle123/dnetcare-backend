@@ -133,6 +133,8 @@ export class TreatmentService {
         }, { transaction });
       }
 
+      await this.syncMasterInvoice(user, plan, transaction);
+
       await transaction.commit();
 
       const createdPlan = await this.treatmentPlanModel.findOne({
@@ -288,9 +290,11 @@ export class TreatmentService {
   }
 
   async addPhase(user: any, planId: string, dto: CreatePhaseDto) {
+    const transaction = await this.sequelize.transaction();
     try {
       const plan = await this.treatmentPlanModel.findOne({
         where: { id: planId, organization_id: user.org_id },
+        transaction
       });
       if (!plan) throw new HttpException({ message: 'Treatment plan not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
 
@@ -301,12 +305,20 @@ export class TreatmentService {
       if (dto.procedure_id) {
         const procedure = await this.procedureModel.findOne({
           where: { id: dto.procedure_id, organization_id: user.org_id, is_active: true },
+          transaction
         });
         if (!procedure) throw new HttpException({ message: 'Invalid procedure selected.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+
+        if (dto.cost === undefined) {
+          dto.cost = Number(procedure.default_cost);
+        }
+      } else if (dto.cost === undefined) {
+        dto.cost = 0;
       }
 
       const maxPhase = await this.phaseModel.max('phase_number', {
         where: { treatment_plan_id: planId },
+        transaction
       });
 
       const new_phase_number = (maxPhase as number || 0) + 1;
@@ -322,12 +334,31 @@ export class TreatmentService {
         discount: dto.discount || 0,
         doctor_notes: dto.doctor_notes || null,
         status: TreatmentPlanPhaseStatus.PENDING,
+      }, { transaction });
+
+      const allPhases = await this.phaseModel.findAll({
+        where: { treatment_plan_id: planId },
+        transaction,
       });
 
-      await this.treatmentPlanModel.increment('total_phases', {
-        by: 1,
-        where: { id: planId }
-      });
+      let totalCost = 0;
+      for (const p of allPhases) {
+        const qty = p.quantity || 1;
+        const phaseCost = Number(p.cost) * qty;
+        const phaseDiscount = Number(p.discount) || 0;
+        totalCost += (phaseCost - phaseDiscount);
+      }
+      
+      const finalCost = totalCost - Number(plan.discount || 0);
+
+      await plan.update({
+        total_phases: allPhases.length,
+        total_cost: totalCost,
+        final_cost: finalCost < 0 ? 0 : finalCost,
+      }, { transaction });
+
+      await this.syncMasterInvoice(user, plan, transaction);
+      await transaction.commit();
 
       return {
         id: phase.id,
@@ -343,6 +374,7 @@ export class TreatmentService {
         created_at: phase.created_at,
       };
     } catch (error) {
+      await transaction.rollback();
       if (error instanceof HttpException) throw error;
       this.logger.error('[addPhase] Error:', error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
@@ -388,8 +420,6 @@ export class TreatmentService {
         await plan.update({ status: TreatmentPlanStatus.COMPLETED });
       }
 
-      await this.generateInvoiceForPhase(user, plan, phase);
-
       const completedUser = await this.userModel.findOne({
         where: { id: user.sub },
         attributes: ['id', 'first_name', 'last_name'],
@@ -412,56 +442,63 @@ export class TreatmentService {
     }
   }
 
-  async generateInvoiceForPhase(user: any, plan: any, phase: any, doctorId?: string) {
-    const transaction = await this.sequelize.transaction();
+  async syncMasterInvoice(user: any, plan: any, transaction: any) {
     try {
-      // Check if an invoice line item already exists for this phase
-      const existing = await this.invoiceLineItemModel.findOne({
-        where: { plan_phase_id: phase.id },
-        transaction
+      const phases = await this.phaseModel.findAll({
+        where: { treatment_plan_id: plan.id },
+        transaction,
+        order: [['phase_number', 'ASC']],
       });
 
-      if (existing) {
-        await transaction.commit();
-        return; // Invoice already exists, do not create duplicate
-      }
-
-      // Fetch Doctor's Consultation Fee
-      let consultationFee = 0;
-      const targetDoctorId = doctorId || plan.created_by;
-      if (targetDoctorId) {
-        const doctorProfile = await this.doctorProfileModel.findOne({
-          where: { user_id: targetDoctorId },
-          transaction
-        });
-        if (doctorProfile && doctorProfile.default_consultation_fee) {
-          consultationFee = Number(doctorProfile.default_consultation_fee);
-        }
-      }
-
-      // Generate Invoice Number
-      const year = new Date().getFullYear();
-      const count = await this.invoiceModel.count({
-        where: {
-          organization_id: user.org_id,
-          invoice_number: { [Op.like]: `INV-${year}-%` },
-        },
+      let invoice = await this.invoiceModel.findOne({
+        where: { treatment_plan_id: plan.id },
         transaction,
       });
 
-      const sequence = count + 1;
-      const invoiceNumber = `INV-${year}-${String(sequence).padStart(5, '0')}`;
+      let consultationFee = 0;
+      if (!invoice) {
+        const targetDoctorId = plan.created_by;
+        if (targetDoctorId) {
+          const doctorProfile = await this.doctorProfileModel.findOne({
+            where: { user_id: targetDoctorId },
+            transaction
+          });
+          if (doctorProfile && doctorProfile.default_consultation_fee) {
+            consultationFee = Number(doctorProfile.default_consultation_fee);
+          }
+        }
+      } else {
+        consultationFee = Number(invoice.consultation_fee || 0);
+      }
 
-      const quantity = phase.quantity || 1;
-      const discount = Number(phase.discount) || 0;
-      const unitCost = Number(phase.cost) || 0;
-      const procedureSubtotal = (unitCost * quantity) - discount;
-      
-      const invoiceSubtotal = procedureSubtotal + consultationFee;
+      let procedure_amount = 0;
+      phases.forEach(p => {
+        const qty = p.quantity || 1;
+        const cost = (Number(p.cost) * qty) - Number(p.discount || 0);
+        procedure_amount += cost;
+      });
 
-      // Create Invoice
-      const invoice = await this.invoiceModel.create(
-        {
+      const subtotal = consultationFee + procedure_amount;
+      const invoiceDiscount = Number(plan.discount || 0);
+      const taxableAmount = subtotal - invoiceDiscount;
+      const gstPercentage = invoice ? Number(invoice.gst_percentage || 0) : 0;
+      const gstAmount = (taxableAmount * gstPercentage) / 100;
+      const total = taxableAmount + gstAmount;
+
+      if (!invoice) {
+        const year = new Date().getFullYear();
+        const count = await this.invoiceModel.count({
+          where: {
+            organization_id: user.org_id,
+            invoice_number: { [Op.like]: `INV-${year}-%` },
+          },
+          transaction,
+        });
+
+        const sequence = count + 1;
+        const invoiceNumber = `INV-${year}-${String(sequence).padStart(5, '0')}`;
+
+        invoice = await this.invoiceModel.create({
           organization_id: user.org_id,
           branch_id: plan.branch_id,
           patient_id: plan.patient_id,
@@ -471,41 +508,51 @@ export class TreatmentService {
           invoice_date: new Date().toISOString().split('T')[0],
           consultation_fee: consultationFee,
           other_amount: 0,
-          procedure_amount: procedureSubtotal,
-          subtotal: invoiceSubtotal,
-          discount: 0,
-          gst_percentage: 0,
-          gst_amount: 0,
-          total: invoiceSubtotal,
+          procedure_amount: procedure_amount,
+          subtotal: subtotal,
+          discount: invoiceDiscount,
+          gst_percentage: gstPercentage,
+          gst_amount: gstAmount,
+          total: total,
           paid_amount: 0,
-          pending_amount: invoiceSubtotal,
+          pending_amount: total,
           status: InvoiceStatus.ISSUED,
           created_by: user.sub || user.id,
-        },
-        { transaction }
-      );
+        }, { transaction });
+      } else {
+        const paid = Number(invoice.paid_amount || 0);
+        let pending = total - paid;
+        if (pending < 0) pending = 0;
 
-      // Create Line Item
-      await this.invoiceLineItemModel.create(
-        {
-          invoice_id: invoice.id,
-          description: phase.title || 'Treatment Phase',
-          procedure_id: phase.procedure_id || null,
-          plan_phase_id: phase.id,
-          tooth_numbers: phase.tooth_numbers || null,
-          quantity: quantity,
-          unit_cost: unitCost,
-          discount: discount,
-          subtotal: procedureSubtotal,
-        },
-        { transaction }
-      );
+        await invoice.update({
+          procedure_amount,
+          subtotal,
+          discount: invoiceDiscount,
+          total,
+          pending_amount: pending,
+        }, { transaction });
 
-      await transaction.commit();
+        await this.invoiceLineItemModel.destroy({ where: { invoice_id: invoice.id }, transaction });
+      }
+
+      const lineItems = phases.map(p => ({
+        invoice_id: invoice!.id,
+        description: p.title || `Phase ${p.phase_number}`,
+        procedure_id: p.procedure_id || null,
+        plan_phase_id: p.id,
+        tooth_numbers: p.tooth_numbers || null,
+        quantity: p.quantity || 1,
+        unit_cost: p.cost,
+        discount: p.discount,
+        subtotal: (Number(p.cost) * (p.quantity || 1)) - Number(p.discount || 0),
+      }));
+
+      if (lineItems.length > 0) {
+        await this.invoiceLineItemModel.bulkCreate(lineItems, { transaction });
+      }
     } catch (error) {
-      await transaction.rollback();
-      this.logger.error(`[generateInvoiceForPhase] Error:`, error);
-      // We don't throw error to not interrupt the workflow, just log it.
+      this.logger.error(`[syncMasterInvoice] Error:`, error);
+      throw error;
     }
   }
 
@@ -577,9 +624,11 @@ export class TreatmentService {
   }
 
   async updateTreatmentPlan(user: any, id: string, dto: UpdateTreatmentPlanDto) {
+    const transaction = await this.sequelize.transaction();
     try {
       const plan = await this.treatmentPlanModel.findOne({
         where: { id, organization_id: user.org_id },
+        transaction
       });
       if (!plan) throw new HttpException({ message: 'Treatment plan not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
 
@@ -596,7 +645,10 @@ export class TreatmentService {
         notes: dto.notes ?? plan.notes,
         discount: dto.discount ?? plan.discount,
         final_cost: finalCost,
-      });
+      }, { transaction });
+
+      await this.syncMasterInvoice(user, plan, transaction);
+      await transaction.commit();
 
       return {
         id: plan.id,
@@ -607,6 +659,7 @@ export class TreatmentService {
         final_cost: plan.final_cost,
       };
     } catch (error) {
+      await transaction.rollback();
       if (error instanceof HttpException) throw error;
       this.logger.error('[updateTreatmentPlan] Error:', error);
       throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
@@ -730,6 +783,8 @@ export class TreatmentService {
         final_cost: finalCost,
       }, { transaction });
 
+      await this.syncMasterInvoice(user, plan, transaction);
+
       await transaction.commit();
 
       return {
@@ -797,6 +852,8 @@ export class TreatmentService {
         total_cost: totalCost,
         final_cost: finalCost < 0 ? 0 : finalCost,
       }, { transaction });
+
+      await this.syncMasterInvoice(user, plan, transaction);
 
       await transaction.commit();
 

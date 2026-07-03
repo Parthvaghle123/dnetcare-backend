@@ -504,19 +504,11 @@ export class AppointmentService {
       }
 
       if (dto.status === UpdateAppointmentStatusEnum.COMPLETED && appointment.plan_phase_id) {
-        const phase = await this.phaseModel.findByPk(appointment.plan_phase_id);
-        const plan = await this.treatmentPlanModel.findByPk(appointment.treatment_plan_id);
-
         await this.phaseModel.update({ status: 'COMPLETED', completed_at: new Date(), completed_by: user.sub }, { where: { id: appointment.plan_phase_id } });
         const allPhases = await this.phaseModel.findAll({ where: { treatment_plan_id: appointment.treatment_plan_id } });
         const allDone = allPhases.every((p: any) => p.status === 'COMPLETED' || p.status === 'SKIPPED');
         if (allDone && appointment.treatment_plan_id) {
           await this.treatmentPlanModel.update({ status: 'COMPLETED' }, { where: { id: appointment.treatment_plan_id } });
-        }
-
-        if (phase && plan) {
-          // Automatic invoice generation (only if one doesn't already exist for this phase)
-          await this.treatmentService.generateInvoiceForPhase(user, plan, phase, appointment.doctor_id);
         }
       }
 

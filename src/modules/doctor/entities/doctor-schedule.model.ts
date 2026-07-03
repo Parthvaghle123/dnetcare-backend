@@ -12,6 +12,11 @@ export enum DayOfWeek {
   SUNDAY = 'SUNDAY',
 }
 
+export enum Shift {
+  MORNING = 'MORNING',
+  EVENING = 'EVENING',
+}
+
 @Table({ tableName: 'doctor_schedules', timestamps: true })
 export class DoctorSchedule extends Model {
   @PrimaryKey
@@ -48,8 +53,8 @@ export class DoctorSchedule extends Model {
   end_time: string;
 
   @AllowNull(false)
-  @Column(DataType.INTEGER)
-  slot_duration_minutes: number;
+  @Column(DataType.ENUM('MORNING', 'EVENING'))
+  shift: Shift;
 
   @AllowNull(false)
   @Column(DataType.BOOLEAN)

@@ -145,7 +145,7 @@ export class DoctorService {
         day_of_week: s.day_of_week,
         start_time: s.start_time,
         end_time: s.end_time,
-        slot_duration_minutes: s.slot_duration_minutes,
+        shift: s.shift,
         is_available: s.is_available
       }));
     } catch (error) {
@@ -171,7 +171,7 @@ export class DoctorService {
           day_of_week: day,
           start_time: dto.start_time,
           end_time: dto.end_time,
-          slot_duration_minutes: dto.slot_duration_minutes,
+          shift: dto.shift,
           is_available: dto.is_available
         });
         schedules.push(schedule);
@@ -209,14 +209,14 @@ export class DoctorService {
             branch_id: dto.branch_id !== undefined ? dto.branch_id : schedule.branch_id,
             start_time: dto.start_time !== undefined ? dto.start_time : schedule.start_time,
             end_time: dto.end_time !== undefined ? dto.end_time : schedule.end_time,
-            slot_duration_minutes: dto.slot_duration_minutes !== undefined ? dto.slot_duration_minutes : schedule.slot_duration_minutes,
+            shift: dto.shift !== undefined ? dto.shift : schedule.shift,
             is_available: dto.is_available !== undefined ? dto.is_available : schedule.is_available
           });
 
           updatedSchedules.push(schedule);
         } else {
           // Upsert: Create new schedule if it doesn't exist
-          if (!dto.branch_id || !dto.start_time || !dto.end_time || !dto.slot_duration_minutes) {
+          if (!dto.branch_id || !dto.start_time || !dto.end_time || !dto.shift) {
              throw new HttpException(`Missing required fields to create a new schedule for ${day}`, StatusCode.BAD_REQUEST);
           }
 
@@ -230,7 +230,7 @@ export class DoctorService {
             day_of_week: day,
             start_time: dto.start_time,
             end_time: dto.end_time,
-            slot_duration_minutes: dto.slot_duration_minutes,
+            shift: dto.shift,
             is_available: dto.is_available !== undefined ? dto.is_available : true
           });
 
