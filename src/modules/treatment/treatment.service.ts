@@ -455,21 +455,19 @@ export class TreatmentService {
         transaction,
       });
 
-      let consultationFee = 0;
-      if (!invoice) {
-        const targetDoctorId = plan.created_by;
-        if (targetDoctorId) {
-          const doctorProfile = await this.doctorProfileModel.findOne({
-            where: { user_id: targetDoctorId },
-            transaction
-          });
-          if (doctorProfile && doctorProfile.default_consultation_fee) {
-            consultationFee = Number(doctorProfile.default_consultation_fee);
-          }
+      let docFee = 0;
+      const targetDoctorId = plan.created_by;
+      if (targetDoctorId) {
+        const doctorProfile = await this.doctorProfileModel.findOne({
+          where: { user_id: targetDoctorId },
+          transaction
+        });
+        if (doctorProfile && doctorProfile.default_consultation_fee) {
+          docFee = Number(doctorProfile.default_consultation_fee);
         }
-      } else {
-        consultationFee = Number(invoice.consultation_fee || 0);
       }
+      
+      const consultationFee = docFee * phases.length;
 
       let procedure_amount = 0;
       phases.forEach(p => {
@@ -525,6 +523,7 @@ export class TreatmentService {
         if (pending < 0) pending = 0;
 
         await invoice.update({
+          consultation_fee: consultationFee,
           procedure_amount,
           subtotal,
           discount: invoiceDiscount,
@@ -537,7 +536,7 @@ export class TreatmentService {
 
       const lineItems = phases.map(p => ({
         invoice_id: invoice!.id,
-        description: p.title || `Phase ${p.phase_number}`,
+        description: `${p.title || `Phase ${p.phase_number}`} - ${p.status || 'PENDING'}`,
         procedure_id: p.procedure_id || null,
         plan_phase_id: p.id,
         tooth_numbers: p.tooth_numbers || null,
