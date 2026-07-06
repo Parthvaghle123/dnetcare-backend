@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsUUID, IsNumber, Min, IsArray, ValidateNested, ArrayMinSize } from 'class-validator';
+import { IsString, IsOptional, IsUUID, IsNumber, Min, IsArray, ValidateNested, ArrayMinSize, IsBoolean } from 'class-validator';
 
 export class CreatePhaseDto {
   @IsString()
@@ -30,4 +30,8 @@ export class CreatePhaseDto {
   @IsOptional()
   @IsString()
   doctor_notes?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  separate_cost?: boolean;
 }

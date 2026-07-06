@@ -60,6 +60,11 @@ export class TreatmentPlanPhase extends Model {
   quantity: number;
 
   @AllowNull(false)
+  @Default(false)
+  @Column(DataType.BOOLEAN)
+  separate_cost: boolean;
+
+  @AllowNull(false)
   @Column(DataType.DECIMAL(10, 2))
   cost: number;
 

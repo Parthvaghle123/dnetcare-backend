@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsUUID, IsNumber, Min } from 'class-validator';
+import { IsString, IsOptional, IsUUID, IsNumber, Min, IsBoolean } from 'class-validator';
 
 export class UpdatePhaseDto {
   @IsOptional()
@@ -31,4 +31,8 @@ export class UpdatePhaseDto {
   @IsOptional()
   @IsString()
   doctor_notes?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  separate_cost?: boolean;
 }

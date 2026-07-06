@@ -466,8 +466,7 @@ export class TreatmentService {
           docFee = Number(doctorProfile.default_consultation_fee);
         }
       }
-      
-      const consultationFee = docFee * phases.length;
+      const consultationFee = docFee;
 
       let procedure_amount = 0;
       phases.forEach(p => {
