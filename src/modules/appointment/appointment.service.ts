@@ -262,8 +262,14 @@ export class AppointmentService {
 
       let isWithinSchedule = false;
       for (const schedule of schedules) {
-        const [startH, startM] = schedule.start_time.split(':').map(Number);
-        const [endH, endM] = schedule.end_time.split(':').map(Number);
+        let [startH, startM] = schedule.start_time.split(':').map(Number);
+        let [endH, endM] = schedule.end_time.split(':').map(Number);
+        
+        if (schedule.shift === 'EVENING') {
+          if (startH < 12) startH += 12;
+          if (endH < 12) endH += 12;
+        }
+
         const startMinutes = startH * 60 + startM;
         const endMinutes = endH * 60 + endM;
 
@@ -582,10 +588,37 @@ export class AppointmentService {
       const leave = await this.doctorLeaveModel.findOne({ where: { doctor_id: appointment.doctor_id, leave_date: dateStr }, transaction });
       if (leave) throw new HttpException({ message: 'Doctor is on leave on the selected date.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
 
-      const schedule = await this.doctorScheduleModel.findOne({
+      const schedules = await this.doctorScheduleModel.findAll({
         where: { doctor_id: appointment.doctor_id, branch_id: appointment.branch_id, day_of_week: dayOfWeek, is_available: true }, transaction
       });
-      if (!schedule) throw new HttpException({ message: 'Doctor has no schedule on the selected day.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      if (!schedules || schedules.length === 0) throw new HttpException({ message: 'Doctor has no schedule on the selected day.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+
+      const timeStr = newScheduledAt.toISOString().split('T')[1].slice(0, 5);
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      const slotMinutes = hours * 60 + minutes;
+
+      let isWithinSchedule = false;
+      for (const schedule of schedules) {
+        let [startH, startM] = schedule.start_time.split(':').map(Number);
+        let [endH, endM] = schedule.end_time.split(':').map(Number);
+        
+        if (schedule.shift === 'EVENING') {
+          if (startH < 12) startH += 12;
+          if (endH < 12) endH += 12;
+        }
+
+        const startMinutes = startH * 60 + startM;
+        const endMinutes = endH * 60 + endM;
+
+        if (slotMinutes >= startMinutes && slotMinutes < endMinutes) {
+          isWithinSchedule = true;
+          break;
+        }
+      }
+
+      if (!isWithinSchedule) {
+        throw new HttpException({ message: 'Selected time is outside doctor schedule hours.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      }
 
       const existing = await this.appointmentModel.findOne({
         where: {
