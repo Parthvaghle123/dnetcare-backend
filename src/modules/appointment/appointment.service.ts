@@ -374,7 +374,9 @@ export class AppointmentService {
         include: [
           { model: this.patientModel, attributes: ['id', 'file_number', 'first_name', 'last_name', 'mobile'] },
           { model: this.userModel, as: 'doctor', attributes: ['id', 'first_name', 'last_name'] },
-          { model: this.branchModel, attributes: ['id', 'name', 'color_code'] }
+          { model: this.branchModel, attributes: ['id', 'name', 'color_code'] },
+          { model: this.treatmentPlanModel, attributes: ['id', 'title'] },
+          { model: this.phaseModel, attributes: ['id', 'title'] }
         ]
       });
 
@@ -390,6 +392,8 @@ export class AppointmentService {
         branch: r.branch,
         treatment_plan_id: r.treatment_plan_id,
         treatment_plan_phase_id: r.plan_phase_id,
+        treatment_plan: r.treatment_plan,
+        treatment_phase: r.plan_phase,
         created_at: r.created_at
       }));
 

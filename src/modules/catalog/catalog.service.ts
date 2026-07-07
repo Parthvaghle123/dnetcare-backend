@@ -89,7 +89,25 @@ export class CatalogService {
       });
 
       if (existingProcedure) {
-        throw new HttpException('A procedure with this name already exists.', StatusCode.CONFLICT);
+        if (existingProcedure.is_deleted) {
+          await existingProcedure.update({
+            name: dto.name,
+            is_deleted: false,
+            is_active: true,
+            default_cost: dto.default_cost,
+            duration_minutes: dto.duration_minutes ?? 30,
+          });
+          return {
+            id: existingProcedure.id,
+            name: existingProcedure.name,
+            default_cost: existingProcedure.default_cost,
+            duration_minutes: existingProcedure.duration_minutes,
+            is_active: existingProcedure.is_active,
+            created_at: existingProcedure.created_at,
+          };
+        } else {
+          throw new HttpException('A procedure with this name already exists.', StatusCode.CONFLICT);
+        }
       }
 
       const procedure = await this.catalogModel.create({
@@ -134,7 +152,8 @@ export class CatalogService {
           where: {
             organization_id: reqUser.org_id,
             name: { [Op.iLike]: dto.name },
-            id: { [Op.ne]: id }
+            id: { [Op.ne]: id },
+            is_deleted: false
           },
         });
 
@@ -206,7 +225,7 @@ export class CatalogService {
         throw new HttpException('Procedure not found.', StatusCode.NOT_FOUND);
       }
 
-      await procedure.update({ is_deleted: true });
+      await procedure.destroy();
 
       return true;
     } catch (error) {
