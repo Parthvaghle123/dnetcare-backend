@@ -260,7 +260,8 @@ export class OrganizationService {
         dto.address === undefined &&
         dto.state === undefined &&
         dto.whatsapp_number === undefined &&
-        dto.color_code === undefined
+        dto.color_code === undefined &&
+        dto.logo_url === undefined
       ) {
         throw new HttpException('Provide at least one field to update.', StatusCode.BAD_REQUEST);
       }
