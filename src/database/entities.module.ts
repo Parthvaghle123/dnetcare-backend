@@ -12,6 +12,7 @@ import { ExpenseCategory } from '../modules/finance/entities/expense-category.mo
 import { Prescription } from '../modules/prescription/entities/prescription.model';
 import { PrescriptionMedicine } from '../modules/prescription/entities/prescription-medicine.model';
 import { MedicineMaster } from '../modules/prescription/entities/medicine-master.model';
+import { InternshipInquiry } from '../modules/internship/entities/internship-inquiry.model';
 
 @Module({
   imports: [
@@ -27,7 +28,8 @@ import { MedicineMaster } from '../modules/prescription/entities/medicine-master
       ExpenseCategory,
       Prescription,
       PrescriptionMedicine,
-      MedicineMaster
+      MedicineMaster,
+      InternshipInquiry
     ])
   ],
   exports: [SequelizeModule]

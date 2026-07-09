@@ -21,6 +21,7 @@ import { FinanceModule } from './modules/finance/finance.module';
 import { AppointmentModule } from './modules/appointment/appointment.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { EntitiesModule } from './database/entities.module';
+import { InternshipModule } from './modules/internship/internship.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { EntitiesModule } from './database/entities.module';
     FinanceModule,
     AppointmentModule,
     BillingModule,
+    InternshipModule,
   ],
   controllers: [AppController],
   providers: [
