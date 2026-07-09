@@ -37,6 +37,18 @@ export class AppointmentService {
     private sequelize: Sequelize,
   ) { }
 
+  private getFormatDate(val: any): string {
+    if (!val) return '';
+    if (val instanceof Date) {
+      const year = val.getFullYear();
+      const month = String(val.getMonth() + 1).padStart(2, '0');
+      const day = String(val.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    if (typeof val === 'string' && val.length >= 10) return val.substring(0, 10);
+    return String(val);
+  }
+
   private generateSlots(startTime: string, endTime: string, slotDuration: number): string[] {
     const startParts = startTime.split(':');
     const endParts = endTime.split(':');
@@ -85,15 +97,25 @@ export class AppointmentService {
       }
 
       const leaves = await this.doctorLeaveModel.findAll({
-        where: { doctor_id, branch_id, leave_date: { [Op.between]: [startDateStr, endDateStr] } }
+        where: { 
+          doctor_id, 
+          branch_id,
+          [Op.or]: [
+            { start_date: { [Op.between]: [startDateStr, endDateStr] } },
+            { end_date: { [Op.between]: [startDateStr, endDateStr] } },
+            { start_date: { [Op.lte]: startDateStr }, end_date: { [Op.gte]: endDateStr } }
+          ]
+        }
       });
-      const leaveDates = leaves.map((l: any) => l.leave_date);
 
       const schedules = await this.doctorScheduleModel.findAll({
         where: { doctor_id, branch_id, is_available: true }
       });
-      const scheduleMap = new Map();
-      schedules.forEach((s: any) => scheduleMap.set(s.day_of_week, s));
+      const scheduleMap = new Map<string, any[]>();
+      schedules.forEach((s: any) => {
+        if (!scheduleMap.has(s.day_of_week)) scheduleMap.set(s.day_of_week, []);
+        scheduleMap.get(s.day_of_week)!.push(s);
+      });
 
       const appointments = await this.appointmentModel.findAll({
         where: {
@@ -121,20 +143,45 @@ export class AppointmentService {
         const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
         const dayOfWeek = dayNames[currentDate.getDay()];
 
-        if (leaveDates.includes(currentStr)) {
+        const overlappingLeave = leaves.find((l: any) => currentStr >= this.getFormatDate(l.start_date) && currentStr <= this.getFormatDate(l.end_date));
+        
+        let excludeEvening = false;
+        let isFullLeave = false;
+
+        if (overlappingLeave) {
+          if (overlappingLeave.is_half_day && currentStr === this.getFormatDate(overlappingLeave.start_date)) {
+            excludeEvening = true;
+          } else {
+            isFullLeave = true;
+          }
+        }
+
+        if (isFullLeave) {
           results.push({ date: currentStr, available: false, reason: 'Doctor is on leave', slots: [] });
-        } else if (!scheduleMap.has(dayOfWeek)) {
+        } else if (!scheduleMap.has(dayOfWeek) || scheduleMap.get(dayOfWeek)!.length === 0) {
           results.push({ date: currentStr, available: false, reason: 'No schedule', slots: [] });
         } else {
-          const sch = scheduleMap.get(dayOfWeek);
-          const allSlots = this.generateSlots(sch.start_time, sch.end_time, sch.slot_duration_minutes);
+          const daySchedules = scheduleMap.get(dayOfWeek)!;
+          let allSlots: string[] = [];
+          const slotDuration = parseInt(query.duration_minutes) || 15;
+          
+          daySchedules.forEach((sch: any) => {
+            if (excludeEvening && sch.shift === 'EVENING') return;
+            
+            const shiftSlots = this.generateSlots(sch.start_time, sch.end_time, slotDuration);
+            allSlots = allSlots.concat(shiftSlots);
+          });
+
+          // Sort and deduplicate slots
+          allSlots = [...new Set(allSlots)].sort();
+          
           const bookedTimes = appointmentMap.get(currentStr) || [];
           const availableSlots = allSlots.filter((slot: string) => !bookedTimes.includes(slot));
 
           results.push({
             date: currentStr,
             available: availableSlots.length > 0,
-            slot_duration_minutes: sch.slot_duration_minutes,
+            slot_duration_minutes: slotDuration,
             total_slots: allSlots.length,
             booked_slots: bookedTimes.length,
             available_slots: availableSlots.length,
@@ -249,8 +296,25 @@ export class AppointmentService {
       const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
       const dayOfWeek = dayNames[scheduledAt.getUTCDay()];
 
-      const leave = await this.doctorLeaveModel.findOne({ where: { doctor_id: dto.doctor_id, leave_date: dateStr }, transaction });
-      if (leave) throw new HttpException({ message: 'Doctor is on leave on this date.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      const leave = await this.doctorLeaveModel.findOne({ 
+        where: { 
+          doctor_id: dto.doctor_id, 
+          start_date: { [Op.lte]: dateStr },
+          end_date: { [Op.gte]: dateStr }
+        }, 
+        transaction 
+      });
+
+      if (leave) {
+        if (leave.is_half_day && this.getFormatDate(leave.start_date) === dateStr) {
+           const [s_h, s_m] = timeStr.split(':').map(Number);
+           if ((s_h * 60 + s_m) >= 720) {
+             throw new HttpException({ message: 'Doctor is on half-day leave (evening) on this date.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+           }
+        } else {
+          throw new HttpException({ message: 'Doctor is on leave on this date.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        }
+      }
 
       const schedules = await this.doctorScheduleModel.findAll({
         where: { doctor_id: dto.doctor_id, branch_id: dto.branch_id, day_of_week: dayOfWeek, is_available: true }, transaction
@@ -589,8 +653,26 @@ export class AppointmentService {
       const dayNames = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
       const dayOfWeek = dayNames[newScheduledAt.getDay()];
 
-      const leave = await this.doctorLeaveModel.findOne({ where: { doctor_id: appointment.doctor_id, leave_date: dateStr }, transaction });
-      if (leave) throw new HttpException({ message: 'Doctor is on leave on the selected date.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      const leave = await this.doctorLeaveModel.findOne({ 
+        where: { 
+          doctor_id: appointment.doctor_id, 
+          start_date: { [Op.lte]: dateStr },
+          end_date: { [Op.gte]: dateStr }
+        }, 
+        transaction 
+      });
+
+      if (leave) {
+        const timeStr = newScheduledAt.toISOString().split('T')[1].slice(0, 5);
+        if (leave.is_half_day && this.getFormatDate(leave.start_date) === dateStr) {
+           const [s_h, s_m] = timeStr.split(':').map(Number);
+           if ((s_h * 60 + s_m) >= 720) {
+             throw new HttpException({ message: 'Doctor is on half-day leave (evening) on the selected date.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+           }
+        } else {
+          throw new HttpException({ message: 'Doctor is on leave on the selected date.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        }
+      }
 
       const schedules = await this.doctorScheduleModel.findAll({
         where: { doctor_id: appointment.doctor_id, branch_id: appointment.branch_id, day_of_week: dayOfWeek, is_available: true }, transaction

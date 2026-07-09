@@ -274,13 +274,17 @@ export class DoctorService {
 
       const leaves = await this.leaveModel.findAll({
         where: { doctor_id: doctorId },
-        order: [['leave_date', 'ASC']]
+        order: [['start_date', 'ASC']]
       });
 
       return leaves.map(l => ({
         id: l.id,
         branch_id: l.branch_id,
-        leave_date: l.leave_date,
+        start_date: l.start_date,
+        end_date: l.end_date,
+        leave_date: l.start_date, // Backwards compatibility for frontend
+        total_days: l.total_days,
+        is_half_day: l.is_half_day,
         reason: l.reason,
         notify_patients: l.notify_patients,
         created_at: l.created_at
@@ -301,11 +305,39 @@ export class DoctorService {
       }
 
       const existingLeave = await this.leaveModel.findOne({
-        where: { doctor_id: doctorId, branch_id: dto.branch_id, leave_date: dto.leave_date }
+        where: { 
+          doctor_id: doctorId, 
+          branch_id: dto.branch_id, 
+          [Op.or]: [
+            {
+              start_date: { [Op.between]: [dto.start_date, dto.end_date] }
+            },
+            {
+              end_date: { [Op.between]: [dto.start_date, dto.end_date] }
+            },
+            {
+              start_date: { [Op.lte]: dto.start_date },
+              end_date: { [Op.gte]: dto.end_date }
+            }
+          ]
+        }
       });
 
       if (existingLeave) {
-        throw new HttpException('Leave already logged for this date and branch.', StatusCode.CONFLICT);
+        throw new HttpException('Leave already logged for these dates and branch.', StatusCode.CONFLICT);
+      }
+      
+      const start = new Date(dto.start_date);
+      const end = new Date(dto.end_date);
+      const diffTime = Math.abs(end.getTime() - start.getTime());
+      let calculated_total_days = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      
+      if (dto.is_half_day) {
+        calculated_total_days -= 0.5;
+      }
+
+      if (dto.total_days !== calculated_total_days) {
+        throw new HttpException('Total days mismatch. The provided total days do not match the start and end dates.', StatusCode.BAD_REQUEST);
       }
 
       const leave = await this.leaveModel.create({
@@ -315,7 +347,7 @@ export class DoctorService {
       });
 
       if (dto.notify_patients) {
-        this.logger.log(`[addLeave] Patient notification requested for leave on ${dto.leave_date}. Enqueueing job...`);
+        this.logger.log(`[addLeave] Patient notification requested for leave from ${dto.start_date} to ${dto.end_date}. Enqueueing job...`);
         // TODO: Enqueue BullMQ job here
       }
 

@@ -27,7 +27,20 @@ export class DoctorLeave extends Model {
 
   @AllowNull(false)
   @Column(DataType.DATEONLY)
-  leave_date: Date;
+  start_date: Date;
+
+  @AllowNull(false)
+  @Column(DataType.DATEONLY)
+  end_date: Date;
+
+  @AllowNull(false)
+  @Column(DataType.FLOAT)
+  total_days: number;
+
+  @AllowNull(false)
+  @Default(false)
+  @Column(DataType.BOOLEAN)
+  is_half_day: boolean;
 
   @AllowNull(true)
   @Column(DataType.TEXT)
