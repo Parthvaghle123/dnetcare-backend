@@ -95,6 +95,11 @@ export class InternshipService {
 
     const inquiries = await this.internshipModel.findAll({
       where: whereClause,
+      include: [
+        {
+          model: InternshipExperience,
+        },
+      ],
       order: [['created_at', 'DESC']],
     });
 
