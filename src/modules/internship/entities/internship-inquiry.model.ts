@@ -1,4 +1,5 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, CreatedAt, UpdatedAt, HasMany } from 'sequelize-typescript';
+import { InternshipExperience } from './internship-experience.model';
 
 @Table({ tableName: 'internship_inquiries', timestamps: true })
 export class InternshipInquiry extends Model {
@@ -10,6 +11,9 @@ export class InternshipInquiry extends Model {
   @AllowNull(true)
   @Column(DataType.UUID)
   organization_id: string;
+
+  @HasMany(() => InternshipExperience)
+  experiences: InternshipExperience[];
 
   @AllowNull(false)
   @Column(DataType.STRING)
@@ -23,9 +27,42 @@ export class InternshipInquiry extends Model {
   @Column(DataType.STRING)
   mobile_number: string;
 
-  @AllowNull(false)
+  @AllowNull(true)
   @Column(DataType.STRING)
   qualification: string;
+
+  @AllowNull(true)
+  @Default(false)
+  @Column(DataType.BOOLEAN)
+  is_pursuing: boolean;
+
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  pursuing_year: string;
+
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  city: string;
+
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  state: string;
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  address: string;
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  professional_summary: string;
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  skills: string;
+
+  @AllowNull(true)
+  @Column(DataType.TEXT)
+  cover_note: string;
 
   @AllowNull(true)
   @Column(DataType.TEXT)

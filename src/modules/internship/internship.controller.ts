@@ -1,7 +1,8 @@
 import { Controller, Post, Get, Patch, Body, Param, Query, UseInterceptors, UploadedFile, UseGuards, HttpException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { InternshipService } from './internship.service';
-import { CreateInternshipInquiryDto } from './dto/internship-inquiry.dto';
+import { CreateInternshipBasicDto } from './dto/internship-inquiry-basic.dto';
+import { UpdateInternshipProfessionalDto } from './dto/internship-inquiry-professional.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { StatusCode } from '../../common/enums/status-code.enum';
 
@@ -9,7 +10,22 @@ import { StatusCode } from '../../common/enums/status-code.enum';
 export class InternshipController {
   constructor(private readonly internshipService: InternshipService) {}
 
-  @Post('apply')
+  @Post('apply/basic')
+  async applyBasic(
+    @Body() dto: CreateInternshipBasicDto,
+  ) {
+    return this.internshipService.applyBasicDetails(dto);
+  }
+
+  @Patch('apply/:id/professional')
+  async applyProfessional(
+    @Param('id') id: string,
+    @Body() dto: UpdateInternshipProfessionalDto,
+  ) {
+    return this.internshipService.updateProfessionalDetails(id, dto);
+  }
+
+  @Patch('apply/:id/photo')
   @UseInterceptors(FileInterceptor('file', {
     fileFilter: (req, file, cb) => {
       const allowedExtensions = /\.(jpg|jpeg|png|webp)$/i;
@@ -24,11 +40,11 @@ export class InternshipController {
       fileSize: 5 * 1024 * 1024, // 5MB limit based on the UI
     }
   }))
-  async applyForInternship(
-    @Body() dto: CreateInternshipInquiryDto,
+  async applyPhoto(
+    @Param('id') id: string,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.internshipService.applyForInternship(dto, file);
+    return this.internshipService.uploadPhotoAndComplete(id, file);
   }
 
   @Get()
