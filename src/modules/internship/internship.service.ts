@@ -8,6 +8,7 @@ import { UploadService } from '../upload/upload.service';
 import { EmailService } from '../notification/email.service';
 import { StatusCode } from '../../common/enums/status-code.enum';
 import { ErrorCode } from '../../common/enums/error-code.enum';
+import { InternshipInquiryStatus } from './enums/internship-status.enum';
 
 @Injectable()
 export class InternshipService {
@@ -19,7 +20,25 @@ export class InternshipService {
   ) {}
 
   async applyBasicDetails(dto: CreateInternshipBasicDto) {
-    const inquiry = await this.internshipModel.create({
+    let inquiry = await this.internshipModel.findOne({
+      where: { email: dto.email },
+      include: [InternshipExperience],
+    });
+
+    if (inquiry) {
+      // Update basic details if it exists
+      await inquiry.update({
+        ...dto,
+      });
+
+      return {
+        message: 'Existing CV found and updated.',
+        inquiry_id: inquiry.id,
+        inquiry,
+      };
+    }
+
+    inquiry = await this.internshipModel.create({
       ...dto,
     });
 
@@ -104,5 +123,39 @@ export class InternshipService {
     });
 
     return inquiries;
+  }
+
+  async updateStatus(id: string, status: InternshipInquiryStatus) {
+    const inquiry = await this.internshipModel.findByPk(id);
+    if (!inquiry) {
+      throw new NotFoundException({ message: 'Internship inquiry not found.', error: ErrorCode.NOT_FOUND });
+    }
+
+    await inquiry.update({ status });
+
+    return {
+      message: `Status updated to ${status}.`,
+      inquiry_id: inquiry.id,
+    };
+  }
+
+  async checkByEmail(email: string) {
+    if (!email) {
+      throw new HttpException({ message: 'Email is required.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+    }
+
+    const inquiry = await this.internshipModel.findOne({
+      where: { email },
+      include: [InternshipExperience],
+    });
+
+    if (!inquiry) {
+      return { exists: false };
+    }
+
+    return {
+      exists: true,
+      inquiry,
+    };
   }
 }

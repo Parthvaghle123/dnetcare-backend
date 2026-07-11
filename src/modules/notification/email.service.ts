@@ -234,7 +234,7 @@ export class EmailService {
   async sendInternshipConfirmationEmail(email: string, name: string) {
     const title = 'Application Received';
     const subTitle = 'Internship Application';
-    const mainMessage = `Dear ${name},<br><br>Thank you for submitting your internship application to Dental Clinic. We have successfully received your details and will review your profile. If your qualifications match our requirements, we will get back to you shortly.`;
+    const mainMessage = `Dear ${name},<br><br>Thank you for submitting your internship application to Dental Clinic. We have successfully received your details and will review your profile. If your qualifications match our requirements, we will get back to you shortly.<br><br><b>Important Note:</b> For your security, please be aware that your profile will be automatically disabled after 1 month. Should this happen, you can easily reactivate it at any time by returning to the application portal and entering your registered email address.`;
     const accentColor = '#2563eb';
 
     const html = `

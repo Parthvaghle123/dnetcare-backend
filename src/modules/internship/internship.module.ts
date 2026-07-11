@@ -6,6 +6,7 @@ import { InternshipController } from './internship.controller';
 import { InternshipService } from './internship.service';
 import { UploadModule } from '../upload/upload.module';
 import { NotificationModule } from '../notification/notification.module';
+import { InternshipCronService } from './internship-cron.service';
 
 @Module({
   imports: [
@@ -14,6 +15,6 @@ import { NotificationModule } from '../notification/notification.module';
     NotificationModule
   ],
   controllers: [InternshipController],
-  providers: [InternshipService],
+  providers: [InternshipService, InternshipCronService],
 })
 export class InternshipModule {}

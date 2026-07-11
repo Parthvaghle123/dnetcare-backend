@@ -5,10 +5,16 @@ import { CreateInternshipBasicDto } from './dto/internship-inquiry-basic.dto';
 import { UpdateInternshipProfessionalDto } from './dto/internship-inquiry-professional.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { StatusCode } from '../../common/enums/status-code.enum';
+import { InternshipInquiryStatus } from './enums/internship-status.enum';
 
 @Controller('internships')
 export class InternshipController {
   constructor(private readonly internshipService: InternshipService) {}
+
+  @Get('apply/check')
+  async checkByEmail(@Query('email') email: string) {
+    return this.internshipService.checkByEmail(email);
+  }
 
   @Post('apply/basic')
   async applyBasic(
@@ -45,6 +51,17 @@ export class InternshipController {
     @UploadedFile() file?: Express.Multer.File,
   ) {
     return this.internshipService.uploadPhotoAndComplete(id, file);
+  }
+
+  @Patch('apply/:id/status')
+  async updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: InternshipInquiryStatus,
+  ) {
+    if (!status || !Object.values(InternshipInquiryStatus).includes(status)) {
+      throw new HttpException('Invalid status provided.', StatusCode.BAD_REQUEST);
+    }
+    return this.internshipService.updateStatus(id, status);
   }
 
   @Get()

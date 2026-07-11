@@ -1,5 +1,6 @@
 import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, CreatedAt, UpdatedAt, HasMany } from 'sequelize-typescript';
 import { InternshipExperience } from './internship-experience.model';
+import { InternshipInquiryStatus } from '../enums/internship-status.enum';
 
 @Table({ tableName: 'internship_inquiries', timestamps: true })
 export class InternshipInquiry extends Model {
@@ -7,6 +8,11 @@ export class InternshipInquiry extends Model {
   @Default(DataType.UUIDV4)
   @Column(DataType.UUID)
   declare id: string;
+
+  @AllowNull(false)
+  @Default(InternshipInquiryStatus.ACTIVE)
+  @Column(DataType.STRING)
+  status: string;
 
   @AllowNull(true)
   @Column(DataType.UUID)

@@ -22,6 +22,7 @@ import { AppointmentModule } from './modules/appointment/appointment.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { EntitiesModule } from './database/entities.module';
 import { InternshipModule } from './modules/internship/internship.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { InternshipModule } from './modules/internship/internship.module';
     AppointmentModule,
     BillingModule,
     InternshipModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [
