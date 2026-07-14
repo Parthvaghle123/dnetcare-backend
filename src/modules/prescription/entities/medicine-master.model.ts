@@ -27,6 +27,11 @@ export class MedicineMaster extends Model {
   @Column(DataType.BOOLEAN)
   is_active: boolean;
 
+  @AllowNull(false)
+  @Default(0)
+  @Column(DataType.INTEGER)
+  stock_quantity: number;
+
   @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;

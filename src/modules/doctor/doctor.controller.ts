@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, ParseUUIDPipe, Query } from '@nestjs/common';
 import { DoctorService } from './doctor.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -48,8 +48,12 @@ export class DoctorController {
 
   @Get(':id/schedules')
   @Roles(Role.OWNER, Role.BRANCH_ADMIN, Role.DOCTOR, Role.RECEPTIONIST)
-  async getSchedules(@Param('id', ParseUUIDPipe) doctorId: string, @CurrentUser() user: any) {
-    const data = await this.doctorService.getSchedules(user, doctorId);
+  async getSchedules(
+    @Param('id', ParseUUIDPipe) doctorId: string, 
+    @Query('shift') shift: string,
+    @CurrentUser() user: any
+  ) {
+    const data = await this.doctorService.getSchedules(user, doctorId, shift);
     return { message: 'Doctor schedules fetched.', data };
   }
 

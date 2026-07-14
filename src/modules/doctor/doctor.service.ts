@@ -130,12 +130,17 @@ export class DoctorService {
 
   // --- Schedule Methods ---
 
-  async getSchedules(reqUser: any, doctorId: string) {
+  async getSchedules(reqUser: any, doctorId: string, shift?: string) {
     try {
       await this.verifyDoctorAccess(reqUser, doctorId);
 
+      const whereClause: any = { doctor_id: doctorId };
+      if (shift) {
+        whereClause.shift = shift.toUpperCase();
+      }
+
       const schedules = await this.scheduleModel.findAll({
-        where: { doctor_id: doctorId },
+        where: whereClause,
         order: [['day_of_week', 'ASC'], ['start_time', 'ASC']]
       });
 
@@ -192,7 +197,11 @@ export class DoctorService {
       const updatedSchedules: DoctorSchedule[] = [];
 
       for (const day of dto.day_of_week) {
-        let schedule = await this.scheduleModel.findOne({ where: { doctor_id: doctorId, day_of_week: day } });
+        const whereClause: any = { doctor_id: doctorId, day_of_week: day };
+        if (dto.shift) {
+          whereClause.shift = dto.shift;
+        }
+        let schedule = await this.scheduleModel.findOne({ where: whereClause });
 
         if (schedule) {
           // Update existing schedule

@@ -38,4 +38,22 @@ export class RegisterDto {
   @Matches(/^[0-9]+$/, { message: 'Branch Phone must contain only numbers' })
   @Length(10, 10, { message: 'Branch Phone must be exactly 10 digits' })
   branch_phone?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Branch Address must be text' })
+  branch_address?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Branch State must be text' })
+  branch_state?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Branch start_time must be in HH:MM format' })
+  branch_start_time?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Branch end_time must be in HH:MM format' })
+  branch_end_time?: string;
 }

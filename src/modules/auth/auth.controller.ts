@@ -5,6 +5,7 @@ import { RegisterDto } from './dto/register.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { UpdateEmailDto } from './dto/update-email.dto';
 
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -81,6 +82,17 @@ export class AuthController {
     const data = await this.authService.getMe(user.sub);
     return {
       message: 'User profile fetched.',
+      data
+    };
+  }
+
+  @Patch('me/email')
+  @UseGuards(JwtAuthGuard)
+  @Roles(Role.OWNER)
+  async updateEmail(@Body() dto: UpdateEmailDto, @CurrentUser() user: any) {
+    const data = await this.authService.updateEmail(user.sub, dto);
+    return {
+      message: 'Email updated successfully.',
       data
     };
   }

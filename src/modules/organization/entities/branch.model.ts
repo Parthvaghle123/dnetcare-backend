@@ -57,6 +57,14 @@ export class Branch extends Model {
   @Column(DataType.BOOLEAN)
   is_active: boolean;
 
+  @AllowNull(true)
+  @Column(DataType.TIME)
+  start_time: string;
+
+  @AllowNull(true)
+  @Column(DataType.TIME)
+  end_time: string;
+
   @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;

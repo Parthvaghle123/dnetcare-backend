@@ -21,6 +21,7 @@ import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { InviteStaffDto } from './dto/invite-staff.dto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
+import { UpdateEmailDto } from './dto/update-email.dto';
 
 import { Role } from '../../common/enums/role.enum';
 
@@ -110,7 +111,11 @@ export class AuthService {
         organization_id: createdOrg.id,
         name: branchName,
         city: dto.branch_city,
+        state: dto.branch_state || null,
+        address: dto.branch_address || null,
         phone: dto.branch_phone,
+        start_time: dto.branch_start_time || null,
+        end_time: dto.branch_end_time || null,
         color_code: '#3B82F6',
         is_active: true
       }, { transaction });
@@ -580,6 +585,8 @@ export class AuthService {
         name: ub.branch.name,
         city: ub.branch.city,
         color_code: ub.branch.color_code,
+        start_time: ub.branch.start_time,
+        end_time: ub.branch.end_time,
         is_primary: ub.is_primary
       }));
 
@@ -620,4 +627,28 @@ export class AuthService {
     }
   }
 
+  async updateEmail(userId: string, dto: UpdateEmailDto) {
+    try {
+      const user = await this.userModel.findByPk(userId);
+      if (!user) {
+        throw new HttpException({ message: 'User not found.', error: ErrorCode.ACCOUNT_NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      if (user.email === dto.email) {
+        return { email: user.email };
+      }
+
+      const existing = await this.userModel.findOne({ where: { email: dto.email } });
+      if (existing) {
+        throw new HttpException({ message: 'Email is already in use by another account.', error: ErrorCode.DUPLICATE_EMAIL }, StatusCode.CONFLICT);
+      }
+
+      await user.update({ email: dto.email });
+      return { email: dto.email };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[updateEmail] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

@@ -9,6 +9,7 @@ import { Patient } from '../patient/entities/patient.model';
 import { User } from '../auth/entities/user.model';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
 import { Branch } from '../organization/entities/branch.model';
+import { MedicineMaster } from './entities/medicine-master.model';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { Branch } from '../organization/entities/branch.model';
       User,
       DoctorProfile,
       Branch,
+      MedicineMaster,
     ]),
   ],
   controllers: [PrescriptionController],

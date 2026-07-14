@@ -8,6 +8,7 @@ import { Patient } from '../patient/entities/patient.model';
 import { User } from '../auth/entities/user.model';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
 import { Branch } from '../organization/entities/branch.model';
+import { MedicineMaster } from './entities/medicine-master.model';
 import { CreatePrescriptionDto } from './dto/create-prescription.dto';
 import { UpdatePrescriptionDto } from './dto/update-prescription.dto';
 
@@ -23,6 +24,7 @@ export class PrescriptionService {
     @InjectModel(User) private userModel: typeof User,
     @InjectModel(DoctorProfile) private doctorProfileModel: typeof DoctorProfile,
     @InjectModel(Branch) private branchModel: typeof Branch,
+    @InjectModel(MedicineMaster) private medicineMasterModel: typeof MedicineMaster,
     private sequelize: Sequelize,
   ) {}
 
@@ -134,6 +136,20 @@ export class PrescriptionService {
         }));
 
         await this.prescriptionMedicineModel.bulkCreate(medicinesToInsert, { transaction: t });
+
+        // Decrement stock for medicines
+        for (const med of dto.medicines) {
+          const medicineMaster = await this.medicineMasterModel.findOne({
+            where: { name: med.medicine_name },
+            transaction: t
+          });
+
+          if (medicineMaster) {
+            const decrementAmount = med.quantity || 0;
+            // Ensure stock doesn't go negative, or just let it if that's the business rule. For now we just decrement.
+            await medicineMaster.decrement('stock_quantity', { by: decrementAmount, transaction: t });
+          }
+        }
 
         return await this.buildPrescriptionResponse(prescription, t);
       });

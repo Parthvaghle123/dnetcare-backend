@@ -142,6 +142,8 @@ export class OrganizationService {
         color_code: branch.color_code,
         logo_url: branch.logo_url,
         is_active: branch.is_active,
+        start_time: branch.start_time,
+        end_time: branch.end_time,
         created_at: branch.created_at,
       }));
 
@@ -187,6 +189,8 @@ export class OrganizationService {
         whatsapp_number: dto.whatsapp_number || null,
         color_code: dto.color_code,
         logo_url: dto.logo_url || null,
+        start_time: dto.start_time || null,
+        end_time: dto.end_time || null,
         is_active: true,
       });
 
@@ -201,6 +205,8 @@ export class OrganizationService {
         color_code: branch.color_code,
         logo_url: branch.logo_url,
         is_active: branch.is_active,
+        start_time: branch.start_time,
+        end_time: branch.end_time,
         created_at: branch.created_at,
       };
     } catch (error) {
@@ -237,6 +243,8 @@ export class OrganizationService {
         color_code: branch.color_code,
         logo_url: branch.logo_url,
         is_active: branch.is_active,
+        start_time: branch.start_time,
+        end_time: branch.end_time,
         created_at: branch.created_at,
         updated_at: branch.updated_at,
       };
@@ -261,7 +269,9 @@ export class OrganizationService {
         dto.state === undefined &&
         dto.whatsapp_number === undefined &&
         dto.color_code === undefined &&
-        dto.logo_url === undefined
+        dto.logo_url === undefined &&
+        dto.start_time === undefined &&
+        dto.end_time === undefined
       ) {
         throw new HttpException('Provide at least one field to update.', StatusCode.BAD_REQUEST);
       }
@@ -297,6 +307,8 @@ export class OrganizationService {
       if (dto.whatsapp_number !== undefined) updateData.whatsapp_number = dto.whatsapp_number;
       if (dto.color_code !== undefined) updateData.color_code = dto.color_code;
       if (dto.logo_url !== undefined) updateData.logo_url = dto.logo_url;
+      if (dto.start_time !== undefined) updateData.start_time = dto.start_time;
+      if (dto.end_time !== undefined) updateData.end_time = dto.end_time;
 
       await this.branchModel.update(updateData, { where: { id } });
 
@@ -313,6 +325,8 @@ export class OrganizationService {
         color_code: updatedBranch!.color_code,
         logo_url: updatedBranch!.logo_url,
         is_active: updatedBranch!.is_active,
+        start_time: updatedBranch!.start_time,
+        end_time: updatedBranch!.end_time,
         created_at: updatedBranch!.created_at,
         updated_at: updatedBranch!.updated_at,
       };

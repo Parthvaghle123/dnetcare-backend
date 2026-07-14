@@ -49,18 +49,18 @@ export class AppointmentService {
     return String(val);
   }
 
-  private generateSlots(startTime: string, endTime: string, slotDuration: number): string[] {
+  private generateSlots(startTime: string, endTime: string, interval: number): string[] {
     const startParts = startTime.split(':');
     const endParts = endTime.split(':');
     let current = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
     const end = parseInt(endParts[0]) * 60 + parseInt(endParts[1]);
 
     const slots: string[] = [];
-    while (current + slotDuration <= end) {
+    while (current < end) {
       const hours = Math.floor(current / 60);
       const minutes = current % 60;
       slots.push(String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0'));
-      current += slotDuration;
+      current += interval;
     }
     return slots;
   }
@@ -126,13 +126,17 @@ export class AppointmentService {
         }
       });
 
-      const appointmentMap = new Map<string, string[]>();
+      const appointmentMap = new Map<string, {start: number, end: number}[]>();
       appointments.forEach((a: any) => {
         const dateObj = new Date(a.scheduled_at);
         const dStr = dateObj.toISOString().split('T')[0];
         const tStr = dateObj.toISOString().split('T')[1].slice(0, 5);
+        const [h, m] = tStr.split(':').map(Number);
+        const startMin = h * 60 + m;
+        const endMin = startMin + (a.duration_minutes || 15);
+
         if (!appointmentMap.has(dStr)) appointmentMap.set(dStr, []);
-        appointmentMap.get(dStr)!.push(tStr);
+        appointmentMap.get(dStr)!.push({ start: startMin, end: endMin });
       });
 
       const results: any[] = [];
@@ -162,30 +166,64 @@ export class AppointmentService {
           results.push({ date: currentStr, available: false, reason: 'No schedule', slots: [] });
         } else {
           const daySchedules = scheduleMap.get(dayOfWeek)!;
+          const shiftSlotsMap = new Map<string, string[]>();
           let allSlots: string[] = [];
-          const slotDuration = parseInt(query.duration_minutes) || 15;
+          let totalAvailableSlots = 0;
+          const requestedDuration = parseInt(query.duration_minutes) || 15;
+          const bookedIntervals = appointmentMap.get(currentStr) || [];
           
           daySchedules.forEach((sch: any) => {
             if (excludeEvening && sch.shift === 'EVENING') return;
             
-            const shiftSlots = this.generateSlots(sch.start_time, sch.end_time, slotDuration);
+            const [endH, endM] = sch.end_time.split(':').map(Number);
+            const shiftEndMin = endH * 60 + endM;
+
+            const shiftSlots = this.generateSlots(sch.start_time, sch.end_time, 15); // Generate every 15 mins
             allSlots = allSlots.concat(shiftSlots);
+
+            const availableForShift: string[] = [];
+
+            shiftSlots.forEach(slot => {
+               const [h, m] = slot.split(':').map(Number);
+               const slotStart = h * 60 + m;
+               const slotEnd = slotStart + requestedDuration;
+
+               if (slotEnd > shiftEndMin) return;
+
+               let overlap = false;
+               for (const booked of bookedIntervals) {
+                 if (slotStart < booked.end && slotEnd > booked.start) {
+                   overlap = true;
+                   break;
+                 }
+               }
+
+               if (!overlap) availableForShift.push(slot);
+            });
+
+            if (!shiftSlotsMap.has(sch.shift)) {
+               shiftSlotsMap.set(sch.shift, []);
+            }
+            shiftSlotsMap.get(sch.shift)!.push(...availableForShift);
           });
 
-          // Sort and deduplicate slots
           allSlots = [...new Set(allSlots)].sort();
           
-          const bookedTimes = appointmentMap.get(currentStr) || [];
-          const availableSlots = allSlots.filter((slot: string) => !bookedTimes.includes(slot));
+          const formattedSlots: {shift: string, slots: string[]}[] = [];
+          shiftSlotsMap.forEach((slots, shift) => {
+            const uniqueSorted = [...new Set(slots)].sort();
+            formattedSlots.push({ shift, slots: uniqueSorted });
+            totalAvailableSlots += uniqueSorted.length;
+          });
 
           results.push({
             date: currentStr,
-            available: availableSlots.length > 0,
-            slot_duration_minutes: slotDuration,
+            available: totalAvailableSlots > 0,
+            slot_duration_minutes: requestedDuration,
             total_slots: allSlots.length,
-            booked_slots: bookedTimes.length,
-            available_slots: availableSlots.length,
-            slots: availableSlots
+            booked_slots: allSlots.length - totalAvailableSlots,
+            available_slots: totalAvailableSlots,
+            slots: formattedSlots
           });
         }
         currentDate.setDate(currentDate.getDate() + 1);
