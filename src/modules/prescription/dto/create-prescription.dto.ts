@@ -23,8 +23,17 @@ export class MedicineDto {
 }
 
 export class CreatePrescriptionDto {
+  @IsOptional()
   @IsUUID()
-  consultation_id: string;
+  consultation_id?: string;
+
+  @IsOptional()
+  @IsUUID()
+  treatment_plan_id?: string;
+
+  @IsOptional()
+  @IsUUID()
+  treatment_plan_phase_id?: string;
 
   @IsOptional()
   @IsString()

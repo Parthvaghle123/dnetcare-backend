@@ -17,6 +17,9 @@ async function run() {
 
     await sequelize.query('ALTER TABLE medicine_masters ADD COLUMN IF NOT EXISTS stock_quantity INTEGER NOT NULL DEFAULT 0;');
     console.log('Added stock_quantity to medicine_masters.');
+
+    await sequelize.query('ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS treatment_plan_phase_id UUID;');
+    console.log('Added treatment_plan_phase_id to prescriptions.');
     
   } catch(e) {
     console.error('Error:', e);

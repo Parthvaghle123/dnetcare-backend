@@ -11,12 +11,16 @@ export class Prescription extends Model {
   declare id: string;
 
   @ForeignKey(() => Consultation)
-  @AllowNull(false)
+  @AllowNull(true)
   @Column(DataType.UUID)
   consultation_id: string;
 
   @BelongsTo(() => Consultation)
   consultation: Consultation;
+
+  @AllowNull(true)
+  @Column(DataType.UUID)
+  treatment_plan_phase_id: string;
 
   @ForeignKey(() => Patient)
   @AllowNull(false)

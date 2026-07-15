@@ -627,6 +627,31 @@ export class AuthService {
     }
   }
 
+  async updateProfile(userId: string, dto: any) {
+    try {
+      const user = await this.userModel.findByPk(userId);
+      if (!user) {
+        throw new HttpException({ message: 'User not found.', error: ErrorCode.ACCOUNT_NOT_FOUND }, StatusCode.NOT_FOUND);
+      }
+
+      await user.update({
+        first_name: dto.first_name ?? user.first_name,
+        last_name: dto.last_name ?? user.last_name,
+        phone: dto.phone ?? user.phone
+      });
+
+      return {
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[updateProfile] Error:`, error);
+      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+  }
+
   async updateEmail(userId: string, dto: UpdateEmailDto) {
     try {
       const user = await this.userModel.findByPk(userId);

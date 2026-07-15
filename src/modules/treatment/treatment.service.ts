@@ -577,12 +577,12 @@ export class TreatmentService {
       });
 
       const items = await Promise.all(rows.map(async (row: any) => {
-        const total_phases = await this.phaseModel.count({
-          where: { treatment_plan_id: row.id }
+        const phasesData = await this.phaseModel.findAll({
+          where: { treatment_plan_id: row.id },
+          order: [['phase_number', 'ASC']],
         });
-        const completed_phases = await this.phaseModel.count({
-          where: { treatment_plan_id: row.id, status: TreatmentPlanPhaseStatus.COMPLETED }
-        });
+        const total_phases = phasesData.length;
+        const completed_phases = phasesData.filter(p => p.status === TreatmentPlanPhaseStatus.COMPLETED).length;
 
         const percentage = total_phases === 0 ? 0 : Math.round((completed_phases / total_phases) * 100);
 
@@ -601,6 +601,12 @@ export class TreatmentService {
             completed_phases,
             percentage
           },
+          phases: phasesData.map(p => ({
+            id: p.id,
+            phase_number: p.phase_number,
+            title: p.title,
+            status: p.status,
+          })),
           created_at: row.created_at
         };
       }));
