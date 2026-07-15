@@ -19,7 +19,8 @@ async function run() {
     console.log('Added stock_quantity to medicine_masters.');
 
     await sequelize.query('ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS treatment_plan_phase_id UUID;');
-    console.log('Added treatment_plan_phase_id to prescriptions.');
+    await sequelize.query('ALTER TABLE prescriptions ALTER COLUMN consultation_id DROP NOT NULL;');
+    console.log('Added treatment_plan_phase_id and made consultation_id nullable in prescriptions.');
     
   } catch(e) {
     console.error('Error:', e);

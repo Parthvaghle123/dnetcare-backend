@@ -15,10 +15,11 @@ import { Organization } from '../organization/entities/organization.model';
 import { Branch } from '../organization/entities/branch.model';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
 import { NotificationModule } from '../notification/notification.module';
+import { MedicalConditionMaster } from '../patient/entities/medical-condition-master.model';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([User, Organization, Branch, UserBranch, RefreshToken, DoctorProfile]),
+    SequelizeModule.forFeature([User, Organization, Branch, UserBranch, RefreshToken, DoctorProfile, MedicalConditionMaster]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       inject: [ConfigService],

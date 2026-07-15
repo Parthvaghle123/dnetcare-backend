@@ -14,6 +14,7 @@ import { EmailService } from '../notification/email.service';
 import { UserBranch } from './entities/user-branch.model';
 import { RefreshToken } from './entities/refresh-token.model';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
+import { MedicalConditionMaster } from '../patient/entities/medical-condition-master.model';
 
 import { RegisterDto } from './dto/register.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
@@ -40,6 +41,7 @@ export class AuthService {
     @InjectModel(UserBranch) private userBranchModel: typeof UserBranch,
     @InjectModel(RefreshToken) private refreshTokenModel: typeof RefreshToken,
     @InjectModel(DoctorProfile) private doctorProfileModel: typeof DoctorProfile,
+    @InjectModel(MedicalConditionMaster) private medicalConditionMasterModel: typeof MedicalConditionMaster,
     private configService: ConfigService,
     private jwtService: JwtService,
     private emailService: EmailService,
@@ -142,6 +144,23 @@ export class AuthService {
         branch_id: createdBranch.id,
         is_primary: true,
       }, { transaction });
+
+      const defaultConditions = [
+        'Diabetes',
+        'Hypertension',
+        'Asthma',
+        'Cardiac Disease',
+        'Bleeding Disorder',
+        'Allergies'
+      ];
+      
+      const conditionRecords = defaultConditions.map(name => ({
+        organization_id: createdOrg.id,
+        name: name,
+        is_active: true
+      }));
+
+      await this.medicalConditionMasterModel.bulkCreate(conditionRecords, { transaction });
 
       await this.emailService.sendOtpEmail(
         dto.email,
