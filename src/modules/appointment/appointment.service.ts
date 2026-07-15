@@ -166,7 +166,7 @@ export class AppointmentService {
           results.push({ date: currentStr, available: false, reason: 'No schedule', slots: [] });
         } else {
           const daySchedules = scheduleMap.get(dayOfWeek)!;
-          const shiftSlotsMap = new Map<string, string[]>();
+          const shiftSlotsMap = new Map<string, {time: string, available: boolean}[]>();
           let allSlots: string[] = [];
           let totalAvailableSlots = 0;
           const requestedDuration = parseInt(query.duration_minutes) || 15;
@@ -181,24 +181,24 @@ export class AppointmentService {
             const shiftSlots = this.generateSlots(sch.start_time, sch.end_time, 15); // Generate every 15 mins
             allSlots = allSlots.concat(shiftSlots);
 
-            const availableForShift: string[] = [];
+            const availableForShift: {time: string, available: boolean}[] = [];
 
             shiftSlots.forEach(slot => {
                const [h, m] = slot.split(':').map(Number);
                const slotStart = h * 60 + m;
-               const slotEnd = slotStart + requestedDuration;
+               const visualSlotEnd = slotStart + 15;
 
-               if (slotEnd > shiftEndMin) return;
+               if (visualSlotEnd > shiftEndMin) return;
 
                let overlap = false;
                for (const booked of bookedIntervals) {
-                 if (slotStart < booked.end && slotEnd > booked.start) {
+                 if (slotStart < booked.end && visualSlotEnd > booked.start) {
                    overlap = true;
                    break;
                  }
                }
 
-               if (!overlap) availableForShift.push(slot);
+               availableForShift.push({ time: slot, available: !overlap });
             });
 
             if (!shiftSlotsMap.has(sch.shift)) {
@@ -209,11 +209,23 @@ export class AppointmentService {
 
           allSlots = [...new Set(allSlots)].sort();
           
-          const formattedSlots: {shift: string, slots: string[]}[] = [];
+          const formattedSlots: {shift: string, slots: {time: string, available: boolean}[]}[] = [];
           shiftSlotsMap.forEach((slots, shift) => {
-            const uniqueSorted = [...new Set(slots)].sort();
+            const uniqueSlotsMap = new Map<string, boolean>();
+            slots.forEach(s => {
+              if (uniqueSlotsMap.has(s.time)) {
+                uniqueSlotsMap.set(s.time, uniqueSlotsMap.get(s.time) || s.available);
+              } else {
+                uniqueSlotsMap.set(s.time, s.available);
+              }
+            });
+            
+            const uniqueSorted = Array.from(uniqueSlotsMap.entries())
+              .map(([time, available]) => ({ time, available }))
+              .sort((a, b) => a.time.localeCompare(b.time));
+
             formattedSlots.push({ shift, slots: uniqueSorted });
-            totalAvailableSlots += uniqueSorted.length;
+            totalAvailableSlots += uniqueSorted.filter(s => s.available).length;
           });
 
           results.push({
@@ -359,6 +371,21 @@ export class AppointmentService {
       });
       if (!schedules || schedules.length === 0) throw new HttpException({ message: 'Doctor has no schedule on this day at this branch.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
 
+      let finalDuration = dto.duration_minutes || 15;
+
+      if (dto.treatment_plan_phase_id) {
+        const phase = await this.phaseModel.findOne({ where: { id: dto.treatment_plan_phase_id, treatment_plan_id: dto.treatment_plan_id }, transaction });
+        if (!phase) throw new HttpException({ message: 'Invalid treatment plan phase.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        if (phase.status === 'COMPLETED') throw new HttpException({ message: 'This phase is already completed.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        
+        if (!dto.duration_minutes && phase.procedure_id) {
+          const procedure = await this.sequelize.models.ProcedureCatalog.findOne({ where: { id: phase.procedure_id }, transaction }) as any;
+          if (procedure && procedure.duration_minutes) {
+            finalDuration = procedure.duration_minutes;
+          }
+        }
+      }
+
       const [hours, minutes] = timeStr.split(':').map(Number);
       const slotMinutes = hours * 60 + minutes;
 
@@ -375,29 +402,40 @@ export class AppointmentService {
         const startMinutes = startH * 60 + startM;
         const endMinutes = endH * 60 + endM;
 
-        if (slotMinutes >= startMinutes && slotMinutes < endMinutes) {
+        if (slotMinutes >= startMinutes && (slotMinutes + finalDuration) <= endMinutes) {
           isWithinSchedule = true;
           break;
         }
       }
 
       if (!isWithinSchedule) {
-        throw new HttpException({ message: 'Selected time is outside doctor schedule hours.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        throw new HttpException({ message: 'Selected time and duration exceeds doctor schedule hours.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
       }
 
-      const existing = await this.appointmentModel.findOne({
+      const dayStart = new Date(scheduledAt);
+      dayStart.setUTCHours(0, 0, 0, 0);
+      const dayEnd = new Date(scheduledAt);
+      dayEnd.setUTCHours(23, 59, 59, 999);
+
+      const existingAppointments = await this.appointmentModel.findAll({
         where: {
           doctor_id: dto.doctor_id,
-          scheduled_at: scheduledAt,
+          scheduled_at: { [Op.between]: [dayStart, dayEnd] },
           status: { [Op.notIn]: [AppointmentStatus.CANCELLED, AppointmentStatus.RESCHEDULED, AppointmentStatus.NO_SHOW] }
         }, transaction
       });
-      if (existing) throw new HttpException({ message: 'This time slot is already booked.', error: ErrorCode.CONFLICT }, StatusCode.CONFLICT);
 
-      if (dto.treatment_plan_phase_id) {
-        const phase = await this.phaseModel.findOne({ where: { id: dto.treatment_plan_phase_id, treatment_plan_id: dto.treatment_plan_id }, transaction });
-        if (!phase) throw new HttpException({ message: 'Invalid treatment plan phase.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
-        if (phase.status === 'COMPLETED') throw new HttpException({ message: 'This phase is already completed.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      const newStartMin = scheduledAt.getUTCHours() * 60 + scheduledAt.getUTCMinutes();
+      const newEndMin = newStartMin + finalDuration;
+
+      for (const apt of existingAppointments) {
+         const aptDate = new Date(apt.scheduled_at);
+         const aptStartMin = aptDate.getUTCHours() * 60 + aptDate.getUTCMinutes();
+         const aptEndMin = aptStartMin + (apt.duration_minutes || 15);
+         
+         if (newStartMin < aptEndMin && newEndMin > aptStartMin) {
+            throw new HttpException({ message: 'This time slot overlaps with an existing appointment.', error: ErrorCode.CONFLICT }, StatusCode.CONFLICT);
+         }
       }
 
       const appointment = await this.appointmentModel.create({
@@ -406,7 +444,7 @@ export class AppointmentService {
         patient_id: dto.patient_id,
         doctor_id: dto.doctor_id,
         scheduled_at: scheduledAt,
-        duration_minutes: dto.duration_minutes || 15,
+        duration_minutes: finalDuration,
         treatment_plan_id: dto.treatment_plan_id || null,
         plan_phase_id: dto.treatment_plan_phase_id || null,
         notes_for_doctor: dto.notes_for_doctor || null,
