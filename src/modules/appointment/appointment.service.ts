@@ -175,7 +175,8 @@ export class AppointmentService {
           daySchedules.forEach((sch: any) => {
             if (excludeEvening && sch.shift === 'EVENING') return;
             
-            const [endH, endM] = sch.end_time.split(':').map(Number);
+            let [endH, endM] = sch.end_time.split(':').map(Number);
+            if (sch.shift === 'EVENING' && endH < 12) endH += 12;
             const shiftEndMin = endH * 60 + endM;
 
             const shiftSlots = this.generateSlots(sch.start_time, sch.end_time, 15); // Generate every 15 mins
@@ -184,7 +185,9 @@ export class AppointmentService {
             const availableForShift: {time: string, available: boolean}[] = [];
 
             shiftSlots.forEach(slot => {
-               const [h, m] = slot.split(':').map(Number);
+               let [h, m] = slot.split(':').map(Number);
+               if (sch.shift === 'EVENING' && h < 12) h += 12;
+               
                const slotStart = h * 60 + m;
                const visualSlotEnd = slotStart + 15;
 
