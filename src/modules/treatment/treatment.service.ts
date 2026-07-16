@@ -535,7 +535,7 @@ export class TreatmentService {
 
       const lineItems = phases.map(p => ({
         invoice_id: invoice!.id,
-        description: `${p.title || `Phase ${p.phase_number}`} - ${p.status || 'PENDING'}`,
+        description: p.title ? `${p.title} - Phase ${p.phase_number}` : `Phase ${p.phase_number}`,
         procedure_id: p.procedure_id || null,
         plan_phase_id: p.id,
         tooth_numbers: p.tooth_numbers || null,
