@@ -10,22 +10,23 @@ export class EmailService {
   async sendOtpEmail(email: string, otp: string, type: 'register' | 'login' | 'invite' = 'login') {
     const isRegister = type === 'register';
     const isInvite = type === 'invite';
+    const backendUrl = this.configService.get<string>('BACKEND_URL') || 'http://localhost:7000';
     
     let title = 'Security Verification';
     let subTitle = 'Verify your login attempt';
     let mainMessage = "To keep your account secure, please enter the verification code below to complete your login. If this wasn't you, please secure your account immediately.";
-    let emailSubject = `Dental Clinic - ${otp} is your Login verification code`;
+    let emailSubject = `DentCare360 - ${otp} is your Login verification code`;
     
     if (isRegister) {
-      title = 'Welcome to Dental Clinic!';
+      title = 'Welcome to DentCare360!';
       subTitle = 'Complete your registration';
       mainMessage = "We're excited to have you on board! Use the verification code below to complete your registration.";
-      emailSubject = `Dental Clinic - ${otp} is your Registration verification code`;
+      emailSubject = `DentCare360 - ${otp} is your Registration verification code`;
     } else if (isInvite) {
       title = 'Clinic Invitation';
       subTitle = 'Join your dental clinic team';
       mainMessage = "You have been invited to join the clinic staff. Use the verification code below to accept your invitation and set up your account.";
-      emailSubject = `Dental Clinic - ${otp} is your Invitation verification code`;
+      emailSubject = `DentCare360 - ${otp} is your Invitation verification code`;
     }
     
     const accentColor = '#2563eb';
@@ -38,52 +39,56 @@ export class EmailService {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>${title}</title>
       <style>
-        body { margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
-        .wrapper { width: 100%; table-layout: fixed; background-color: #f8fafc; padding-bottom: 40px; padding-top: 40px; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden; }
-        .header { background-color: ${accentColor}; padding: 40px 20px; text-align: center; }
-        .logo { color: #ffffff; font-size: 32px; font-weight: 800; letter-spacing: -1px; text-decoration: none; }
-        .content { padding: 40px; text-align: center; }
-        .title { font-size: 24px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
-        .subtitle { font-size: 16px; font-weight: 500; color: #64748b; margin-bottom: 24px; }
-        .message { font-size: 16px; line-height: 24px; color: #475569; margin-bottom: 32px; }
-        .otp-box { background-color: #f1f5f9; border: 2px dashed ${accentColor}; border-radius: 12px; padding: 24px; margin-bottom: 32px; display: inline-block; min-width: 240px; }
-        .otp-code { font-size: 42px; font-weight: 800; letter-spacing: 10px; color: ${accentColor}; font-family: 'Courier New', Courier, monospace; }
-        .expiry { font-size: 14px; color: #94a3b8; margin-top: 8px; }
-        .expiry b { color: #ef4444; }
-        .footer { padding: 32px 40px; background-color: #f1f5f9; text-align: center; font-size: 14px; color: #64748b; }
-        .footer p { margin: 4px 0; }
-        .security-badge { display: inline-flex; align-items: center; background-color: #ecfdf5; color: #059669; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; margin-bottom: 24px; }
-        @media only screen and (max-width: 600px) { .content { padding: 30px 20px; } .otp-code { font-size: 32px; letter-spacing: 6px; } }
+        body { margin: 0; padding: 0; background-color: #f4f7f6; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+        .wrapper { width: 100%; background-color: #f4f7f6; padding: 40px 0; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
       </style>
     </head>
     <body>
       <div class="wrapper">
         <div class="container">
-          <div class="header">
-            <div class="logo">Dental Clinic</div>
+          <!-- Header -->
+          <div style="background: #2563eb; padding: 40px 20px; text-align: center; color: #ffffff;">
+            <div style="display: inline-block; text-align: center;">
+              <div style="display: inline-block; vertical-align: middle; margin-right: 16px; background-color: #ffffff; width: 64px; height: 64px; border-radius: 50%; line-height: 64px; font-size: 32px;"><img src="https://res.cloudinary.com/dve9etzft/image/upload/v1784205052/dentcare360_logo.png" width="64" height="64" alt="DentCare360 Logo" style="display: block; border-radius: 50%;" /></div>
+              <div style="display: inline-block; vertical-align: middle; text-align: left;">
+                <h1 style="font-size: 28px; font-weight: 700; margin: 0; letter-spacing: -0.5px; color: #ffffff;">DentCare360</h1>
+                <p style="font-size: 14px; color: #bfdbfe; margin: 4px 0 0 0;">Smart Care. Better Dentistry.</p>
+              </div>
+            </div>
           </div>
-          <div class="content">
-            <div class="security-badge">
-              <span style="margin-right: 4px;">🛡️</span> Secure Verification
-            </div>
-            <div class="title">${title}</div>
-            <div class="subtitle">${subTitle}</div>
-            <div class="message">${mainMessage}</div>
-            
-            <div class="otp-box">
-              <div class="otp-code">${otp}</div>
-              <div class="expiry">Valid for <b>10 minutes</b> only</div>
+          
+          <!-- Content -->
+          <div style="padding: 40px; text-align: center;">
+            <div style="display: inline-block; background-color: #ecfdf5; color: #059669; padding: 6px 16px; border-radius: 9999px; font-size: 13px; font-weight: 600; margin-bottom: 24px;">
+              🔒 Secure Verification
             </div>
             
-            <p style="font-size: 14px; color: #94a3b8;">
+            <h2 style="font-size: 32px; font-weight: 800; color: #0f172a; margin: 0 0 8px 0;">${title}</h2>
+            <p style="font-size: 18px; color: #64748b; margin: 0 0 32px 0;">${subTitle}</p>
+            
+            <p style="font-size: 16px; line-height: 1.6; color: #475569; margin: 0 auto 32px auto; max-width: 480px;">${mainMessage}</p>
+            
+            <div style="background-color: #f8fafc; border: 2px dashed #93c5fd; border-radius: 12px; padding: 24px; margin-bottom: 32px; display: inline-block; min-width: 240px;">
+              <div style="font-size: 42px; font-weight: 800; letter-spacing: 12px; color: #2563eb; font-family: 'Courier New', Courier, monospace; margin-left: 12px;">${otp}</div>
+              <div style="font-size: 14px; color: #64748b; margin-top: 12px;">Valid for <b style="color: #ef4444;">10 minutes</b> only</div>
+            </div>
+            
+            <p style="font-size: 14px; color: #94a3b8; max-width: 400px; margin: 0 auto;">
               Please do not share this code with anyone. Our support team will never ask for your verification code.
             </p>
           </div>
-          <div class="footer">
-            <p><b>Dental Clinic Management System</b></p>
-            <p>Your premier clinic management solution.</p>
-            <p style="margin-top: 24px;">&copy; ${new Date().getFullYear()} Dental Clinic. All rights reserved.</p>
+          
+          <!-- Footer -->
+          <div style="padding: 32px 40px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+            <div style="display: inline-block; text-align: left;">
+              <div style="display: inline-block; vertical-align: middle; margin-right: 16px; font-size: 32px;"><img src="https://res.cloudinary.com/dve9etzft/image/upload/v1784205052/dentcare360_logo.png" width="32" height="32" alt="DentCare360 Logo" style="display: block; border-radius: 50%;" /></div>
+              <div style="display: inline-block; vertical-align: middle; color: #64748b; font-size: 14px; line-height: 1.5; margin: 0;">
+                Thank you,<br>
+                <strong style="color: #0f172a; font-weight: 600; display: block;">DentCare360 Team</strong>
+                <a href="https://dentcare360.in" style="color: #2563eb; text-decoration: none; font-weight: 600;">dentcare360.in</a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -107,8 +112,8 @@ export class EmailService {
         },
         body: JSON.stringify({
           sender: { 
-            name: 'Dental Clinic', 
-            email: this.configService.get<string>('MAIL_FROM') || 'noreply@dentalclinic.com' 
+            name: 'DentCare360', 
+            email: this.configService.get<string>('MAIL_FROM') || 'noreply@dentcare360.in' 
           },
           to: [{ email: email }],
           subject: emailSubject,
@@ -132,6 +137,7 @@ export class EmailService {
   }
 
   async sendInviteEmail(email: string, inviteLink: string) {
+    const backendUrl = this.configService.get<string>('BACKEND_URL') || 'http://localhost:7000';
     const title = 'Clinic Invitation';
     const subTitle = 'Join your dental clinic team';
     const mainMessage = "You have been invited to join the clinic staff. Click the button below to accept your invitation and set up your account.";
@@ -143,53 +149,73 @@ export class EmailService {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${title}</title>
+      <title>Clinic Invitation</title>
       <style>
-        body { margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
-        .wrapper { width: 100%; table-layout: fixed; background-color: #f8fafc; padding-bottom: 40px; padding-top: 40px; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden; }
-        .header { background-color: ${accentColor}; padding: 40px 20px; text-align: center; }
-        .logo { color: #ffffff; font-size: 32px; font-weight: 800; letter-spacing: -1px; text-decoration: none; }
-        .content { padding: 40px; text-align: center; }
-        .title { font-size: 24px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
-        .subtitle { font-size: 16px; font-weight: 500; color: #64748b; margin-bottom: 24px; }
-        .message { font-size: 16px; line-height: 24px; color: #475569; margin-bottom: 32px; }
-        .btn-primary { display: inline-block; background-color: ${accentColor}; color: #ffffff !important; font-size: 16px; font-weight: 700; text-decoration: none; padding: 16px 32px; border-radius: 8px; margin-bottom: 32px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.4); transition: background-color 0.2s; }
-        .expiry { font-size: 14px; color: #94a3b8; margin-top: 8px; }
-        .expiry b { color: #ef4444; }
-        .footer { padding: 32px 40px; background-color: #f1f5f9; text-align: center; font-size: 14px; color: #64748b; }
-        .footer p { margin: 4px 0; }
-        .security-badge { display: inline-flex; align-items: center; background-color: #ecfdf5; color: #059669; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; margin-bottom: 24px; }
+        body { margin: 0; padding: 0; background-color: #f4f7f6; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+        .wrapper { width: 100%; background-color: #f4f7f6; padding: 40px 0; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
       </style>
     </head>
     <body>
       <div class="wrapper">
         <div class="container">
-          <div class="header"><div class="logo">Dental Clinic</div></div>
-          <div class="content">
-            <div class="security-badge">
-              <span style="margin-right: 4px;">🔒</span> Secure Invitation
+          <!-- Header -->
+          <div style="background: #2563eb; padding: 40px 20px; text-align: center; color: #ffffff;">
+            <div style="display: inline-block; text-align: center;">
+              <div style="display: inline-block; vertical-align: middle; margin-right: 16px; background-color: #ffffff; width: 64px; height: 64px; border-radius: 50%; line-height: 64px; font-size: 32px;"><img src="https://res.cloudinary.com/dve9etzft/image/upload/v1784205052/dentcare360_logo.png" width="64" height="64" alt="DentCare360 Logo" style="display: block; border-radius: 50%;" /></div>
+              <div style="display: inline-block; vertical-align: middle; text-align: left;">
+                <h1 style="font-size: 28px; font-weight: 700; margin: 0; letter-spacing: -0.5px; color: #ffffff;">DentCare360</h1>
+                <p style="font-size: 14px; color: #bfdbfe; margin: 4px 0 0 0;">Smart Care. Better Dentistry.</p>
+              </div>
             </div>
-            <div class="title">${title}</div>
-            <div class="subtitle">${subTitle}</div>
-            <div class="message">${mainMessage}</div>
-            <a href="${inviteLink}" class="btn-primary">Accept Invitation</a>
-            
-            <p style="font-size: 14px; color: #94a3b8; margin-top: 32px;">
-              Or copy and paste this URL into your browser:<br>
-              <a href="${inviteLink}" style="color: ${accentColor}; word-break: break-all; margin-top: 8px; display: inline-block; text-decoration: none;">${inviteLink}</a>
-            </p>
           </div>
-          <div class="footer">
-            <p><b>Dental Clinic Management System</b></p>
-            <p>Your premier clinic management solution.</p>
-            <p style="margin-top: 24px;">&copy; ${new Date().getFullYear()} Dental Clinic. All rights reserved.</p>
+          
+          <!-- Content -->
+          <div style="padding: 40px; text-align: center;">
+            <div style="display: inline-block; background-color: #ecfdf5; color: #059669; padding: 6px 16px; border-radius: 9999px; font-size: 13px; font-weight: 600; margin-bottom: 24px;">
+              🔒 Secure Invitation
+            </div>
+            
+            <h2 style="font-size: 32px; font-weight: 800; color: #0f172a; margin: 0 0 8px 0;">${title}</h2>
+            <p style="font-size: 18px; color: #64748b; margin: 0 0 32px 0;">${subTitle}</p>
+            
+            <div style="margin: 32px 0; text-align: center;">
+              <span style="display: inline-block; width: 80px; border-top: 1px solid #e2e8f0; vertical-align: middle;"></span>
+              <span style="display: inline-block; background-color: #eff6ff; color: #2563eb; width: 32px; height: 32px; border-radius: 50%; border: 4px solid #ffffff; line-height: 32px; text-align: center; vertical-align: middle; font-size: 18px; font-weight: bold; margin: 0 12px;">+</span>
+              <span style="display: inline-block; width: 80px; border-top: 1px solid #e2e8f0; vertical-align: middle;"></span>
+            </div>
+
+            <p style="font-size: 16px; line-height: 1.6; color: #475569; margin: 0 auto 32px auto; max-width: 480px;">${mainMessage}</p>
+            
+            <a href="${inviteLink}" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-size: 18px; font-weight: 600; text-decoration: none; padding: 16px 36px; border-radius: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
+              👤 Accept Invitation
+            </a>
+            
+            <div style="border-top: 1px dashed #cbd5e1; margin: 40px 0;"></div>
+
+            <p style="font-size: 14px; color: #64748b; margin: 0 0 12px 0;">Or copy and paste this URL into your browser:</p>
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; text-align: left; word-break: break-all;">
+              <a href="${inviteLink}" style="color: #2563eb; font-size: 13px; text-decoration: none;">${inviteLink}</a>
+            </div>
+          </div>
+          
+          <!-- Footer -->
+          <div style="padding: 32px 40px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+            <div style="display: inline-block; text-align: left;">
+              <div style="display: inline-block; vertical-align: middle; margin-right: 16px; font-size: 32px;"><img src="https://res.cloudinary.com/dve9etzft/image/upload/v1784205052/dentcare360_logo.png" width="32" height="32" alt="DentCare360 Logo" style="display: block; border-radius: 50%;" /></div>
+              <div style="display: inline-block; vertical-align: middle; color: #64748b; font-size: 14px; line-height: 1.5; margin: 0;">
+                Thank you,<br>
+                <strong style="color: #0f172a; font-weight: 600; display: block;">DentCare360 Team</strong>
+                <a href="https://dentcare360.in" style="color: #2563eb; text-decoration: none; font-weight: 600;">dentcare360.in</a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </body>
     </html>
     `;
+
 
     const apiKey = this.configService.get<string>('BREVO_API_KEY');
     if (!apiKey) {
@@ -207,11 +233,11 @@ export class EmailService {
         },
         body: JSON.stringify({
           sender: { 
-            name: 'Dental Clinic', 
-            email: this.configService.get<string>('MAIL_FROM') || 'noreply@dentalclinic.com' 
+            name: 'DentCare360', 
+            email: this.configService.get<string>('MAIL_FROM') || 'noreply@dentcare360.in' 
           },
           to: [{ email: email }],
-          subject: `Dental Clinic - You are invited to join the team`,
+          subject: `DentCare360 - You are invited to join the team`,
           htmlContent: html,
         }),
       });

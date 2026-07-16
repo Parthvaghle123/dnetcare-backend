@@ -381,6 +381,17 @@ export class AuthService {
         }
       }
 
+      const validBranchesCount = await this.branchModel.count({
+        where: {
+          id: dto.branch_ids,
+          organization_id: inviterOrgId,
+        }
+      });
+
+      if (validBranchesCount !== dto.branch_ids.length) {
+        throw new HttpException({ message: 'One or more provided branch IDs are invalid or do not belong to your clinic.', error: ErrorCode.INVALID_BRANCH }, StatusCode.BAD_REQUEST);
+      }
+
       let primaryBranchId = dto.primary_branch_id;
       if (!primaryBranchId) {
         if (dto.branch_ids.length === 1) {

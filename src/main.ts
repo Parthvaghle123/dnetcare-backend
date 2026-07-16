@@ -2,12 +2,15 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 let cachedApp: any;
 
 async function bootstrapServer() {
   if (!cachedApp) {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create<NestExpressApplication>(AppModule);
+    app.useStaticAssets(join(__dirname, '..', 'public'));
     
     app.use((req: any, res: any, next: any) => {
       console.log('======> req url:', req.url, '======> req method:', req.method);
@@ -39,7 +42,8 @@ async function bootstrapServer() {
 // Start local server if not running in Vercel
 if (!process.env.VERCEL) {
   async function startLocal() {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create<NestExpressApplication>(AppModule);
+    app.useStaticAssets(join(__dirname, '..', 'public'));
     
     app.use((req: any, res: any, next: any) => {
       console.log('======> req url:', req.url, '======> req method:', req.method);
