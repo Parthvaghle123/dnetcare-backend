@@ -1,4 +1,5 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey, CreatedAt, UpdatedAt, HasMany } from 'sequelize-typescript';
+import { Subscription } from '../../subscription/entities/subscription.model';
 
 @Table({ tableName: 'organizations', timestamps: true })
 export class Organization extends Model {
@@ -31,4 +32,6 @@ export class Organization extends Model {
   @Column(DataType.DATE)
   updated_at: Date;
 
+  @HasMany(() => Subscription)
+  subscriptions: Subscription[];
 }

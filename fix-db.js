@@ -21,6 +21,11 @@ async function run() {
     await sequelize.query('ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS treatment_plan_phase_id UUID;');
     await sequelize.query('ALTER TABLE prescriptions ALTER COLUMN consultation_id DROP NOT NULL;');
     console.log('Added treatment_plan_phase_id and made consultation_id nullable in prescriptions.');
+
+    await sequelize.query('ALTER TABLE payments ADD COLUMN IF NOT EXISTS razorpay_order_id VARCHAR(255);');
+    await sequelize.query('ALTER TABLE payments ADD COLUMN IF NOT EXISTS razorpay_payment_id VARCHAR(255);');
+    await sequelize.query('ALTER TABLE payments ADD COLUMN IF NOT EXISTS razorpay_signature VARCHAR(255);');
+    console.log('Added Razorpay columns to payments.');
     
   } catch(e) {
     console.error('Error:', e);

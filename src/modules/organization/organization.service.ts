@@ -6,6 +6,8 @@ import { Role } from '../../common/enums/role.enum';
 import { Organization } from './entities/organization.model';
 import { Branch } from './entities/branch.model';
 import { UserBranch } from '../auth/entities/user-branch.model';
+import { Subscription, SubscriptionStatus } from '../subscription/entities/subscription.model';
+import { Plan } from '../subscription/entities/plan.model';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
@@ -20,6 +22,7 @@ export class OrganizationService {
     @InjectModel(Organization) private orgModel: typeof Organization,
     @InjectModel(Branch) private branchModel: typeof Branch,
     @InjectModel(UserBranch) private userBranchModel: typeof UserBranch,
+    @InjectModel(Subscription) private subscriptionModel: typeof Subscription,
     @InjectConnection() private sequelize: Sequelize,
   ) {}
 
@@ -177,6 +180,22 @@ export class OrganizationService {
 
       if (existingBranch) {
         throw new HttpException('A branch with this name already exists in your clinic.', StatusCode.CONFLICT);
+      }
+
+      // Check plan limits
+      const subscription = await this.subscriptionModel.findOne({
+        where: { organization_id: reqUser.org_id, status: SubscriptionStatus.ACTIVE },
+        include: [Plan],
+      });
+
+      if (subscription && subscription.plan && subscription.plan.max_branches !== null) {
+        const currentBranchesCount = await this.branchModel.count({
+          where: { organization_id: reqUser.org_id },
+        });
+
+        if (currentBranchesCount >= subscription.plan.max_branches) {
+          throw new HttpException(`Plan limit reached: You can only create up to ${subscription.plan.max_branches} branches on your current plan.`, StatusCode.FORBIDDEN);
+        }
       }
 
       const branch = await this.branchModel.create({

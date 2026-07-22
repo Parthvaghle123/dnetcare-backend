@@ -76,6 +76,18 @@ export class Payment extends Model {
   @BelongsTo(() => User)
   received_by_relation: User;
 
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  razorpay_order_id: string;
+
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  razorpay_payment_id: string;
+
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  razorpay_signature: string;
+
   @CreatedAt
   @Column(DataType.DATE)
   created_at: Date;

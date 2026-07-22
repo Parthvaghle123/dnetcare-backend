@@ -13,6 +13,9 @@ import { Prescription } from '../modules/prescription/entities/prescription.mode
 import { PrescriptionMedicine } from '../modules/prescription/entities/prescription-medicine.model';
 import { MedicineMaster } from '../modules/prescription/entities/medicine-master.model';
 import { InternshipInquiry } from '../modules/internship/entities/internship-inquiry.model';
+import { Plan } from '../modules/subscription/entities/plan.model';
+import { Subscription } from '../modules/subscription/entities/subscription.model';
+import { SubscriptionPayment } from '../modules/subscription/entities/subscription-payment.model';
 
 @Module({
   imports: [
@@ -29,7 +32,10 @@ import { InternshipInquiry } from '../modules/internship/entities/internship-inq
       Prescription,
       PrescriptionMedicine,
       MedicineMaster,
-      InternshipInquiry
+      InternshipInquiry,
+      Plan,
+      Subscription,
+      SubscriptionPayment
     ])
   ],
   exports: [SequelizeModule]

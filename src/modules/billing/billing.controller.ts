@@ -71,4 +71,16 @@ export class BillingController {
     const data = await this.billingService.deleteInvoice(user, id);
     return { message: 'Invoice deleted successfully.', data };
   }
+
+  @Post(':id/razorpay-order')
+  async createRazorpayOrder(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: any) {
+    const data = await this.billingService.createRazorpayOrder(user, id);
+    return { message: 'Razorpay order created.', data };
+  }
+
+  @Post('razorpay-verify')
+  async verifyRazorpayPayment(@Body() body: any, @CurrentUser() user: any) {
+    const data = await this.billingService.verifyRazorpayPayment(user, body);
+    return { message: data.message, data };
+  }
 }

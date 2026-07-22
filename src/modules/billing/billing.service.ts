@@ -1,4 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
+import Razorpay from 'razorpay';
+import * as crypto from 'crypto';
 import { InjectModel } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import { Op } from 'sequelize';
@@ -18,6 +20,7 @@ import { CreatePaymentDto } from './dto/create-payment.dto';
 @Injectable()
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
+  private razorpay: any;
 
   constructor(
     @InjectModel(Invoice) private invoiceModel: typeof Invoice,
@@ -29,7 +32,14 @@ export class BillingService {
     @InjectModel(Consultation) private consultationModel: typeof Consultation,
     @InjectModel(TreatmentPlan) private treatmentPlanModel: typeof TreatmentPlan,
     private sequelize: Sequelize,
-  ) { }
+  ) {
+    if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+      this.razorpay = new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET,
+      });
+    }
+  }
 
   async createInvoice(user: any, dto: CreateInvoiceDto) {
     try {
@@ -708,6 +718,134 @@ export class BillingService {
       this.logger.error(`Delete Invoice Error: ${error.message}`, error.stack);
       if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException('Failed to delete invoice.');
+    }
+  }
+
+  async createRazorpayOrder(user: any, invoiceId: string) {
+    try {
+      if (!this.razorpay) {
+        throw new InternalServerErrorException('Razorpay is not configured.');
+      }
+
+      const invoice = await this.invoiceModel.findOne({
+        where: { id: invoiceId, organization_id: user.org_id },
+      });
+
+      if (!invoice) throw new NotFoundException('Invoice not found.');
+
+      if (invoice.status === InvoiceStatus.PAID) {
+        throw new BadRequestException('Invoice is already paid.');
+      }
+      
+      if (invoice.status === InvoiceStatus.CANCELLED) {
+        throw new BadRequestException('Cannot pay for a cancelled invoice.');
+      }
+
+      const pendingAmount = Number(invoice.pending_amount);
+      if (pendingAmount <= 0) {
+        throw new BadRequestException('No pending amount for this invoice.');
+      }
+
+      // Razorpay expects amount in paisa (smallest unit)
+      const options = {
+        amount: Math.round(pendingAmount * 100),
+        currency: 'INR',
+        // receipt max length is 40 chars, invoiceId is a UUID (36 chars)
+        receipt: invoiceId,
+      };
+
+      const order = await this.razorpay.orders.create(options);
+
+      return {
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        keyId: process.env.RAZORPAY_KEY_ID,
+      };
+    } catch (error: any) {
+      const errorMsg = error?.error?.description || error.message || JSON.stringify(error);
+      this.logger.error(`Create Razorpay Order Error: ${errorMsg}`, error.stack);
+      if (error instanceof NotFoundException || error instanceof BadRequestException || error instanceof InternalServerErrorException) throw error;
+      throw new InternalServerErrorException(`Failed to create Razorpay order: ${errorMsg}`);
+    }
+  }
+
+  async verifyRazorpayPayment(user: any, payload: { billId: string; razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {
+    try {
+      const secret = process.env.RAZORPAY_KEY_SECRET;
+      if (!secret) {
+        throw new InternalServerErrorException('Razorpay secret is not configured.');
+      }
+
+      const body = payload.razorpay_order_id + '|' + payload.razorpay_payment_id;
+      const expectedSignature = crypto
+        .createHmac('sha256', secret)
+        .update(body.toString())
+        .digest('hex');
+
+      const isAuthentic = expectedSignature === payload.razorpay_signature;
+
+      if (!isAuthentic) {
+        throw new BadRequestException('Invalid signature.');
+      }
+
+      const invoice = await this.invoiceModel.findOne({
+        where: { id: payload.billId, organization_id: user.org_id },
+      });
+
+      if (!invoice) throw new NotFoundException('Invoice not found.');
+
+      // Fetch payment details from Razorpay to get the exact amount paid (optional but safe)
+      const paymentDetails = await this.razorpay.payments.fetch(payload.razorpay_payment_id);
+      const amountPaid = paymentDetails.amount / 100; // Convert from paisa back to rupees
+
+      return await this.sequelize.transaction(async (t) => {
+        const payment = await this.paymentModel.create(
+          {
+            organization_id: user.org_id,
+            branch_id: invoice.branch_id,
+            patient_id: invoice.patient_id,
+            invoice_id: invoice.id,
+            amount: amountPaid,
+            payment_date: new Date().toISOString().split('T')[0],
+            payment_mode: 'ONLINE',
+            payment_reference: payload.razorpay_payment_id,
+            razorpay_order_id: payload.razorpay_order_id,
+            razorpay_payment_id: payload.razorpay_payment_id,
+            razorpay_signature: payload.razorpay_signature,
+            received_by: user.sub,
+          },
+          { transaction: t }
+        );
+
+        const newPaidAmount = Number(invoice.paid_amount) + amountPaid;
+        let newPendingAmount = Number(invoice.total) - newPaidAmount;
+        let newStatus = InvoiceStatus.PARTIALLY_PAID;
+
+        if (newPendingAmount <= 0) {
+          newStatus = InvoiceStatus.PAID;
+          newPendingAmount = 0;
+        }
+
+        await invoice.update(
+          {
+            paid_amount: newPaidAmount,
+            pending_amount: newPendingAmount,
+            status: newStatus,
+          },
+          { transaction: t }
+        );
+
+        return {
+          success: true,
+          payment_id: payment.id,
+          message: 'Payment verified and recorded successfully.'
+        };
+      });
+    } catch (error) {
+      this.logger.error(`Verify Razorpay Payment Error: ${error.message}`, error.stack);
+      if (error instanceof NotFoundException || error instanceof BadRequestException || error instanceof InternalServerErrorException) throw error;
+      throw new InternalServerErrorException('Failed to verify payment.');
     }
   }
 }
