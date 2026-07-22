@@ -13,6 +13,14 @@ export class SubscriptionController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('current')
+  async getCurrentSubscription(@CurrentUser() user: any) {
+    const organizationId = user.org_id;
+    return this.subscriptionService.getCurrentSubscription(organizationId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+
   @Post('checkout')
   async checkout(@Body() body: { plan_id: string }, @CurrentUser() user: any) {
     const organizationId = user.org_id; 
