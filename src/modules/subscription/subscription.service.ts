@@ -148,4 +148,16 @@ export class SubscriptionService {
       message: 'Payment verified and subscription activated.',
     };
   }
+
+  async getCurrentSubscription(organizationId: string) {
+    return this.subscriptionModel.findOne({
+      where: {
+        organization_id: organizationId,
+        status: SubscriptionStatus.ACTIVE,
+      },
+      include: [Plan],
+      order: [['updated_at', 'DESC']],
+    });
+  }
 }
+
