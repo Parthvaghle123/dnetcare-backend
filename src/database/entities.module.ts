@@ -16,6 +16,7 @@ import { InternshipInquiry } from '../modules/internship/entities/internship-inq
 import { Plan } from '../modules/subscription/entities/plan.model';
 import { Subscription } from '../modules/subscription/entities/subscription.model';
 import { SubscriptionPayment } from '../modules/subscription/entities/subscription-payment.model';
+import { WebsiteConfig } from '../modules/website/entities/website-config.model';
 
 @Module({
   imports: [
@@ -35,9 +36,10 @@ import { SubscriptionPayment } from '../modules/subscription/entities/subscripti
       InternshipInquiry,
       Plan,
       Subscription,
-      SubscriptionPayment
-    ])
+      SubscriptionPayment,
+      WebsiteConfig,
+    ]),
   ],
-  exports: [SequelizeModule]
+  exports: [SequelizeModule],
 })
 export class EntitiesModule {}

@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Put, Patch, Delete, Body, Param, Query, UseGuards, ParseUUIDPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { TreatmentService } from './treatment.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -15,19 +27,29 @@ export class TreatmentController {
   constructor(private readonly treatmentService: TreatmentService) {}
 
   @Post()
-  async createTreatmentPlan(@Body() dto: CreateTreatmentPlanDto, @CurrentUser() user: any) {
+  async createTreatmentPlan(
+    @Body() dto: CreateTreatmentPlanDto,
+    @CurrentUser() user: any,
+  ) {
     const data = await this.treatmentService.createTreatmentPlan(user, dto);
     return { message: 'Treatment plan created successfully.', data };
   }
 
   @Get(':id')
-  async getTreatmentPlanById(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: any) {
+  async getTreatmentPlanById(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: any,
+  ) {
     const data = await this.treatmentService.getTreatmentPlanById(user, id);
     return { message: 'Treatment plan fetched.', data };
   }
 
   @Post(':id/phases')
-  async addPhase(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreatePhaseDto, @CurrentUser() user: any) {
+  async addPhase(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreatePhaseDto,
+    @CurrentUser() user: any,
+  ) {
     const data = await this.treatmentService.addPhase(user, id, dto);
     return { message: 'Phase added to treatment plan.', data };
   }
@@ -36,11 +58,17 @@ export class TreatmentController {
   async completePhase(
     @Param('planId', ParseUUIDPipe) planId: string,
     @Param('phaseId', ParseUUIDPipe) phaseId: string,
-    @CurrentUser() user: any
+    @CurrentUser() user: any,
   ) {
-    const data = await this.treatmentService.completePhase(user, planId, phaseId);
-    const msg = data.allDone ? 'Phase completed. Treatment plan is now fully completed.' : 'Phase marked as completed.';
-    
+    const data = await this.treatmentService.completePhase(
+      user,
+      planId,
+      phaseId,
+    );
+    const msg = data.allDone
+      ? 'Phase completed. Treatment plan is now fully completed.'
+      : 'Phase marked as completed.';
+
     // Remove internal flag before returning
     delete (data as any).allDone;
 
@@ -57,7 +85,7 @@ export class TreatmentController {
   async updateTreatmentPlan(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateTreatmentPlanDto,
-    @CurrentUser() user: any
+    @CurrentUser() user: any,
   ) {
     const data = await this.treatmentService.updateTreatmentPlan(user, id, dto);
     return { message: 'Treatment plan updated successfully.', data };
@@ -67,14 +95,21 @@ export class TreatmentController {
   async updateTreatmentPlanStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateTreatmentPlanStatusDto,
-    @CurrentUser() user: any
+    @CurrentUser() user: any,
   ) {
-    const data = await this.treatmentService.updateTreatmentPlanStatus(user, id, dto);
+    const data = await this.treatmentService.updateTreatmentPlanStatus(
+      user,
+      id,
+      dto,
+    );
     return { message: 'Treatment plan status updated.', data };
   }
 
   @Get(':id/phases')
-  async listPhases(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: any) {
+  async listPhases(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: any,
+  ) {
     const data = await this.treatmentService.listPhases(user, id);
     return { message: 'Treatment plan phases fetched.', data };
   }
@@ -84,9 +119,14 @@ export class TreatmentController {
     @Param('planId', ParseUUIDPipe) planId: string,
     @Param('phaseId', ParseUUIDPipe) phaseId: string,
     @Body() dto: UpdatePhaseDto,
-    @CurrentUser() user: any
+    @CurrentUser() user: any,
   ) {
-    const data = await this.treatmentService.updatePhase(user, planId, phaseId, dto);
+    const data = await this.treatmentService.updatePhase(
+      user,
+      planId,
+      phaseId,
+      dto,
+    );
     return { message: 'Treatment plan phase updated.', data };
   }
 
@@ -94,7 +134,7 @@ export class TreatmentController {
   async removePhase(
     @Param('planId', ParseUUIDPipe) planId: string,
     @Param('phaseId', ParseUUIDPipe) phaseId: string,
-    @CurrentUser() user: any
+    @CurrentUser() user: any,
   ) {
     const data = await this.treatmentService.removePhase(user, planId, phaseId);
     return { message: 'Treatment plan phase removed.', data };

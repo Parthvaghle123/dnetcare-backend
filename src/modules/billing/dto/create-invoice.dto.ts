@@ -1,4 +1,14 @@
-import { IsUUID, IsOptional, IsDateString, IsNumber, IsString, IsArray, ValidateNested, Min, ArrayMinSize } from 'class-validator';
+import {
+  IsUUID,
+  IsOptional,
+  IsDateString,
+  IsNumber,
+  IsString,
+  IsArray,
+  ValidateNested,
+  Min,
+  ArrayMinSize,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class InvoiceLineItemDto {

@@ -1,4 +1,16 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey, CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  BelongsTo,
+  ForeignKey,
+  CreatedAt,
+  UpdatedAt,
+} from 'sequelize-typescript';
 import { Organization } from '../../organization/entities/organization.model';
 import { Branch } from '../../organization/entities/branch.model';
 import { Patient } from '../../patient/entities/patient.model';
@@ -111,7 +123,9 @@ export class Invoice extends Model {
 
   @AllowNull(false)
   @Default('ISSUED')
-  @Column(DataType.ENUM('DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'))
+  @Column(
+    DataType.ENUM('DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'),
+  )
   status: InvoiceStatus;
 
   @AllowNull(true)
@@ -133,5 +147,4 @@ export class Invoice extends Model {
   @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
-
 }

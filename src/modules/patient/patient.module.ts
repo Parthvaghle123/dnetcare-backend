@@ -15,15 +15,15 @@ import { DentalChartEntry } from '../consultation/entities/dental-chart-entry.mo
 @Module({
   imports: [
     SequelizeModule.forFeature([
-      Patient, 
-      Branch, 
-      User, 
-      MedicalConditionMaster, 
+      Patient,
+      Branch,
+      User,
+      MedicalConditionMaster,
       PatientMedicalCondition,
       Consultation,
-      DentalChartEntry
-    ]), 
-    BillingModule
+      DentalChartEntry,
+    ]),
+    BillingModule,
   ],
   controllers: [PatientController, MedicalConditionController],
   providers: [PatientService],

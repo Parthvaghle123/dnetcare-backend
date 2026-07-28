@@ -1,4 +1,16 @@
-import { Controller, Get, Put, Patch, Post, Delete, Param, Body, Query, UseGuards, HttpCode } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Put,
+  Patch,
+  Post,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  HttpCode,
+} from '@nestjs/common';
 import { StaffService } from './staff.service';
 import { AuthService } from '../auth/auth.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -16,14 +28,14 @@ import { StatusCode } from '../../common/enums/status-code.enum';
 export class StaffController {
   constructor(
     private readonly staffService: StaffService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
   ) {}
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.OWNER, Role.BRANCH_ADMIN)
   async getStaffList(
-    @CurrentUser() user: any, 
+    @CurrentUser() user: any,
     @Query('branch_id') branch_id?: string,
     @Query('role') role?: string,
     @Query('status') status?: string,
@@ -32,14 +44,24 @@ export class StaffController {
     @Query('is_pending') is_pending?: string,
     @Query('search') search?: string,
     @Query('page') page?: string,
-    @Query('limit') limit?: string
+    @Query('limit') limit?: string,
   ) {
-    const filters = { branch_id, role, status, is_active, is_deleted, is_pending, search, page, limit };
+    const filters = {
+      branch_id,
+      role,
+      status,
+      is_active,
+      is_deleted,
+      is_pending,
+      search,
+      page,
+      limit,
+    };
     const result = await this.staffService.getStaffList(user, filters);
     return {
       message: 'Staff list fetched successfully.',
       data: result.records,
-      meta: result.meta
+      meta: result.meta,
     };
   }
 
@@ -54,7 +76,11 @@ export class StaffController {
   @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.OWNER, Role.BRANCH_ADMIN)
-  async updateStaff(@Param('id') staffId: string, @Body() dto: UpdateStaffDto, @CurrentUser() user: any) {
+  async updateStaff(
+    @Param('id') staffId: string,
+    @Body() dto: UpdateStaffDto,
+    @CurrentUser() user: any,
+  ) {
     const data = await this.staffService.updateStaff(user, staffId, dto);
     return { message: 'Staff updated successfully.', data };
   }
@@ -62,7 +88,11 @@ export class StaffController {
   @Patch(':id/status')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.OWNER, Role.BRANCH_ADMIN)
-  async updateStaffStatus(@Param('id') staffId: string, @Body() dto: UpdateStaffStatusDto, @CurrentUser() user: any) {
+  async updateStaffStatus(
+    @Param('id') staffId: string,
+    @Body() dto: UpdateStaffStatusDto,
+    @CurrentUser() user: any,
+  ) {
     const data = await this.staffService.updateStaffStatus(user, staffId, dto);
     return { message: `Staff status updated successfully.`, data };
   }
@@ -70,7 +100,10 @@ export class StaffController {
   @Get(':id/branches')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.OWNER, Role.BRANCH_ADMIN)
-  async getStaffBranches(@Param('id') staffId: string, @CurrentUser() user: any) {
+  async getStaffBranches(
+    @Param('id') staffId: string,
+    @CurrentUser() user: any,
+  ) {
     const data = await this.staffService.getStaffBranches(user, staffId);
     return { message: 'Staff branches fetched.', data };
   }
@@ -79,9 +112,9 @@ export class StaffController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.OWNER, Role.BRANCH_ADMIN)
   async assignStaffToBranch(
-    @Param('id') staffId: string, 
-    @Param('branchId') branchId: string, 
-    @CurrentUser() user: any
+    @Param('id') staffId: string,
+    @Param('branchId') branchId: string,
+    @CurrentUser() user: any,
   ) {
     await this.staffService.assignStaffToBranch(user, staffId, branchId);
     return { message: 'Staff assigned to branch successfully.' };
@@ -91,9 +124,9 @@ export class StaffController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.OWNER, Role.BRANCH_ADMIN)
   async removeStaffFromBranch(
-    @Param('id') staffId: string, 
-    @Param('branchId') branchId: string, 
-    @CurrentUser() user: any
+    @Param('id') staffId: string,
+    @Param('branchId') branchId: string,
+    @CurrentUser() user: any,
   ) {
     await this.staffService.removeStaffFromBranch(user, staffId, branchId);
     return { message: 'Staff removed from branch successfully.' };
@@ -114,7 +147,7 @@ export class StaffController {
     const data = await this.authService.inviteStaff(dto, user);
     return {
       message: `Invitation sent to ${dto.email}`,
-      data
+      data,
     };
   }
 
@@ -124,7 +157,7 @@ export class StaffController {
     const data = await this.authService.acceptInvite(dto);
     return {
       message: 'Account activated. OTP sent to your email to complete login.',
-      data
+      data,
     };
   }
 
@@ -134,7 +167,7 @@ export class StaffController {
     const data = await this.authService.getInviteDetails(token);
     return {
       message: 'Invite details fetched successfully.',
-      data
+      data,
     };
   }
 }

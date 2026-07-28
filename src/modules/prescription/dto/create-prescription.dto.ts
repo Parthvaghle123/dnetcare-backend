@@ -1,4 +1,15 @@
-import { IsUUID, IsOptional, IsString, IsArray, ValidateNested, Min, IsIn, MinLength, ArrayMinSize, IsNumber } from 'class-validator';
+import {
+  IsUUID,
+  IsOptional,
+  IsString,
+  IsArray,
+  ValidateNested,
+  Min,
+  IsIn,
+  MinLength,
+  ArrayMinSize,
+  IsNumber,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class MedicineDto {

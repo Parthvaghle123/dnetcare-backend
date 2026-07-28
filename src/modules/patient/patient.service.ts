@@ -27,10 +27,13 @@ export class PatientService {
     @InjectModel(Patient) private patientModel: typeof Patient,
     @InjectModel(Branch) private branchModel: typeof Branch,
     @InjectModel(User) private userModel: typeof User,
-    @InjectModel(MedicalConditionMaster) private conditionMasterModel: typeof MedicalConditionMaster,
-    @InjectModel(PatientMedicalCondition) private patientConditionModel: typeof PatientMedicalCondition,
+    @InjectModel(MedicalConditionMaster)
+    private conditionMasterModel: typeof MedicalConditionMaster,
+    @InjectModel(PatientMedicalCondition)
+    private patientConditionModel: typeof PatientMedicalCondition,
     @InjectModel(Consultation) private consultationModel: typeof Consultation,
-    @InjectModel(DentalChartEntry) private dentalChartEntryModel: typeof DentalChartEntry,
+    @InjectModel(DentalChartEntry)
+    private dentalChartEntryModel: typeof DentalChartEntry,
     @InjectConnection() private sequelize: Sequelize,
   ) {}
 
@@ -38,12 +41,18 @@ export class PatientService {
     const transaction = await this.sequelize.transaction();
     try {
       const branch = await this.branchModel.findOne({
-        where: { id: dto.registration_branch_id, organization_id: reqUser.org_id },
+        where: {
+          id: dto.registration_branch_id,
+          organization_id: reqUser.org_id,
+        },
         transaction,
       });
 
       if (!branch) {
-        throw new HttpException('Invalid branch selected.', StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          'Invalid branch selected.',
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       const duplicateMobile = await this.patientModel.findOne({
@@ -52,7 +61,10 @@ export class PatientService {
       });
 
       if (duplicateMobile) {
-        throw new HttpException('A patient with this mobile number already exists.', StatusCode.CONFLICT);
+        throw new HttpException(
+          'A patient with this mobile number already exists.',
+          StatusCode.CONFLICT,
+        );
       }
 
       const count = await this.patientModel.count({
@@ -64,28 +76,33 @@ export class PatientService {
 
       let age: number | null = null;
       if (dto.date_of_birth) {
-        age = Math.floor((Date.now() - new Date(dto.date_of_birth).getTime()) / 31557600000);
+        age = Math.floor(
+          (Date.now() - new Date(dto.date_of_birth).getTime()) / 31557600000,
+        );
       } else if (dto.age !== undefined) {
         age = dto.age;
       }
 
-      const patient = await this.patientModel.create({
-        organization_id: reqUser.org_id,
-        branch_id: dto.registration_branch_id,
-        file_number: fileNumber,
-        first_name: dto.first_name,
-        last_name: dto.last_name,
-        mobile: dto.mobile,
-        date_of_birth: dto.date_of_birth || null,
-        age: age,
-        gender: dto.gender,
-        address: dto.address || null,
-        city: dto.city || null,
-        notes: dto.notes || null,
-        total_phases: 0,
-        is_active: true,
-        created_by: reqUser.sub,
-      }, { transaction });
+      const patient = await this.patientModel.create(
+        {
+          organization_id: reqUser.org_id,
+          branch_id: dto.registration_branch_id,
+          file_number: fileNumber,
+          first_name: dto.first_name,
+          last_name: dto.last_name,
+          mobile: dto.mobile,
+          date_of_birth: dto.date_of_birth || null,
+          age: age,
+          gender: dto.gender,
+          address: dto.address || null,
+          city: dto.city || null,
+          notes: dto.notes || null,
+          total_phases: 0,
+          is_active: true,
+          created_by: reqUser.sub,
+        },
+        { transaction },
+      );
 
       await transaction.commit();
 
@@ -109,11 +126,23 @@ export class PatientService {
       await transaction.rollback();
       if (error instanceof HttpException) throw error;
       this.logger.error(`[createPatient] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async getPatients(reqUser: any, filters: { search?: string, branch_id?: string, is_active?: string, page?: string, limit?: string }) {
+  async getPatients(
+    reqUser: any,
+    filters: {
+      search?: string;
+      branch_id?: string;
+      is_active?: string;
+      page?: string;
+      limit?: string;
+    },
+  ) {
     try {
       const page = parseInt(filters.page || '1', 10);
       const limit = parseInt(filters.limit || '10', 10);
@@ -136,7 +165,7 @@ export class PatientService {
           { first_name: { [Op.iLike]: `%${filters.search}%` } },
           { last_name: { [Op.iLike]: `%${filters.search}%` } },
           { mobile: { [Op.iLike]: `%${filters.search}%` } },
-          { file_number: { [Op.iLike]: `%${filters.search}%` } }
+          { file_number: { [Op.iLike]: `%${filters.search}%` } },
         ];
       }
 
@@ -170,13 +199,16 @@ export class PatientService {
           total_pages: totalPages,
           limit: limit,
           has_next: page < totalPages,
-          has_previous: page > 1
-        }
+          has_previous: page > 1,
+        },
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getPatients] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -206,24 +238,31 @@ export class PatientService {
         city: patient.city,
         notes: patient.notes,
         is_active: patient.is_active,
-        registration_branch: branch ? {
-          id: branch.id,
-          name: branch.name,
-          city: branch.city,
-          color_code: branch.color_code,
-        } : null,
-        created_by: user ? {
-          id: user.id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-        } : null,
+        registration_branch: branch
+          ? {
+              id: branch.id,
+              name: branch.name,
+              city: branch.city,
+              color_code: branch.color_code,
+            }
+          : null,
+        created_by: user
+          ? {
+              id: user.id,
+              first_name: user.first_name,
+              last_name: user.last_name,
+            }
+          : null,
         created_at: patient.created_at,
         updated_at: patient.updated_at,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getPatientById] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -238,16 +277,26 @@ export class PatientService {
       }
 
       if (Object.keys(dto).length === 0) {
-        throw new HttpException('Provide at least one field to update.', StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          'Provide at least one field to update.',
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       if (dto.mobile && dto.mobile !== patient.mobile) {
         const duplicateMobile = await this.patientModel.findOne({
-          where: { mobile: dto.mobile, organization_id: reqUser.org_id, id: { [Op.ne]: id } },
+          where: {
+            mobile: dto.mobile,
+            organization_id: reqUser.org_id,
+            id: { [Op.ne]: id },
+          },
         });
 
         if (duplicateMobile) {
-          throw new HttpException('This mobile number belongs to another patient.', StatusCode.CONFLICT);
+          throw new HttpException(
+            'This mobile number belongs to another patient.',
+            StatusCode.CONFLICT,
+          );
         }
       }
 
@@ -256,14 +305,17 @@ export class PatientService {
       if (dto.last_name !== undefined) updateData.last_name = dto.last_name;
       if (dto.mobile !== undefined) updateData.mobile = dto.mobile;
       if (dto.gender !== undefined) updateData.gender = dto.gender;
-      if (dto.registration_branch_id !== undefined) updateData.branch_id = dto.registration_branch_id;
+      if (dto.registration_branch_id !== undefined)
+        updateData.branch_id = dto.registration_branch_id;
       if (dto.address !== undefined) updateData.address = dto.address;
       if (dto.city !== undefined) updateData.city = dto.city;
       if (dto.notes !== undefined) updateData.notes = dto.notes;
 
       if (dto.date_of_birth !== undefined) {
         updateData.date_of_birth = dto.date_of_birth;
-        updateData.age = Math.floor((Date.now() - new Date(dto.date_of_birth).getTime()) / 31557600000);
+        updateData.age = Math.floor(
+          (Date.now() - new Date(dto.date_of_birth).getTime()) / 31557600000,
+        );
       } else if (dto.age !== undefined) {
         updateData.age = dto.age;
       }
@@ -274,12 +326,18 @@ export class PatientService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updatePatient] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-
-  async updatePatientStatus(reqUser: any, id: string, dto: UpdatePatientStatusDto) {
+  async updatePatientStatus(
+    reqUser: any,
+    id: string,
+    dto: UpdatePatientStatusDto,
+  ) {
     try {
       const patient = await this.patientModel.findOne({
         where: { id, organization_id: reqUser.org_id },
@@ -301,7 +359,10 @@ export class PatientService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updatePatientStatus] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -329,21 +390,30 @@ export class PatientService {
         condition_id: pc.condition_id,
         condition_name: pc.condition?.name || null,
         notes: pc.notes,
-        recorded_by: pc.recorded_by_relation ? {
-          id: pc.recorded_by_relation.id,
-          first_name: pc.recorded_by_relation.first_name,
-          last_name: pc.recorded_by_relation.last_name,
-        } : null,
+        recorded_by: pc.recorded_by_relation
+          ? {
+              id: pc.recorded_by_relation.id,
+              first_name: pc.recorded_by_relation.first_name,
+              last_name: pc.recorded_by_relation.last_name,
+            }
+          : null,
         created_at: pc.created_at,
       }));
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getPatientMedicalConditions] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async addPatientMedicalCondition(reqUser: any, patientId: string, dto: AddMedicalConditionDto) {
+  async addPatientMedicalCondition(
+    reqUser: any,
+    patientId: string,
+    dto: AddMedicalConditionDto,
+  ) {
     try {
       const patient = await this.patientModel.findOne({
         where: { id: patientId, organization_id: reqUser.org_id },
@@ -365,7 +435,10 @@ export class PatientService {
       });
 
       if (!condition) {
-        throw new HttpException('Medical condition not found or not available for your organization.', StatusCode.NOT_FOUND);
+        throw new HttpException(
+          'Medical condition not found or not available for your organization.',
+          StatusCode.NOT_FOUND,
+        );
       }
 
       const existing = await this.patientConditionModel.findOne({
@@ -373,7 +446,10 @@ export class PatientService {
       });
 
       if (existing) {
-        throw new HttpException('This condition is already assigned to the patient.', StatusCode.CONFLICT);
+        throw new HttpException(
+          'This condition is already assigned to the patient.',
+          StatusCode.CONFLICT,
+        );
       }
 
       const record = await this.patientConditionModel.create({
@@ -393,11 +469,19 @@ export class PatientService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[addPatientMedicalCondition] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async updatePatientMedicalCondition(reqUser: any, patientId: string, conditionId: string, dto: UpdatePatientMedicalConditionDto) {
+  async updatePatientMedicalCondition(
+    reqUser: any,
+    patientId: string,
+    conditionId: string,
+    dto: UpdatePatientMedicalConditionDto,
+  ) {
     try {
       const patient = await this.patientModel.findOne({
         where: { id: patientId, organization_id: reqUser.org_id },
@@ -410,18 +494,20 @@ export class PatientService {
       const record = await this.patientConditionModel.findOne({
         where: {
           patient_id: patientId,
-          [Op.or]: [
-            { id: conditionId },
-            { condition_id: conditionId }
-          ]
+          [Op.or]: [{ id: conditionId }, { condition_id: conditionId }],
         },
       });
 
       if (!record) {
-        throw new HttpException('Medical condition record not found for this patient.', StatusCode.NOT_FOUND);
+        throw new HttpException(
+          'Medical condition record not found for this patient.',
+          StatusCode.NOT_FOUND,
+        );
       }
 
-      await record.update({ notes: dto.notes !== undefined ? dto.notes : record.notes });
+      await record.update({
+        notes: dto.notes !== undefined ? dto.notes : record.notes,
+      });
 
       return {
         id: record.id,
@@ -432,11 +518,18 @@ export class PatientService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updatePatientMedicalCondition] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async removePatientMedicalCondition(reqUser: any, patientId: string, conditionId: string) {
+  async removePatientMedicalCondition(
+    reqUser: any,
+    patientId: string,
+    conditionId: string,
+  ) {
     try {
       const patient = await this.patientModel.findOne({
         where: { id: patientId, organization_id: reqUser.org_id },
@@ -449,22 +542,25 @@ export class PatientService {
       const deleted = await this.patientConditionModel.destroy({
         where: {
           patient_id: patientId,
-          [Op.or]: [
-            { id: conditionId },
-            { condition_id: conditionId }
-          ]
+          [Op.or]: [{ id: conditionId }, { condition_id: conditionId }],
         },
       });
 
       if (!deleted) {
-        throw new HttpException('Medical condition record not found for this patient.', StatusCode.NOT_FOUND);
+        throw new HttpException(
+          'Medical condition record not found for this patient.',
+          StatusCode.NOT_FOUND,
+        );
       }
 
       return true;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[removePatientMedicalCondition] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -490,7 +586,10 @@ export class PatientService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getMedicalConditions] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -507,7 +606,10 @@ export class PatientService {
       });
 
       if (duplicate) {
-        throw new HttpException('A condition with this name already exists.', StatusCode.CONFLICT);
+        throw new HttpException(
+          'A condition with this name already exists.',
+          StatusCode.CONFLICT,
+        );
       }
 
       const condition = await this.conditionMasterModel.create({
@@ -525,22 +627,35 @@ export class PatientService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[createMedicalCondition] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async updateMedicalCondition(reqUser: any, id: string, dto: UpdateMedicalConditionDto) {
+  async updateMedicalCondition(
+    reqUser: any,
+    id: string,
+    dto: UpdateMedicalConditionDto,
+  ) {
     try {
       const condition = await this.conditionMasterModel.findOne({
         where: { id, organization_id: reqUser.org_id },
       });
 
       if (!condition) {
-        throw new HttpException('Medical condition not found or you do not have permission to edit it.', StatusCode.NOT_FOUND);
+        throw new HttpException(
+          'Medical condition not found or you do not have permission to edit it.',
+          StatusCode.NOT_FOUND,
+        );
       }
 
       if (condition.organization_id === null) {
-        throw new HttpException('Cannot edit system default medical conditions.', StatusCode.FORBIDDEN);
+        throw new HttpException(
+          'Cannot edit system default medical conditions.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       const duplicate = await this.conditionMasterModel.findOne({
@@ -555,7 +670,10 @@ export class PatientService {
       });
 
       if (duplicate) {
-        throw new HttpException('A condition with this name already exists.', StatusCode.CONFLICT);
+        throw new HttpException(
+          'A condition with this name already exists.',
+          StatusCode.CONFLICT,
+        );
       }
 
       await condition.update({ name: dto.name.trim() });
@@ -569,22 +687,35 @@ export class PatientService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updateMedicalCondition] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async updateMedicalConditionStatus(reqUser: any, id: string, dto: UpdateMedicalConditionStatusDto) {
+  async updateMedicalConditionStatus(
+    reqUser: any,
+    id: string,
+    dto: UpdateMedicalConditionStatusDto,
+  ) {
     try {
       const condition = await this.conditionMasterModel.findOne({
         where: { id, organization_id: reqUser.org_id },
       });
 
       if (!condition) {
-        throw new HttpException('Medical condition not found or you do not have permission to edit it.', StatusCode.NOT_FOUND);
+        throw new HttpException(
+          'Medical condition not found or you do not have permission to edit it.',
+          StatusCode.NOT_FOUND,
+        );
       }
 
       if (condition.organization_id === null) {
-        throw new HttpException('Cannot edit system default medical conditions.', StatusCode.FORBIDDEN);
+        throw new HttpException(
+          'Cannot edit system default medical conditions.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       await condition.update({ is_active: dto.is_active });
@@ -598,7 +729,10 @@ export class PatientService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updateMedicalConditionStatus] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -609,19 +743,28 @@ export class PatientService {
       });
 
       if (!condition) {
-        throw new HttpException('Medical condition not found or you do not have permission to delete it.', StatusCode.NOT_FOUND);
+        throw new HttpException(
+          'Medical condition not found or you do not have permission to delete it.',
+          StatusCode.NOT_FOUND,
+        );
       }
 
       if (condition.organization_id === null) {
-        throw new HttpException('Cannot delete system default medical conditions.', StatusCode.FORBIDDEN);
+        throw new HttpException(
+          'Cannot delete system default medical conditions.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       const inUse = await this.patientConditionModel.count({
-        where: { condition_id: id }
+        where: { condition_id: id },
       });
 
       if (inUse > 0) {
-        throw new HttpException('Cannot delete this condition as it is used by patients.', StatusCode.CONFLICT);
+        throw new HttpException(
+          'Cannot delete this condition as it is used by patients.',
+          StatusCode.CONFLICT,
+        );
       }
 
       await condition.destroy();
@@ -630,7 +773,10 @@ export class PatientService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[deleteMedicalCondition] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -655,11 +801,11 @@ export class PatientService {
               {
                 model: this.userModel,
                 as: 'doctor', // the alias in Consultation model is 'doctor' (BelongsTo(() => User))
-                attributes: ['id', 'first_name', 'last_name']
-              }
-            ]
-          }
-        ]
+                attributes: ['id', 'first_name', 'last_name'],
+              },
+            ],
+          },
+        ],
       });
 
       return history.map((entry: any) => ({
@@ -667,22 +813,29 @@ export class PatientService {
         tooth_number: entry.tooth_number,
         condition: entry.condition,
         notes: entry.notes,
-        consultation: entry.consultation ? {
-          id: entry.consultation.id,
-          consultation_date: entry.consultation.consultation_date,
-          doctor: entry.consultation.doctor ? {
-            id: entry.consultation.doctor.id,
-            first_name: entry.consultation.doctor.first_name,
-            last_name: entry.consultation.doctor.last_name
-          } : null
-        } : null,
+        consultation: entry.consultation
+          ? {
+              id: entry.consultation.id,
+              consultation_date: entry.consultation.consultation_date,
+              doctor: entry.consultation.doctor
+                ? {
+                    id: entry.consultation.doctor.id,
+                    first_name: entry.consultation.doctor.first_name,
+                    last_name: entry.consultation.doctor.last_name,
+                  }
+                : null,
+            }
+          : null,
         created_at: entry.created_at,
-        updated_at: entry.updated_at
+        updated_at: entry.updated_at,
       }));
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getToothHistory] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

@@ -1,4 +1,16 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  BelongsTo,
+  ForeignKey,
+  CreatedAt,
+  UpdatedAt,
+} from 'sequelize-typescript';
 import { Consultation } from './consultation.model';
 import { Patient } from '../../patient/entities/patient.model';
 
@@ -34,11 +46,22 @@ export class DentalChartEntry extends Model {
   surface: string;
 
   @AllowNull(true)
-  @Column(DataType.ENUM(
-    'CARIES', 'FRACTURE', 'MOBILITY', 'ROOT_STUMP',
-    'MISSING_TOOTH', 'IMPACTED', 'SUPRA_ERUPTED',
-    'PERIAPICAL_ABSCESS', 'RCT_DONE', 'CROWN', 'BRIDGE', 'IMPLANT'
-  ))
+  @Column(
+    DataType.ENUM(
+      'CARIES',
+      'FRACTURE',
+      'MOBILITY',
+      'ROOT_STUMP',
+      'MISSING_TOOTH',
+      'IMPACTED',
+      'SUPRA_ERUPTED',
+      'PERIAPICAL_ABSCESS',
+      'RCT_DONE',
+      'CROWN',
+      'BRIDGE',
+      'IMPLANT',
+    ),
+  )
   condition: string;
 
   @AllowNull(true)
@@ -49,9 +72,7 @@ export class DentalChartEntry extends Model {
   @Column(DataType.DATE)
   created_at: Date;
 
-
   @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
-
 }

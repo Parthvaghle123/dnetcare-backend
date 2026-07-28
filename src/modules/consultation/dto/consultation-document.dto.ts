@@ -1,11 +1,17 @@
-import { IsString, IsEnum, IsArray, ValidateNested, ArrayMinSize } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsArray,
+  ValidateNested,
+  ArrayMinSize,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum FileType {
   XRAY = 'XRAY',
   INTRAORAL_PHOTO = 'INTRAORAL_PHOTO',
   LAB_REPORT = 'LAB_REPORT',
-  OTHER = 'OTHER'
+  OTHER = 'OTHER',
 }
 
 export class ConsultationDocumentDto {

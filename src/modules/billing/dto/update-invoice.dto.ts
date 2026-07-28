@@ -1,7 +1,17 @@
-import { IsUUID, IsOptional, IsDateString, IsNumber, IsString, IsArray, ValidateNested, Min, IsEnum, ArrayMinSize } from 'class-validator';
+import {
+  IsUUID,
+  IsOptional,
+  IsDateString,
+  IsNumber,
+  IsString,
+  IsArray,
+  ValidateNested,
+  Min,
+  IsEnum,
+  ArrayMinSize,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { InvoiceLineItemDto } from './create-invoice.dto';
-
 
 export class UpdateInvoiceDto {
   @IsOptional()

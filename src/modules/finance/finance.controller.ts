@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { FinanceService } from './finance.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -23,7 +33,10 @@ export class FinanceController {
 
   @Post('expense-categories')
   @Roles(Role.OWNER, Role.BRANCH_ADMIN)
-  async createExpenseCategory(@Body() dto: CreateExpenseCategoryDto, @CurrentUser() user: any) {
+  async createExpenseCategory(
+    @Body() dto: CreateExpenseCategoryDto,
+    @CurrentUser() user: any,
+  ) {
     const data = await this.financeService.createExpenseCategory(user, dto);
     return { message: 'Expense category created successfully.', data };
   }
@@ -44,7 +57,11 @@ export class FinanceController {
 
   @Put('expenses/:id')
   @Roles(Role.OWNER, Role.BRANCH_ADMIN)
-  async updateExpense(@Param('id') id: string, @Body() dto: UpdateExpenseDto, @CurrentUser() user: any) {
+  async updateExpense(
+    @Param('id') id: string,
+    @Body() dto: UpdateExpenseDto,
+    @CurrentUser() user: any,
+  ) {
     const data = await this.financeService.updateExpense(user, id, dto);
     return { message: 'Expense updated successfully.', data };
   }
@@ -58,8 +75,14 @@ export class FinanceController {
 
   @Get('reports/pending')
   @Roles(Role.OWNER, Role.BRANCH_ADMIN)
-  async getOutstandingPatientBalances(@Query() query: any, @CurrentUser() user: any) {
-    const data = await this.financeService.getOutstandingPatientBalances(user, query);
+  async getOutstandingPatientBalances(
+    @Query() query: any,
+    @CurrentUser() user: any,
+  ) {
+    const data = await this.financeService.getOutstandingPatientBalances(
+      user,
+      query,
+    );
     return { message: 'Outstanding patient balances fetched.', data };
   }
 

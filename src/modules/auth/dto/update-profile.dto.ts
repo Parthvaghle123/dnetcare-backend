@@ -3,12 +3,16 @@ import { IsString, IsOptional, Matches, Length } from 'class-validator';
 export class UpdateProfileDto {
   @IsOptional()
   @IsString({ message: 'First Name must be text' })
-  @Matches(/^[a-zA-Z\s]+$/, { message: 'First Name must contain only alphabets' })
+  @Matches(/^[a-zA-Z\s]+$/, {
+    message: 'First Name must contain only alphabets',
+  })
   first_name?: string;
 
   @IsOptional()
   @IsString({ message: 'Last Name must be text' })
-  @Matches(/^[a-zA-Z\s]+$/, { message: 'Last Name must contain only alphabets' })
+  @Matches(/^[a-zA-Z\s]+$/, {
+    message: 'Last Name must contain only alphabets',
+  })
   last_name?: string;
 
   @IsOptional()

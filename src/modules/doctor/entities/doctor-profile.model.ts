@@ -1,4 +1,16 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  BelongsTo,
+  ForeignKey,
+  CreatedAt,
+  UpdatedAt,
+} from 'sequelize-typescript';
 import { User } from '../../auth/entities/user.model';
 
 @Table({ tableName: 'doctor_profiles', timestamps: true })
@@ -43,5 +55,4 @@ export class DoctorProfile extends Model {
   @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
-
 }

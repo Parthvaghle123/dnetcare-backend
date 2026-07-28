@@ -1,4 +1,15 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, CreatedAt, UpdatedAt, HasMany } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  CreatedAt,
+  UpdatedAt,
+  HasMany,
+} from 'sequelize-typescript';
 import { InternshipExperience } from './internship-experience.model';
 import { InternshipInquiryStatus } from '../enums/internship-status.enum';
 

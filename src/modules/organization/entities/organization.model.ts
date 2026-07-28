@@ -1,5 +1,20 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey, CreatedAt, UpdatedAt, HasMany } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  BelongsTo,
+  ForeignKey,
+  CreatedAt,
+  UpdatedAt,
+  HasMany,
+  HasOne,
+} from 'sequelize-typescript';
 import { Subscription } from '../../subscription/entities/subscription.model';
+import { WebsiteConfig } from '../../website/entities/website-config.model';
 
 @Table({ tableName: 'organizations', timestamps: true })
 export class Organization extends Model {
@@ -20,6 +35,14 @@ export class Organization extends Model {
   @Column(DataType.STRING)
   logo_url: string;
 
+  @AllowNull(true)
+  @Column({ type: DataType.STRING, unique: true })
+  subdomain: string;
+
+  @AllowNull(true)
+  @Column({ type: DataType.STRING, unique: true })
+  custom_domain: string;
+
   @AllowNull(false)
   @Column(DataType.BOOLEAN)
   is_active: boolean;
@@ -34,4 +57,7 @@ export class Organization extends Model {
 
   @HasMany(() => Subscription)
   subscriptions: Subscription[];
+
+  @HasOne(() => WebsiteConfig)
+  websiteConfig: WebsiteConfig;
 }

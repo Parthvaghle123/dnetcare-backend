@@ -1,4 +1,16 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  BelongsTo,
+  ForeignKey,
+  CreatedAt,
+  UpdatedAt,
+} from 'sequelize-typescript';
 import { TreatmentPlan } from './treatment-plan.model';
 import { Appointment } from '../../appointment/entities/appointment.model';
 import { ProcedureCatalog } from '../../catalog/entities/procedure-catalog.model';
@@ -77,7 +89,15 @@ export class TreatmentPlanPhase extends Model {
   doctor_notes: string;
 
   @Default(TreatmentPlanPhaseStatus.PENDING)
-  @Column(DataType.ENUM('PENDING', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'SKIPPED'))
+  @Column(
+    DataType.ENUM(
+      'PENDING',
+      'SCHEDULED',
+      'IN_PROGRESS',
+      'COMPLETED',
+      'SKIPPED',
+    ),
+  )
   status: TreatmentPlanPhaseStatus;
 
   @AllowNull(true)
@@ -99,5 +119,4 @@ export class TreatmentPlanPhase extends Model {
   @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
-
 }

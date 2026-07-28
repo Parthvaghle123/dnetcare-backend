@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Put, Patch, Delete, Param, ParseUUIDPipe, Body, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Patch,
+  Delete,
+  Param,
+  ParseUUIDPipe,
+  Body,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -33,7 +45,7 @@ export class CatalogController {
   async updateCatalog(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCatalogDto,
-    @CurrentUser() user: any
+    @CurrentUser() user: any,
   ) {
     const data = await this.catalogService.updateCatalog(user, id, dto);
     return { message: 'Procedure updated successfully.', data };
@@ -44,7 +56,7 @@ export class CatalogController {
   async updateCatalogStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateCatalogStatusDto,
-    @CurrentUser() user: any
+    @CurrentUser() user: any,
   ) {
     const data = await this.catalogService.updateCatalogStatus(user, id, dto);
     return { message: 'Procedure status updated successfully.', data };
@@ -54,7 +66,7 @@ export class CatalogController {
   @Roles(Role.OWNER, Role.BRANCH_ADMIN)
   async deleteCatalog(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: any
+    @CurrentUser() user: any,
   ) {
     await this.catalogService.deleteCatalog(user, id);
     return { message: 'Procedure deleted successfully.' };

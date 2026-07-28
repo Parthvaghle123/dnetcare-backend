@@ -40,13 +40,15 @@ export class AuthService {
     @InjectModel(User) private userModel: typeof User,
     @InjectModel(UserBranch) private userBranchModel: typeof UserBranch,
     @InjectModel(RefreshToken) private refreshTokenModel: typeof RefreshToken,
-    @InjectModel(DoctorProfile) private doctorProfileModel: typeof DoctorProfile,
-    @InjectModel(MedicalConditionMaster) private medicalConditionMasterModel: typeof MedicalConditionMaster,
+    @InjectModel(DoctorProfile)
+    private doctorProfileModel: typeof DoctorProfile,
+    @InjectModel(MedicalConditionMaster)
+    private medicalConditionMasterModel: typeof MedicalConditionMaster,
     private configService: ConfigService,
     private jwtService: JwtService,
     private emailService: EmailService,
     @InjectConnection() private sequelize: Sequelize,
-  ) { }
+  ) {}
 
   private generateOtp(): string {
     if (this.configService.get('NODE_ENV') === 'development') {
@@ -56,9 +58,12 @@ export class AuthService {
     }
   }
 
-
-
-  private async generateTokens(user: User, branchIds: string[], ipAddress: string = '', userAgent: string = '') {
+  private async generateTokens(
+    user: User,
+    branchIds: string[],
+    ipAddress: string = '',
+    userAgent: string = '',
+  ) {
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = await argon2.hash(rawToken);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -69,7 +74,7 @@ export class AuthService {
       expires_at: expiresAt,
       is_revoked: false,
       ip_address: ipAddress,
-      user_agent: userAgent
+      user_agent: userAgent,
     });
 
     const payload = {
@@ -86,64 +91,95 @@ export class AuthService {
   }
 
   async register(dto: RegisterDto) {
-    const existingUser = await this.userModel.findOne({ where: { email: dto.email } });
+    const existingUser = await this.userModel.findOne({
+      where: { email: dto.email },
+    });
     if (existingUser) {
-      throw new HttpException({ message: 'An account with this email already exists', error: ErrorCode.DUPLICATE_EMAIL }, StatusCode.CONFLICT);
+      throw new HttpException(
+        {
+          message: 'An account with this email already exists',
+          error: ErrorCode.DUPLICATE_EMAIL,
+        },
+        StatusCode.CONFLICT,
+      );
     }
 
     if (dto.phone) {
-      const existingPhone = await this.userModel.findOne({ where: { phone: dto.phone } });
+      const existingPhone = await this.userModel.findOne({
+        where: { phone: dto.phone },
+      });
       if (existingPhone) {
-        throw new HttpException({ message: 'An account with this phone already exists', error: ErrorCode.DUPLICATE_PHONE }, StatusCode.CONFLICT);
+        throw new HttpException(
+          {
+            message: 'An account with this phone already exists',
+            error: ErrorCode.DUPLICATE_PHONE,
+          },
+          StatusCode.CONFLICT,
+        );
       }
     }
 
     const transaction = await this.sequelize.transaction();
 
     try {
-      const createdOrg = await this.orgModel.create({
-        name: dto.org_name,
-        phone: dto.phone,
-        is_active: true
-      }, { transaction });
+      const createdOrg = await this.orgModel.create(
+        {
+          name: dto.org_name,
+          phone: dto.phone,
+          is_active: true,
+        },
+        { transaction },
+      );
 
-      const branchName = (dto.branch_name && dto.branch_name.trim() !== '') ? dto.branch_name : dto.org_name;
+      const branchName =
+        dto.branch_name && dto.branch_name.trim() !== ''
+          ? dto.branch_name
+          : dto.org_name;
 
-      const createdBranch = await this.branchModel.create({
-        organization_id: createdOrg.id,
-        name: branchName,
-        city: dto.branch_city,
-        state: dto.branch_state || null,
-        address: dto.branch_address || null,
-        phone: dto.branch_phone,
-        start_time: dto.branch_start_time || null,
-        end_time: dto.branch_end_time || null,
-        color_code: '#3B82F6',
-        is_active: true
-      }, { transaction });
+      const createdBranch = await this.branchModel.create(
+        {
+          organization_id: createdOrg.id,
+          name: branchName,
+          city: dto.branch_city,
+          state: dto.branch_state || null,
+          address: dto.branch_address || null,
+          phone: dto.branch_phone,
+          start_time: dto.branch_start_time || null,
+          end_time: dto.branch_end_time || null,
+          color_code: '#3B82F6',
+          is_active: true,
+        },
+        { transaction },
+      );
 
       const otp = this.generateOtp();
       const otp_expires_at = new Date(Date.now() + 10 * 60 * 1000);
 
-      const createdUser = await this.userModel.create({
-        organization_id: createdOrg.id,
-        first_name: dto.first_name,
-        last_name: dto.last_name,
-        email: dto.email,
-        phone: dto.phone,
-        role: Role.OWNER,
-        status: UserStatus.PENDING,
-        otp_code: otp,
-        otp_expires_at: otp_expires_at,
-        otp_attempts: 0,
-        is_active: true
-      }, { transaction });
+      const createdUser = await this.userModel.create(
+        {
+          organization_id: createdOrg.id,
+          first_name: dto.first_name,
+          last_name: dto.last_name,
+          email: dto.email,
+          phone: dto.phone,
+          role: Role.OWNER,
+          status: UserStatus.PENDING,
+          otp_code: otp,
+          otp_expires_at: otp_expires_at,
+          otp_attempts: 0,
+          is_active: true,
+        },
+        { transaction },
+      );
 
-      await this.userBranchModel.create({
-        user_id: createdUser.id,
-        branch_id: createdBranch.id,
-        is_primary: true,
-      }, { transaction });
+      await this.userBranchModel.create(
+        {
+          user_id: createdUser.id,
+          branch_id: createdBranch.id,
+          is_primary: true,
+        },
+        { transaction },
+      );
 
       const defaultConditions = [
         'Diabetes',
@@ -151,22 +187,20 @@ export class AuthService {
         'Asthma',
         'Cardiac Disease',
         'Bleeding Disorder',
-        'Allergies'
+        'Allergies',
       ];
-      
-      const conditionRecords = defaultConditions.map(name => ({
+
+      const conditionRecords = defaultConditions.map((name) => ({
         organization_id: createdOrg.id,
         name: name,
-        is_active: true
+        is_active: true,
       }));
 
-      await this.medicalConditionMasterModel.bulkCreate(conditionRecords, { transaction });
+      await this.medicalConditionMasterModel.bulkCreate(conditionRecords, {
+        transaction,
+      });
 
-      await this.emailService.sendOtpEmail(
-        dto.email,
-        otp,
-        'register'
-      );
+      await this.emailService.sendOtpEmail(dto.email, otp, 'register');
 
       await transaction.commit();
       return { email: dto.email };
@@ -174,25 +208,52 @@ export class AuthService {
       await transaction.rollback();
       if (error instanceof HttpException) throw error;
       this.logger.error(`[register] Error:`, error);
-      throw new HttpException({ message: 'Something went wrong. Please try again.', error: error.message || error.toString() }, StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        {
+          message: 'Something went wrong. Please try again.',
+          error: error.message || error.toString(),
+        },
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async sendOtp(dto: SendOtpDto) {
     try {
-      const user = await this.userModel.findOne({ where: { email: dto.email } });
+      const user = await this.userModel.findOne({
+        where: { email: dto.email },
+      });
       if (!user) {
-        throw new HttpException({ message: 'No account found with this email', error: ErrorCode.ACCOUNT_NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          {
+            message: 'No account found with this email',
+            error: ErrorCode.ACCOUNT_NOT_FOUND,
+          },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       if (user.status === UserStatus.PENDING && !user.invite_token) {
         // Registered but unverified — allow OTP resend
       } else if (user.status === UserStatus.PENDING) {
-        throw new HttpException({ message: 'Account not activated. Please use your invite link.', error: ErrorCode.ACCOUNT_NOT_ACTIVATED }, StatusCode.FORBIDDEN);
+        throw new HttpException(
+          {
+            message: 'Account not activated. Please use your invite link.',
+            error: ErrorCode.ACCOUNT_NOT_ACTIVATED,
+          },
+          StatusCode.FORBIDDEN,
+        );
       }
 
       if (user.status === UserStatus.INACTIVE || !user.is_active) {
-        throw new HttpException({ message: 'Your account has been disabled. Contact your clinic admin.', error: ErrorCode.ACCOUNT_DISABLED }, StatusCode.FORBIDDEN);
+        throw new HttpException(
+          {
+            message:
+              'Your account has been disabled. Contact your clinic admin.',
+            error: ErrorCode.ACCOUNT_DISABLED,
+          },
+          StatusCode.FORBIDDEN,
+        );
       }
 
       const otp = this.generateOtp();
@@ -208,47 +269,86 @@ export class AuthService {
       // The user explicitly disabled this because OTP is hardcoded to 999999 in dev.
       // The user will manually uncomment this when they need to test emails again.
 
-      await this.emailService.sendOtpEmail(
-        dto.email,
-        otp,
-        'login'
-      );
+      await this.emailService.sendOtpEmail(dto.email, otp, 'login');
 
       return { email: dto.email };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[sendOtp] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async verifyOtp(dto: VerifyOtpDto, ipAddress: string = '', userAgent: string = '') {
+  async verifyOtp(
+    dto: VerifyOtpDto,
+    ipAddress: string = '',
+    userAgent: string = '',
+  ) {
     try {
-      const user = await this.userModel.findOne({ where: { email: dto.email } });
+      const user = await this.userModel.findOne({
+        where: { email: dto.email },
+      });
       if (!user) {
-        throw new HttpException({ message: 'User not found.', error: ErrorCode.ACCOUNT_NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'User not found.', error: ErrorCode.ACCOUNT_NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
-      if (user.status !== UserStatus.ACTIVE && user.status !== UserStatus.PENDING) {
-        throw new HttpException({ message: 'Account is not active.', error: ErrorCode.ACCOUNT_DISABLED }, StatusCode.FORBIDDEN);
+      if (
+        user.status !== UserStatus.ACTIVE &&
+        user.status !== UserStatus.PENDING
+      ) {
+        throw new HttpException(
+          {
+            message: 'Account is not active.',
+            error: ErrorCode.ACCOUNT_DISABLED,
+          },
+          StatusCode.FORBIDDEN,
+        );
       }
 
       if (!user.otp_code) {
-        throw new HttpException({ message: 'No OTP requested.', error: ErrorCode.INVALID_OTP }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          { message: 'No OTP requested.', error: ErrorCode.INVALID_OTP },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       if (user.otp_attempts >= 5) {
-        throw new HttpException({ message: 'Too many wrong attempts. Please request a new OTP.', error: ErrorCode.TOO_MANY_OTP_ATTEMPTS }, StatusCode.TOO_MANY_REQUESTS);
+        throw new HttpException(
+          {
+            message: 'Too many wrong attempts. Please request a new OTP.',
+            error: ErrorCode.TOO_MANY_OTP_ATTEMPTS,
+          },
+          StatusCode.TOO_MANY_REQUESTS,
+        );
       }
 
       if (new Date() > user.otp_expires_at) {
-        await user.update({ otp_code: null, otp_expires_at: null, otp_attempts: 0 });
-        throw new HttpException({ message: 'OTP has expired. Please request a new OTP.', error: ErrorCode.OTP_EXPIRED }, StatusCode.BAD_REQUEST);
+        await user.update({
+          otp_code: null,
+          otp_expires_at: null,
+          otp_attempts: 0,
+        });
+        throw new HttpException(
+          {
+            message: 'OTP has expired. Please request a new OTP.',
+            error: ErrorCode.OTP_EXPIRED,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       if (String(dto.otp) !== user.otp_code) {
         await user.update({ otp_attempts: user.otp_attempts + 1 });
-        throw new HttpException({ message: 'Invalid OTP.', error: ErrorCode.INVALID_OTP }, StatusCode.UNAUTHORIZED);
+        throw new HttpException(
+          { message: 'Invalid OTP.', error: ErrorCode.INVALID_OTP },
+          StatusCode.UNAUTHORIZED,
+        );
       }
 
       await user.update({
@@ -258,10 +358,17 @@ export class AuthService {
         otp_attempts: 0,
       });
 
-      const userBranches = await this.userBranchModel.findAll({ where: { user_id: user.id } });
-      const branchIds = userBranches.map(ub => ub.branch_id);
+      const userBranches = await this.userBranchModel.findAll({
+        where: { user_id: user.id },
+      });
+      const branchIds = userBranches.map((ub) => ub.branch_id);
 
-      const tokens = await this.generateTokens(user, branchIds, ipAddress, userAgent);
+      const tokens = await this.generateTokens(
+        user,
+        branchIds,
+        ipAddress,
+        userAgent,
+      );
 
       return {
         access_token: tokens.access_token,
@@ -276,32 +383,50 @@ export class AuthService {
           status: user.status,
           org_id: user.organization_id,
           branch_ids: branchIds,
-        }
+        },
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[verifyOtp] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async refresh(dto: RefreshTokenDto, ipAddress: string = '', userAgent: string = '') {
+  async refresh(
+    dto: RefreshTokenDto,
+    ipAddress: string = '',
+    userAgent: string = '',
+  ) {
     try {
       const user = await this.userModel.findByPk(dto.user_id);
       if (!user) {
-        throw new HttpException({ message: 'Invalid session.', error: ErrorCode.INVALID_SESSION }, StatusCode.UNAUTHORIZED);
+        throw new HttpException(
+          { message: 'Invalid session.', error: ErrorCode.INVALID_SESSION },
+          StatusCode.UNAUTHORIZED,
+        );
       }
 
       if (user.status !== UserStatus.ACTIVE) {
-        throw new HttpException({ message: 'Account is not active. Please contact administration.', error: ErrorCode.ACCOUNT_DISABLED }, StatusCode.FORBIDDEN);
+        throw new HttpException(
+          {
+            message: 'Account is not active. Please contact administration.',
+            error: ErrorCode.ACCOUNT_DISABLED,
+          },
+          StatusCode.FORBIDDEN,
+        );
       }
 
       const activeSessions = await this.refreshTokenModel.findAll({
-        where: { user_id: user.id, is_revoked: false }
+        where: { user_id: user.id, is_revoked: false },
       });
 
       let validSession: RefreshToken | null = null;
-      this.logger.log(`[refresh] Found ${activeSessions.length} active sessions for user ${user.id}`);
+      this.logger.log(
+        `[refresh] Found ${activeSessions.length} active sessions for user ${user.id}`,
+      );
       for (const session of activeSessions) {
         if (new Date() > session.expires_at) {
           this.logger.log(`[refresh] Session ${session.id} expired.`);
@@ -310,36 +435,60 @@ export class AuthService {
         }
 
         try {
-          const isMatch = await argon2.verify(session.token, dto.refresh_token.trim());
-          this.logger.log(`[refresh] Argon2 verify for session ${session.id}: ${isMatch}`);
+          const isMatch = await argon2.verify(
+            session.token,
+            dto.refresh_token.trim(),
+          );
+          this.logger.log(
+            `[refresh] Argon2 verify for session ${session.id}: ${isMatch}`,
+          );
           if (isMatch) {
             validSession = session;
             break;
           }
         } catch (err) {
-          this.logger.error(`[refresh] Argon2 verify crashed for session ${session.id}:`, err);
+          this.logger.error(
+            `[refresh] Argon2 verify crashed for session ${session.id}:`,
+            err,
+          );
         }
       }
 
       if (!validSession) {
-        throw new HttpException({ message: 'Session expired. Please login again.', error: ErrorCode.SESSION_EXPIRED }, StatusCode.UNAUTHORIZED);
+        throw new HttpException(
+          {
+            message: 'Session expired. Please login again.',
+            error: ErrorCode.SESSION_EXPIRED,
+          },
+          StatusCode.UNAUTHORIZED,
+        );
       }
 
       await validSession.update({ is_revoked: true });
 
-      const userBranches = await this.userBranchModel.findAll({ where: { user_id: user.id } });
-      const branchIds = userBranches.map(ub => ub.branch_id);
+      const userBranches = await this.userBranchModel.findAll({
+        where: { user_id: user.id },
+      });
+      const branchIds = userBranches.map((ub) => ub.branch_id);
 
-      const tokens = await this.generateTokens(user, branchIds, ipAddress, userAgent);
+      const tokens = await this.generateTokens(
+        user,
+        branchIds,
+        ipAddress,
+        userAgent,
+      );
 
       return {
         access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token
+        refresh_token: tokens.refresh_token,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[refresh] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -348,19 +497,22 @@ export class AuthService {
       if (sessionId) {
         await this.refreshTokenModel.update(
           { is_revoked: true },
-          { where: { id: sessionId, user_id: userId, is_revoked: false } }
+          { where: { id: sessionId, user_id: userId, is_revoked: false } },
         );
       } else {
         await this.refreshTokenModel.update(
           { is_revoked: true },
-          { where: { user_id: userId, is_revoked: false } }
+          { where: { user_id: userId, is_revoked: false } },
         );
       }
       return null;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[logout] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -371,13 +523,27 @@ export class AuthService {
       const inviterBranchIds = reqUser.branch_ids;
 
       if (dto.role === Role.OWNER) {
-        throw new HttpException({ message: 'Cannot invite a user with OWNER role.', error: ErrorCode.CANNOT_INVITE_OWNER }, StatusCode.FORBIDDEN);
+        throw new HttpException(
+          {
+            message: 'Cannot invite a user with OWNER role.',
+            error: ErrorCode.CANNOT_INVITE_OWNER,
+          },
+          StatusCode.FORBIDDEN,
+        );
       }
 
       if (inviterRole === Role.BRANCH_ADMIN) {
-        const hasAccessToAll = dto.branch_ids.every(id => inviterBranchIds.includes(id));
+        const hasAccessToAll = dto.branch_ids.every((id) =>
+          inviterBranchIds.includes(id),
+        );
         if (!hasAccessToAll) {
-          throw new HttpException({ message: 'You can only invite staff to your own branch.', error: ErrorCode.BRANCH_ACCESS_DENIED }, StatusCode.FORBIDDEN);
+          throw new HttpException(
+            {
+              message: 'You can only invite staff to your own branch.',
+              error: ErrorCode.BRANCH_ACCESS_DENIED,
+            },
+            StatusCode.FORBIDDEN,
+          );
         }
       }
 
@@ -385,11 +551,18 @@ export class AuthService {
         where: {
           id: dto.branch_ids,
           organization_id: inviterOrgId,
-        }
+        },
       });
 
       if (validBranchesCount !== dto.branch_ids.length) {
-        throw new HttpException({ message: 'One or more provided branch IDs are invalid or do not belong to your clinic.', error: ErrorCode.INVALID_BRANCH }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          {
+            message:
+              'One or more provided branch IDs are invalid or do not belong to your clinic.',
+            error: ErrorCode.INVALID_BRANCH,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       let primaryBranchId = dto.primary_branch_id;
@@ -397,16 +570,30 @@ export class AuthService {
         if (dto.branch_ids.length === 1) {
           primaryBranchId = dto.branch_ids[0];
         } else {
-          throw new HttpException({ message: 'Please select a primary branch when assigning multiple branches to this user.', error: ErrorCode.PRIMARY_BRANCH_REQUIRED }, StatusCode.BAD_REQUEST);
+          throw new HttpException(
+            {
+              message:
+                'Please select a primary branch when assigning multiple branches to this user.',
+              error: ErrorCode.PRIMARY_BRANCH_REQUIRED,
+            },
+            StatusCode.BAD_REQUEST,
+          );
         }
       }
 
       if (!dto.branch_ids.includes(primaryBranchId)) {
-        throw new HttpException({ message: 'The selected primary branch must be one of the assigned branches.', error: ErrorCode.PRIMARY_BRANCH_INVALID }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          {
+            message:
+              'The selected primary branch must be one of the assigned branches.',
+            error: ErrorCode.PRIMARY_BRANCH_INVALID,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       const existingUser = await this.userModel.findOne({
-        where: { email: dto.email }
+        where: { email: dto.email },
       });
 
       const inviteToken = crypto.randomBytes(32).toString('hex');
@@ -414,36 +601,54 @@ export class AuthService {
 
       if (existingUser) {
         if (existingUser.organization_id !== inviterOrgId) {
-          throw new HttpException({ message: 'A user with this email already belongs to another clinic.', error: ErrorCode.DUPLICATE_EMAIL }, StatusCode.CONFLICT);
+          throw new HttpException(
+            {
+              message:
+                'A user with this email already belongs to another clinic.',
+              error: ErrorCode.DUPLICATE_EMAIL,
+            },
+            StatusCode.CONFLICT,
+          );
         }
 
         if (existingUser.role === UserRole.OWNER && dto.role === Role.DOCTOR) {
-          const existingProfile = await this.doctorProfileModel.findOne({ where: { user_id: existingUser.id } });
+          const existingProfile = await this.doctorProfileModel.findOne({
+            where: { user_id: existingUser.id },
+          });
           if (!existingProfile) {
             await this.doctorProfileModel.create({
-              user_id: existingUser.id
+              user_id: existingUser.id,
             });
           }
-          
+
           await existingUser.update({ invite_token: inviteToken });
 
-          const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+          const frontendUrl =
+            this.configService.get<string>('FRONTEND_URL') ||
+            'http://localhost:3001';
           const inviteLink = `${frontendUrl}/accept-invite?token=${inviteToken}`;
-    
+
           await this.emailService.sendInviteEmail(
             existingUser.email,
-            inviteLink
+            inviteLink,
           );
 
           return {
             email: existingUser.email,
             role: Role.DOCTOR,
-            invite_token: inviteToken
+            invite_token: inviteToken,
           };
         }
 
         if (existingUser.status === UserStatus.ACTIVE) {
-          throw new HttpException({ message: 'A user with this email already exists and is active in your clinic.', error: ErrorCode.DUPLICATE_EMAIL }, StatusCode.CONFLICT);
+          throw new HttpException(
+            {
+              message:
+                'A user with this email already exists and is active in your clinic.',
+              error: ErrorCode.DUPLICATE_EMAIL,
+            },
+            StatusCode.CONFLICT,
+          );
         }
 
         await existingUser.update({
@@ -452,10 +657,12 @@ export class AuthService {
           role: dto.role as Role,
           status: UserStatus.PENDING,
           is_active: true,
-          invite_token: inviteToken
+          invite_token: inviteToken,
         });
 
-        await this.userBranchModel.destroy({ where: { user_id: existingUser.id } });
+        await this.userBranchModel.destroy({
+          where: { user_id: existingUser.id },
+        });
         targetUserId = existingUser.id;
       } else {
         const createdUser = await this.userModel.create({
@@ -463,10 +670,10 @@ export class AuthService {
           first_name: dto.first_name,
           last_name: dto.last_name,
           email: dto.email,
-          role: dto.role as Role,
+          role: dto.role,
           status: UserStatus.PENDING,
           invite_token: inviteToken,
-          is_active: true
+          is_active: true,
         });
         targetUserId = createdUser.id;
       }
@@ -475,56 +682,80 @@ export class AuthService {
         await this.userBranchModel.create({
           user_id: targetUserId,
           branch_id: branchId,
-          is_primary: branchId === primaryBranchId
+          is_primary: branchId === primaryBranchId,
         });
       }
 
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3001';
+      const frontendUrl =
+        this.configService.get<string>('FRONTEND_URL') ||
+        'http://localhost:3001';
       const inviteLink = `${frontendUrl}/accept-invite?token=${inviteToken}`;
 
-      await this.emailService.sendInviteEmail(
-        dto.email,
-        inviteLink
-      );
+      await this.emailService.sendInviteEmail(dto.email, inviteLink);
 
       return {
         email: dto.email,
         role: dto.role,
-        invite_token: inviteToken
+        invite_token: inviteToken,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[inviteStaff] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async acceptInvite(dto: AcceptInviteDto) {
     try {
-      const user = await this.userModel.findOne({ where: { invite_token: dto.invite_token } });
+      const user = await this.userModel.findOne({
+        where: { invite_token: dto.invite_token },
+      });
       if (!user) {
-        throw new HttpException({ message: 'Invalid or expired invite link.', error: ErrorCode.INVITE_EXPIRED_OR_INVALID }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          {
+            message: 'Invalid or expired invite link.',
+            error: ErrorCode.INVITE_EXPIRED_OR_INVALID,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       if (user.email !== dto.email) {
-        throw new HttpException({ message: 'Email does not match the invited email address.', error: ErrorCode.EMAIL_MISMATCH }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          {
+            message: 'Email does not match the invited email address.',
+            error: ErrorCode.EMAIL_MISMATCH,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       if (user.status !== UserStatus.PENDING) {
         if (user.role === UserRole.OWNER) {
           await user.update({ invite_token: null });
           return {
-            message: 'Invite accepted successfully. You can now act as a Doctor in your clinic.',
+            message:
+              'Invite accepted successfully. You can now act as a Doctor in your clinic.',
             email: user.email,
-            require_otp: false
+            require_otp: false,
           };
         }
-        throw new HttpException({ message: 'This invite has already been used. Please login directly.', error: ErrorCode.INVITE_ALREADY_USED }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          {
+            message:
+              'This invite has already been used. Please login directly.',
+            error: ErrorCode.INVITE_ALREADY_USED,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       await user.update({
         status: UserStatus.ACTIVE,
-        invite_token: null
+        invite_token: null,
       });
 
       const otp = this.generateOtp();
@@ -533,20 +764,19 @@ export class AuthService {
       await user.update({
         otp_code: otp,
         otp_expires_at: otp_expires_at,
-        otp_attempts: 0
+        otp_attempts: 0,
       });
 
-      await this.emailService.sendOtpEmail(
-        user.email,
-        otp,
-        'register'
-      );
+      await this.emailService.sendOtpEmail(user.email, otp, 'register');
 
       return { email: user.email };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[acceptInvite] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -554,27 +784,41 @@ export class AuthService {
     try {
       const user = await this.userModel.findOne({
         where: { invite_token: token },
-        include: [{ model: Organization, attributes: ['name', 'logo_url'] }]
+        include: [{ model: Organization, attributes: ['name', 'logo_url'] }],
       });
 
       if (!user) {
-        throw new HttpException({ message: 'Invalid or expired invite link.', error: ErrorCode.INVITE_EXPIRED_OR_INVALID }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          {
+            message: 'Invalid or expired invite link.',
+            error: ErrorCode.INVITE_EXPIRED_OR_INVALID,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       if (user.status !== UserStatus.PENDING && user.role !== UserRole.OWNER) {
-        throw new HttpException({ message: 'This invite has already been used.', error: ErrorCode.INVITE_ALREADY_USED }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          {
+            message: 'This invite has already been used.',
+            error: ErrorCode.INVITE_ALREADY_USED,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       const userBranches = await this.userBranchModel.findAll({
         where: { user_id: user.id },
-        include: [{ model: Branch, attributes: ['name', 'city', 'color_code'] }]
+        include: [
+          { model: Branch, attributes: ['name', 'city', 'color_code'] },
+        ],
       });
 
-      const branches = userBranches.map(ub => ({
+      const branches = userBranches.map((ub) => ({
         name: ub.branch.name,
         city: ub.branch.city,
         color_code: ub.branch.color_code,
-        is_primary: ub.is_primary
+        is_primary: ub.is_primary,
       }));
 
       return {
@@ -584,47 +828,59 @@ export class AuthService {
         role: user.role,
         organization: {
           name: user.organization?.name,
-          logo_url: user.organization?.logo_url || null
+          logo_url: user.organization?.logo_url || null,
         },
-        branches
+        branches,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getInviteDetails] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async getMe(userId: string) {
     try {
       const user = await this.userModel.findByPk(userId, {
-        include: [{ model: Organization, attributes: ['name'] }]
+        include: [{ model: Organization, attributes: ['name'] }],
       });
 
       if (!user) {
-        throw new HttpException({ message: 'User not found.', error: ErrorCode.ACCOUNT_NOT_FOUND }, StatusCode.UNAUTHORIZED);
+        throw new HttpException(
+          { message: 'User not found.', error: ErrorCode.ACCOUNT_NOT_FOUND },
+          StatusCode.UNAUTHORIZED,
+        );
       }
 
       const userBranches = await this.userBranchModel.findAll({
         where: { user_id: userId },
-        include: [{ model: Branch }]
+        include: [{ model: Branch }],
       });
 
-      const branches = userBranches.map(ub => ({
+      const branches = userBranches.map((ub) => ({
         id: ub.branch.id,
         name: ub.branch.name,
         city: ub.branch.city,
         color_code: ub.branch.color_code,
         start_time: ub.branch.start_time,
         end_time: ub.branch.end_time,
-        is_primary: ub.is_primary
+        is_primary: ub.is_primary,
       }));
 
       let doctorProfile: any = null;
-      if (user.role === UserRole.DOCTOR as any || user.role === 'DOCTOR') {
+      if (user.role === (UserRole.DOCTOR as any) || user.role === 'DOCTOR') {
         const profile = await this.doctorProfileModel.findOne({
           where: { user_id: userId },
-          attributes: ['registration_number', 'specialization', 'qualification', 'signature_url', 'default_consultation_fee']
+          attributes: [
+            'registration_number',
+            'specialization',
+            'qualification',
+            'signature_url',
+            'default_consultation_fee',
+          ],
         });
         if (profile) {
           doctorProfile = {
@@ -632,7 +888,7 @@ export class AuthService {
             specialization: profile.specialization,
             qualification: profile.qualification,
             signature_url: profile.signature_url,
-            default_consultation_fee: profile.default_consultation_fee
+            default_consultation_fee: profile.default_consultation_fee,
           };
         }
       }
@@ -648,12 +904,15 @@ export class AuthService {
         org_id: user.organization_id,
         org_name: user.organization.name,
         branches,
-        ...(doctorProfile ? { doctor_profile: doctorProfile } : {})
+        ...(doctorProfile ? { doctor_profile: doctorProfile } : {}),
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getMe] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -661,24 +920,30 @@ export class AuthService {
     try {
       const user = await this.userModel.findByPk(userId);
       if (!user) {
-        throw new HttpException({ message: 'User not found.', error: ErrorCode.ACCOUNT_NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'User not found.', error: ErrorCode.ACCOUNT_NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       await user.update({
         first_name: dto.first_name ?? user.first_name,
         last_name: dto.last_name ?? user.last_name,
-        phone: dto.phone ?? user.phone
+        phone: dto.phone ?? user.phone,
       });
 
       return {
         first_name: user.first_name,
         last_name: user.last_name,
-        phone: user.phone
+        phone: user.phone,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updateProfile] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -686,16 +951,27 @@ export class AuthService {
     try {
       const user = await this.userModel.findByPk(userId);
       if (!user) {
-        throw new HttpException({ message: 'User not found.', error: ErrorCode.ACCOUNT_NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'User not found.', error: ErrorCode.ACCOUNT_NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       if (user.email === dto.email) {
         return { email: user.email };
       }
 
-      const existing = await this.userModel.findOne({ where: { email: dto.email } });
+      const existing = await this.userModel.findOne({
+        where: { email: dto.email },
+      });
       if (existing) {
-        throw new HttpException({ message: 'Email is already in use by another account.', error: ErrorCode.DUPLICATE_EMAIL }, StatusCode.CONFLICT);
+        throw new HttpException(
+          {
+            message: 'Email is already in use by another account.',
+            error: ErrorCode.DUPLICATE_EMAIL,
+          },
+          StatusCode.CONFLICT,
+        );
       }
 
       await user.update({ email: dto.email });
@@ -703,7 +979,10 @@ export class AuthService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updateEmail] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

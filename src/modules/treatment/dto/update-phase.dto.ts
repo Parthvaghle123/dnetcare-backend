@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsUUID, IsNumber, Min, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsUUID,
+  IsNumber,
+  Min,
+  IsBoolean,
+} from 'class-validator';
 
 export class UpdatePhaseDto {
   @IsOptional()

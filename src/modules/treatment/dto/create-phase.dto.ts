@@ -1,4 +1,14 @@
-import { IsString, IsOptional, IsUUID, IsNumber, Min, IsArray, ValidateNested, ArrayMinSize, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsUUID,
+  IsNumber,
+  Min,
+  IsArray,
+  ValidateNested,
+  ArrayMinSize,
+  IsBoolean,
+} from 'class-validator';
 
 export class CreatePhaseDto {
   @IsString()

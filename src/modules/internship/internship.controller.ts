@@ -1,4 +1,16 @@
-import { Controller, Post, Get, Patch, Body, Param, Query, UseInterceptors, UploadedFile, UseGuards, HttpException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Body,
+  Param,
+  Query,
+  UseInterceptors,
+  UploadedFile,
+  UseGuards,
+  HttpException,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { InternshipService } from './internship.service';
 import { CreateInternshipBasicDto } from './dto/internship-inquiry-basic.dto';
@@ -17,9 +29,7 @@ export class InternshipController {
   }
 
   @Post('apply/basic')
-  async applyBasic(
-    @Body() dto: CreateInternshipBasicDto,
-  ) {
+  async applyBasic(@Body() dto: CreateInternshipBasicDto) {
     return this.internshipService.applyBasicDetails(dto);
   }
 
@@ -32,20 +42,28 @@ export class InternshipController {
   }
 
   @Patch('apply/:id/photo')
-  @UseInterceptors(FileInterceptor('file', {
-    fileFilter: (req, file, cb) => {
-      const allowedExtensions = /\.(jpg|jpeg|png|webp)$/i;
-      const originalName = file.originalname || '';
-      
-      if (!originalName.match(allowedExtensions)) {
-        return cb(new HttpException('Invalid file type. Only JPG, PNG, and WEBP images are allowed.', StatusCode.BAD_REQUEST), false);
-      }
-      cb(null, true);
-    },
-    limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB limit based on the UI
-    }
-  }))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (req, file, cb) => {
+        const allowedExtensions = /\.(jpg|jpeg|png|webp)$/i;
+        const originalName = file.originalname || '';
+
+        if (!originalName.match(allowedExtensions)) {
+          return cb(
+            new HttpException(
+              'Invalid file type. Only JPG, PNG, and WEBP images are allowed.',
+              StatusCode.BAD_REQUEST,
+            ),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit based on the UI
+      },
+    }),
+  )
   async applyPhoto(
     @Param('id') id: string,
     @UploadedFile() file?: Express.Multer.File,
@@ -59,7 +77,10 @@ export class InternshipController {
     @Body('status') status: InternshipInquiryStatus,
   ) {
     if (!status || !Object.values(InternshipInquiryStatus).includes(status)) {
-      throw new HttpException('Invalid status provided.', StatusCode.BAD_REQUEST);
+      throw new HttpException(
+        'Invalid status provided.',
+        StatusCode.BAD_REQUEST,
+      );
     }
     return this.internshipService.updateStatus(id, status);
   }

@@ -11,7 +11,8 @@ export class InternshipCronService {
   private readonly logger = new Logger(InternshipCronService.name);
 
   constructor(
-    @InjectModel(InternshipInquiry) private internshipModel: typeof InternshipInquiry,
+    @InjectModel(InternshipInquiry)
+    private internshipModel: typeof InternshipInquiry,
   ) {}
 
   // Run once a day at midnight in production. Changed to EVERY_MINUTE for testing.

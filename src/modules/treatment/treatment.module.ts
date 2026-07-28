@@ -26,11 +26,11 @@ import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
       User,
       Invoice,
       InvoiceLineItem,
-      DoctorProfile
-    ])
+      DoctorProfile,
+    ]),
   ],
   controllers: [TreatmentController],
   providers: [TreatmentService],
-  exports: [TreatmentService]
+  exports: [TreatmentService],
 })
 export class TreatmentModule {}

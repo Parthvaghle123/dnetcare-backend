@@ -7,30 +7,38 @@ export class EmailService {
 
   constructor(private configService: ConfigService) {}
 
-  async sendOtpEmail(email: string, otp: string, type: 'register' | 'login' | 'invite' = 'login') {
+  async sendOtpEmail(
+    email: string,
+    otp: string,
+    type: 'register' | 'login' | 'invite' = 'login',
+  ) {
     const isRegister = type === 'register';
     const isInvite = type === 'invite';
-    const backendUrl = this.configService.get<string>('BACKEND_URL') || 'http://localhost:7000';
-    
+    const backendUrl =
+      this.configService.get<string>('BACKEND_URL') || 'http://localhost:7000';
+
     let title = 'Security Verification';
     let subTitle = 'Verify your login attempt';
-    let mainMessage = "To keep your account secure, please enter the verification code below to complete your login. If this wasn't you, please secure your account immediately.";
+    let mainMessage =
+      "To keep your account secure, please enter the verification code below to complete your login. If this wasn't you, please secure your account immediately.";
     let emailSubject = `DentCare360 - ${otp} is your Login verification code`;
-    
+
     if (isRegister) {
       title = 'Welcome to DentCare360!';
       subTitle = 'Complete your registration';
-      mainMessage = "We're excited to have you on board! Use the verification code below to complete your registration.";
+      mainMessage =
+        "We're excited to have you on board! Use the verification code below to complete your registration.";
       emailSubject = `DentCare360 - ${otp} is your Registration verification code`;
     } else if (isInvite) {
       title = 'Clinic Invitation';
       subTitle = 'Join your dental clinic team';
-      mainMessage = "You have been invited to join the clinic staff. Use the verification code below to accept your invitation and set up your account.";
+      mainMessage =
+        'You have been invited to join the clinic staff. Use the verification code below to accept your invitation and set up your account.';
       emailSubject = `DentCare360 - ${otp} is your Invitation verification code`;
     }
-    
+
     const accentColor = '#2563eb';
-    
+
     const html = `
     <!DOCTYPE html>
     <html lang="en">
@@ -106,14 +114,16 @@ export class EmailService {
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
-          'accept': 'application/json',
+          accept: 'application/json',
           'api-key': apiKey.trim(),
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          sender: { 
-            name: 'DentCare360', 
-            email: this.configService.get<string>('MAIL_FROM') || 'noreply@dentcare360.in' 
+          sender: {
+            name: 'DentCare360',
+            email:
+              this.configService.get<string>('MAIL_FROM') ||
+              'noreply@dentcare360.in',
           },
           to: [{ email: email }],
           subject: emailSubject,
@@ -128,7 +138,9 @@ export class EmailService {
       }
 
       const data = await response.json();
-      this.logger.log(`OTP Email sent successfully to ${email}. MessageID: ${data.messageId}`);
+      this.logger.log(
+        `OTP Email sent successfully to ${email}. MessageID: ${data.messageId}`,
+      );
       return data;
     } catch (error: any) {
       this.logger.error(`Failed to send OTP email to ${email}`, error);
@@ -137,10 +149,12 @@ export class EmailService {
   }
 
   async sendInviteEmail(email: string, inviteLink: string) {
-    const backendUrl = this.configService.get<string>('BACKEND_URL') || 'http://localhost:7000';
+    const backendUrl =
+      this.configService.get<string>('BACKEND_URL') || 'http://localhost:7000';
     const title = 'Clinic Invitation';
     const subTitle = 'Join your dental clinic team';
-    const mainMessage = "You have been invited to join the clinic staff. Click the button below to accept your invitation and set up your account.";
+    const mainMessage =
+      'You have been invited to join the clinic staff. Click the button below to accept your invitation and set up your account.';
     const accentColor = '#2563eb';
 
     const html = `
@@ -216,7 +230,6 @@ export class EmailService {
     </html>
     `;
 
-
     const apiKey = this.configService.get<string>('BREVO_API_KEY');
     if (!apiKey) {
       this.logger.warn('BREVO_API_KEY is missing. Emails will not be sent.');
@@ -227,14 +240,16 @@ export class EmailService {
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
-          'accept': 'application/json',
+          accept: 'application/json',
           'api-key': apiKey.trim(),
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          sender: { 
-            name: 'DentCare360', 
-            email: this.configService.get<string>('MAIL_FROM') || 'noreply@dentcare360.in' 
+          sender: {
+            name: 'DentCare360',
+            email:
+              this.configService.get<string>('MAIL_FROM') ||
+              'noreply@dentcare360.in',
           },
           to: [{ email: email }],
           subject: `DentCare360 - You are invited to join the team`,
@@ -249,7 +264,9 @@ export class EmailService {
       }
 
       const data = await response.json();
-      this.logger.log(`Invite Email sent successfully to ${email}. MessageID: ${data.messageId}`);
+      this.logger.log(
+        `Invite Email sent successfully to ${email}. MessageID: ${data.messageId}`,
+      );
       return data;
     } catch (error: any) {
       this.logger.error(`Failed to send Invite email to ${email}`, error);
@@ -321,14 +338,16 @@ export class EmailService {
       const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
-          'accept': 'application/json',
+          accept: 'application/json',
           'api-key': apiKey.trim(),
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          sender: { 
-            name: 'Dental Clinic', 
-            email: this.configService.get<string>('MAIL_FROM') || 'noreply@dentalclinic.com' 
+          sender: {
+            name: 'Dental Clinic',
+            email:
+              this.configService.get<string>('MAIL_FROM') ||
+              'noreply@dentalclinic.com',
           },
           to: [{ email: email, name: name }],
           subject: 'Dental Clinic - Internship Application Received',
@@ -343,7 +362,9 @@ export class EmailService {
       }
 
       const data = await response.json();
-      this.logger.log(`Internship Email sent successfully to ${email}. MessageID: ${data.messageId}`);
+      this.logger.log(
+        `Internship Email sent successfully to ${email}. MessageID: ${data.messageId}`,
+      );
       return data;
     } catch (error: any) {
       this.logger.error(`Failed to send Internship email to ${email}`, error);

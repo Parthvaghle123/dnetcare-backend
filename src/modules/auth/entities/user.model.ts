@@ -1,4 +1,18 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey, CreatedAt, UpdatedAt, HasMany, Unique } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  BelongsTo,
+  ForeignKey,
+  CreatedAt,
+  UpdatedAt,
+  HasMany,
+  Unique,
+} from 'sequelize-typescript';
 import { Organization } from '../../organization/entities/organization.model';
 import { UserBranch } from './user-branch.model';
 
@@ -104,5 +118,4 @@ export class User extends Model {
   @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
-
 }

@@ -1,4 +1,14 @@
-import { IsString, IsOptional, IsUUID, IsNumber, Min, IsArray, ValidateNested, ArrayMinSize, IsInt } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsUUID,
+  IsNumber,
+  Min,
+  IsArray,
+  ValidateNested,
+  ArrayMinSize,
+  IsInt,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreatePhaseDto } from './create-phase.dto';
 

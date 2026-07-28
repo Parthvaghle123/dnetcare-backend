@@ -10,10 +10,16 @@ import { UserBranch } from '../auth/entities/user-branch.model';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([DoctorProfile, DoctorSchedule, DoctorLeave, User, UserBranch])
+    SequelizeModule.forFeature([
+      DoctorProfile,
+      DoctorSchedule,
+      DoctorLeave,
+      User,
+      UserBranch,
+    ]),
   ],
   controllers: [DoctorController],
   providers: [DoctorService],
-  exports: [DoctorService]
+  exports: [DoctorService],
 })
 export class DoctorModule {}

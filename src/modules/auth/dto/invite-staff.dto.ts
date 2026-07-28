@@ -1,4 +1,13 @@
-import { IsString, IsEmail, MinLength, IsIn, IsUUID, IsArray, ArrayMinSize, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  MinLength,
+  IsIn,
+  IsUUID,
+  IsArray,
+  ArrayMinSize,
+  IsOptional,
+} from 'class-validator';
 import { Role } from '../../../common/enums/role.enum';
 
 export class InviteStaffDto {

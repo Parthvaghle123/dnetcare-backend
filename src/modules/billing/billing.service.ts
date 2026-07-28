@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import Razorpay from 'razorpay';
 import * as crypto from 'crypto';
 import { InjectModel } from '@nestjs/sequelize';
@@ -24,13 +30,16 @@ export class BillingService {
 
   constructor(
     @InjectModel(Invoice) private invoiceModel: typeof Invoice,
-    @InjectModel(InvoiceLineItem) private invoiceLineItemModel: typeof InvoiceLineItem,
+    @InjectModel(InvoiceLineItem)
+    private invoiceLineItemModel: typeof InvoiceLineItem,
     @InjectModel(Payment) private paymentModel: typeof Payment,
     @InjectModel(Patient) private patientModel: typeof Patient,
     @InjectModel(Branch) private branchModel: typeof Branch,
-    @InjectModel(ProcedureCatalog) private procedureCatalogModel: typeof ProcedureCatalog,
+    @InjectModel(ProcedureCatalog)
+    private procedureCatalogModel: typeof ProcedureCatalog,
     @InjectModel(Consultation) private consultationModel: typeof Consultation,
-    @InjectModel(TreatmentPlan) private treatmentPlanModel: typeof TreatmentPlan,
+    @InjectModel(TreatmentPlan)
+    private treatmentPlanModel: typeof TreatmentPlan,
     private sequelize: Sequelize,
   ) {
     if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
@@ -55,16 +64,26 @@ export class BillingService {
 
       if (dto.consultation_id) {
         const consultation = await this.consultationModel.findOne({
-          where: { id: dto.consultation_id, organization_id: user.org_id, patient_id: dto.patient_id },
+          where: {
+            id: dto.consultation_id,
+            organization_id: user.org_id,
+            patient_id: dto.patient_id,
+          },
         });
-        if (!consultation) throw new BadRequestException('Invalid consultation.');
+        if (!consultation)
+          throw new BadRequestException('Invalid consultation.');
       }
 
       if (dto.treatment_plan_id) {
         const treatmentPlan = await this.treatmentPlanModel.findOne({
-          where: { id: dto.treatment_plan_id, organization_id: user.org_id, patient_id: dto.patient_id },
+          where: {
+            id: dto.treatment_plan_id,
+            organization_id: user.org_id,
+            patient_id: dto.patient_id,
+          },
         });
-        if (!treatmentPlan) throw new BadRequestException('Invalid treatment plan.');
+        if (!treatmentPlan)
+          throw new BadRequestException('Invalid treatment plan.');
       }
 
       if (!dto.line_items || dto.line_items.length === 0) {
@@ -75,9 +94,16 @@ export class BillingService {
         const item = dto.line_items[i];
         if (item.procedure_id) {
           const procedure = await this.procedureCatalogModel.findOne({
-            where: { id: item.procedure_id, organization_id: user.org_id, is_active: true },
+            where: {
+              id: item.procedure_id,
+              organization_id: user.org_id,
+              is_active: true,
+            },
           });
-          if (!procedure) throw new BadRequestException(`Invalid procedure in line item ${i}.`);
+          if (!procedure)
+            throw new BadRequestException(
+              `Invalid procedure in line item ${i}.`,
+            );
         }
       }
 
@@ -90,10 +116,13 @@ export class BillingService {
       const parsedLineItems = dto.line_items.map((item) => {
         const quantity = item.quantity ?? 1;
         const discount = item.discount ?? 0;
-        const lineSubtotal = (Number(item.unit_cost) * quantity) - Number(discount);
+        const lineSubtotal =
+          Number(item.unit_cost) * quantity - Number(discount);
 
         if (lineSubtotal < 0) {
-          throw new BadRequestException('Line item discount cannot exceed cost.');
+          throw new BadRequestException(
+            'Line item discount cannot exceed cost.',
+          );
         }
 
         procedureAmount += lineSubtotal;
@@ -108,11 +137,14 @@ export class BillingService {
 
       const consultationFee = dto.consultation_fee ?? 0;
       const otherAmount = dto.other_amount ?? 0;
-      const subtotal = Number(consultationFee) + Number(otherAmount) + procedureAmount;
+      const subtotal =
+        Number(consultationFee) + Number(otherAmount) + procedureAmount;
       const invoiceDiscount = dto.discount ?? 0;
 
       if (invoiceDiscount > subtotal) {
-        throw new BadRequestException('Invoice discount cannot exceed subtotal.');
+        throw new BadRequestException(
+          'Invoice discount cannot exceed subtotal.',
+        );
       }
 
       const taxableAmount = subtotal - invoiceDiscount;
@@ -140,7 +172,8 @@ export class BillingService {
             consultation_id: dto.consultation_id || null,
             treatment_plan_id: dto.treatment_plan_id || null,
             invoice_number: invoiceNumber,
-            invoice_date: dto.invoice_date || new Date().toISOString().split('T')[0],
+            invoice_date:
+              dto.invoice_date || new Date().toISOString().split('T')[0],
             consultation_fee: consultationFee,
             other_amount: otherAmount,
             procedure_amount: procedureAmount,
@@ -170,13 +203,19 @@ export class BillingService {
           subtotal: item.subtotal,
         }));
 
-        await this.invoiceLineItemModel.bulkCreate(lineItemsToInsert, { transaction: t });
+        await this.invoiceLineItemModel.bulkCreate(lineItemsToInsert, {
+          transaction: t,
+        });
 
         return await this.getInvoiceById(user, invoice.id, t);
       });
     } catch (error) {
       this.logger.error(`Create Invoice Error: ${error.message}`, error.stack);
-      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      )
+        throw error;
       throw new InternalServerErrorException('Failed to create invoice.');
     }
   }
@@ -191,8 +230,14 @@ export class BillingService {
 
       const patientId = dto.patient_id ?? invoice.patient_id;
       const branchId = dto.branch_id ?? invoice.branch_id;
-      const consultationId = dto.consultation_id !== undefined ? dto.consultation_id : invoice.consultation_id;
-      const treatmentPlanId = dto.treatment_plan_id !== undefined ? dto.treatment_plan_id : invoice.treatment_plan_id;
+      const consultationId =
+        dto.consultation_id !== undefined
+          ? dto.consultation_id
+          : invoice.consultation_id;
+      const treatmentPlanId =
+        dto.treatment_plan_id !== undefined
+          ? dto.treatment_plan_id
+          : invoice.treatment_plan_id;
 
       if (dto.patient_id && dto.patient_id !== invoice.patient_id) {
         const patient = await this.patientModel.findOne({
@@ -217,9 +262,16 @@ export class BillingService {
           const item = dto.line_items[i];
           if (item.procedure_id) {
             const procedure = await this.procedureCatalogModel.findOne({
-              where: { id: item.procedure_id, organization_id: user.org_id, is_active: true },
+              where: {
+                id: item.procedure_id,
+                organization_id: user.org_id,
+                is_active: true,
+              },
             });
-            if (!procedure) throw new BadRequestException(`Invalid procedure in line item ${i}.`);
+            if (!procedure)
+              throw new BadRequestException(
+                `Invalid procedure in line item ${i}.`,
+              );
           }
         }
       }
@@ -239,14 +291,17 @@ export class BillingService {
         parsedLineItems = dto.line_items.map((item) => {
           const quantity = item.quantity ?? 1;
           const discount = item.discount ?? 0;
-          const lineSubtotal = (Number(item.unit_cost) * quantity) - Number(discount);
-          
+          const lineSubtotal =
+            Number(item.unit_cost) * quantity - Number(discount);
+
           if (lineSubtotal < 0) {
-            throw new BadRequestException('Line item discount cannot exceed cost.');
+            throw new BadRequestException(
+              'Line item discount cannot exceed cost.',
+            );
           }
 
           procedureAmount += lineSubtotal;
-          
+
           return {
             ...item,
             quantity,
@@ -256,10 +311,13 @@ export class BillingService {
         });
       }
 
-      const subtotal = Number(consultationFee) + Number(otherAmount) + procedureAmount;
+      const subtotal =
+        Number(consultationFee) + Number(otherAmount) + procedureAmount;
 
       if (invoiceDiscount > subtotal) {
-        throw new BadRequestException('Invoice discount cannot exceed subtotal.');
+        throw new BadRequestException(
+          'Invoice discount cannot exceed subtotal.',
+        );
       }
 
       const taxableAmount = subtotal - Number(invoiceDiscount);
@@ -307,21 +365,36 @@ export class BillingService {
             subtotal: item.subtotal,
           }));
 
-          await this.invoiceLineItemModel.bulkCreate(lineItemsToInsert, { transaction: t });
+          await this.invoiceLineItemModel.bulkCreate(lineItemsToInsert, {
+            transaction: t,
+          });
         }
 
         return await this.getInvoiceById(user, invoice.id, t);
       });
     } catch (error) {
       this.logger.error(`Update Invoice Error: ${error.message}`, error.stack);
-      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      )
+        throw error;
       throw new InternalServerErrorException('Failed to update invoice.');
     }
   }
 
   async getInvoices(user: any, query: any) {
     try {
-      const { patient_id, branch_id, status, treatment_plan_id, date_from, date_to, page = 1, limit = 10 } = query;
+      const {
+        patient_id,
+        branch_id,
+        status,
+        treatment_plan_id,
+        date_from,
+        date_to,
+        page = 1,
+        limit = 10,
+      } = query;
       const whereClause: any = { organization_id: user.org_id };
 
       if (patient_id) whereClause.patient_id = patient_id;
@@ -342,7 +415,10 @@ export class BillingService {
       const { rows, count } = await this.invoiceModel.findAndCountAll({
         where: whereClause,
         include: [
-          { model: Patient, attributes: ['id', 'file_number', 'first_name', 'last_name'] },
+          {
+            model: Patient,
+            attributes: ['id', 'file_number', 'first_name', 'last_name'],
+          },
           { model: Branch, attributes: ['id', 'name'] },
         ],
         order: [['created_at', 'DESC']],
@@ -370,9 +446,24 @@ export class BillingService {
       const invoice = await this.invoiceModel.findOne({
         where: { id, organization_id: user.org_id },
         include: [
-          { model: Patient, attributes: ['id', 'file_number', 'first_name', 'last_name', 'mobile', 'age', 'gender'] },
+          {
+            model: Patient,
+            attributes: [
+              'id',
+              'file_number',
+              'first_name',
+              'last_name',
+              'mobile',
+              'age',
+              'gender',
+            ],
+          },
           { model: Branch, attributes: ['id', 'name', 'city', 'phone'] },
-          { model: User, as: 'created_by_relation', attributes: ['id', 'first_name', 'last_name'] },
+          {
+            model: User,
+            as: 'created_by_relation',
+            attributes: ['id', 'first_name', 'last_name'],
+          },
         ],
         transaction,
       });
@@ -381,9 +472,7 @@ export class BillingService {
 
       const lineItems = await this.invoiceLineItemModel.findAll({
         where: { invoice_id: id },
-        include: [
-          { model: ProcedureCatalog, attributes: ['id', 'name'] }
-        ],
+        include: [{ model: ProcedureCatalog, attributes: ['id', 'name'] }],
         order: [['created_at', 'ASC']],
         transaction,
       });
@@ -391,7 +480,11 @@ export class BillingService {
       const payments = await this.paymentModel.findAll({
         where: { invoice_id: id },
         include: [
-          { model: User, as: 'received_by_relation', attributes: ['id', 'first_name', 'last_name'] }
+          {
+            model: User,
+            as: 'received_by_relation',
+            attributes: ['id', 'first_name', 'last_name'],
+          },
         ],
         order: [['created_at', 'ASC']],
         transaction,
@@ -401,7 +494,7 @@ export class BillingService {
         const json = item.toJSON();
         return {
           ...json,
-          procedure_name: json.procedure ? (json.procedure as any).name : null,
+          procedure_name: json.procedure ? json.procedure.name : null,
           procedure: undefined,
         };
       });
@@ -424,7 +517,10 @@ export class BillingService {
         payments: parsedPayments,
       };
     } catch (error) {
-      this.logger.error(`Get Invoice By Id Error: ${error.message}`, error.stack);
+      this.logger.error(
+        `Get Invoice By Id Error: ${error.message}`,
+        error.stack,
+      );
       if (error instanceof NotFoundException) throw error;
       throw new InternalServerErrorException('Failed to fetch invoice.');
     }
@@ -439,23 +535,31 @@ export class BillingService {
       if (!invoice) throw new NotFoundException('Invoice not found.');
 
       if (invoice.status === InvoiceStatus.CANCELLED) {
-        throw new BadRequestException('Cannot record payment against a cancelled invoice.');
+        throw new BadRequestException(
+          'Cannot record payment against a cancelled invoice.',
+        );
       }
       if (invoice.status === InvoiceStatus.PAID) {
         throw new BadRequestException('This invoice is already fully paid.');
       }
 
       if (Number(dto.amount) <= 0) {
-        throw new BadRequestException('Payment amount must be greater than zero.');
+        throw new BadRequestException(
+          'Payment amount must be greater than zero.',
+        );
       }
 
       const currentPending = Number(invoice.pending_amount);
       if (Number(dto.amount) > currentPending) {
-        throw new BadRequestException(`Payment amount (₹${dto.amount}) exceeds pending balance (₹${currentPending}).`);
+        throw new BadRequestException(
+          `Payment amount (₹${dto.amount}) exceeds pending balance (₹${currentPending}).`,
+        );
       }
 
       if (dto.payment_mode === 'CHEQUE' && !dto.payment_reference) {
-        throw new BadRequestException('Cheque number is required for cheque payments.');
+        throw new BadRequestException(
+          'Cheque number is required for cheque payments.',
+        );
       }
 
       return await this.sequelize.transaction(async (t) => {
@@ -466,12 +570,13 @@ export class BillingService {
             patient_id: invoice.patient_id,
             invoice_id: invoice.id,
             amount: dto.amount,
-            payment_date: dto.payment_date || new Date().toISOString().split('T')[0],
+            payment_date:
+              dto.payment_date || new Date().toISOString().split('T')[0],
             payment_mode: dto.payment_mode,
             payment_reference: dto.payment_reference || null,
             received_by: user.sub,
           },
-          { transaction: t }
+          { transaction: t },
         );
 
         const newPaidAmount = Number(invoice.paid_amount) + Number(dto.amount);
@@ -489,7 +594,7 @@ export class BillingService {
             pending_amount: newPendingAmount,
             status: newStatus,
           },
-          { transaction: t }
+          { transaction: t },
         );
 
         return {
@@ -513,7 +618,11 @@ export class BillingService {
       });
     } catch (error) {
       this.logger.error(`Create Payment Error: ${error.message}`, error.stack);
-      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      )
+        throw error;
       throw new InternalServerErrorException('Failed to create payment.');
     }
   }
@@ -550,7 +659,10 @@ export class BillingService {
 
         if (inv.status === InvoiceStatus.PAID) {
           paid_invoices++;
-        } else if (inv.status === InvoiceStatus.ISSUED || inv.status === InvoiceStatus.PARTIALLY_PAID) {
+        } else if (
+          inv.status === InvoiceStatus.ISSUED ||
+          inv.status === InvoiceStatus.PARTIALLY_PAID
+        ) {
           pending_invoices++;
           unpaid_list.push({
             id: inv.id,
@@ -577,16 +689,21 @@ export class BillingService {
         outstanding_invoices: unpaid_list,
       };
     } catch (error) {
-      this.logger.error(`Get Pending Balance Error: ${error.message}`, error.stack);
+      this.logger.error(
+        `Get Pending Balance Error: ${error.message}`,
+        error.stack,
+      );
       if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException('Failed to fetch patient balance.');
+      throw new InternalServerErrorException(
+        'Failed to fetch patient balance.',
+      );
     }
   }
 
   async getInvoicePayments(id: string, user: any) {
     try {
       const invoice = await this.invoiceModel.findOne({
-        where: { id, organization_id: user.org_id }
+        where: { id, organization_id: user.org_id },
       });
 
       if (!invoice) {
@@ -597,13 +714,15 @@ export class BillingService {
         where: { invoice_id: id },
         order: [
           ['payment_date', 'ASC'],
-          ['created_at', 'ASC']
+          ['created_at', 'ASC'],
         ],
-        include: [{
-          model: User,
-          as: 'received_by_relation',
-          attributes: ['id', 'first_name', 'last_name']
-        }]
+        include: [
+          {
+            model: User,
+            as: 'received_by_relation',
+            attributes: ['id', 'first_name', 'last_name'],
+          },
+        ],
       });
 
       const parsedPayments = payments.map((p) => {
@@ -614,12 +733,14 @@ export class BillingService {
           payment_date: json.payment_date,
           payment_mode: json.payment_mode,
           payment_reference: json.payment_reference,
-          received_by: json.received_by_relation ? {
-            id: json.received_by_relation.id,
-            first_name: json.received_by_relation.first_name,
-            last_name: json.received_by_relation.last_name
-          } : null,
-          created_at: json.created_at
+          received_by: json.received_by_relation
+            ? {
+                id: json.received_by_relation.id,
+                first_name: json.received_by_relation.first_name,
+                last_name: json.received_by_relation.last_name,
+              }
+            : null,
+          created_at: json.created_at,
         };
       });
 
@@ -631,23 +752,30 @@ export class BillingService {
         pending_amount: Number(invoice.pending_amount),
         invoice_status: invoice.status,
         total_payments: payments.length,
-        payments: parsedPayments
+        payments: parsedPayments,
       };
     } catch (error) {
-      this.logger.error(`Get Invoice Payments Error: ${error.message}`, error.stack);
+      this.logger.error(
+        `Get Invoice Payments Error: ${error.message}`,
+        error.stack,
+      );
       if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException('Failed to fetch invoice payments.');
+      throw new InternalServerErrorException(
+        'Failed to fetch invoice payments.',
+      );
     }
   }
 
   async cancelInvoice(id: string, user: any) {
     try {
       if (user.role !== 'OWNER' && user.role !== 'BRANCH_ADMIN') {
-        throw new BadRequestException('Only owners and branch admins can cancel invoices.');
+        throw new BadRequestException(
+          'Only owners and branch admins can cancel invoices.',
+        );
       }
 
       const invoice = await this.invoiceModel.findOne({
-        where: { id, organization_id: user.org_id }
+        where: { id, organization_id: user.org_id },
       });
 
       if (!invoice) {
@@ -663,11 +791,13 @@ export class BillingService {
       }
 
       const paymentCount = await this.paymentModel.count({
-        where: { invoice_id: id }
+        where: { invoice_id: id },
       });
 
       if (paymentCount > 0) {
-        throw new BadRequestException('Cannot cancel invoice with recorded payments. Reverse the payments first.');
+        throw new BadRequestException(
+          'Cannot cancel invoice with recorded payments. Reverse the payments first.',
+        );
       }
 
       await invoice.update({ status: InvoiceStatus.CANCELLED });
@@ -677,11 +807,15 @@ export class BillingService {
         invoice_number: invoice.invoice_number,
         status: InvoiceStatus.CANCELLED,
         total: Number(invoice.total),
-        updated_at: invoice.updated_at
+        updated_at: invoice.updated_at,
       };
     } catch (error) {
       this.logger.error(`Cancel Invoice Error: ${error.message}`, error.stack);
-      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      )
+        throw error;
       throw new InternalServerErrorException('Failed to cancel invoice.');
     }
   }
@@ -697,17 +831,19 @@ export class BillingService {
       }
 
       const paymentCount = await this.paymentModel.count({
-        where: { invoice_id: id }
+        where: { invoice_id: id },
       });
 
       if (paymentCount > 0) {
-        throw new BadRequestException('Cannot delete invoice with recorded payments. Reverse the payments first.');
+        throw new BadRequestException(
+          'Cannot delete invoice with recorded payments. Reverse the payments first.',
+        );
       }
 
       return await this.sequelize.transaction(async (t) => {
         await this.invoiceLineItemModel.destroy({
           where: { invoice_id: id },
-          transaction: t
+          transaction: t,
         });
 
         await invoice.destroy({ transaction: t });
@@ -716,7 +852,11 @@ export class BillingService {
       });
     } catch (error) {
       this.logger.error(`Delete Invoice Error: ${error.message}`, error.stack);
-      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      )
+        throw error;
       throw new InternalServerErrorException('Failed to delete invoice.');
     }
   }
@@ -736,7 +876,7 @@ export class BillingService {
       if (invoice.status === InvoiceStatus.PAID) {
         throw new BadRequestException('Invoice is already paid.');
       }
-      
+
       if (invoice.status === InvoiceStatus.CANCELLED) {
         throw new BadRequestException('Cannot pay for a cancelled invoice.');
       }
@@ -763,21 +903,43 @@ export class BillingService {
         keyId: process.env.RAZORPAY_KEY_ID,
       };
     } catch (error: any) {
-      const errorMsg = error?.error?.description || error.message || JSON.stringify(error);
-      this.logger.error(`Create Razorpay Order Error: ${errorMsg}`, error.stack);
-      if (error instanceof NotFoundException || error instanceof BadRequestException || error instanceof InternalServerErrorException) throw error;
-      throw new InternalServerErrorException(`Failed to create Razorpay order: ${errorMsg}`);
+      const errorMsg =
+        error?.error?.description || error.message || JSON.stringify(error);
+      this.logger.error(
+        `Create Razorpay Order Error: ${errorMsg}`,
+        error.stack,
+      );
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException
+      )
+        throw error;
+      throw new InternalServerErrorException(
+        `Failed to create Razorpay order: ${errorMsg}`,
+      );
     }
   }
 
-  async verifyRazorpayPayment(user: any, payload: { billId: string; razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {
+  async verifyRazorpayPayment(
+    user: any,
+    payload: {
+      billId: string;
+      razorpay_order_id: string;
+      razorpay_payment_id: string;
+      razorpay_signature: string;
+    },
+  ) {
     try {
       const secret = process.env.RAZORPAY_KEY_SECRET;
       if (!secret) {
-        throw new InternalServerErrorException('Razorpay secret is not configured.');
+        throw new InternalServerErrorException(
+          'Razorpay secret is not configured.',
+        );
       }
 
-      const body = payload.razorpay_order_id + '|' + payload.razorpay_payment_id;
+      const body =
+        payload.razorpay_order_id + '|' + payload.razorpay_payment_id;
       const expectedSignature = crypto
         .createHmac('sha256', secret)
         .update(body.toString())
@@ -796,7 +958,9 @@ export class BillingService {
       if (!invoice) throw new NotFoundException('Invoice not found.');
 
       // Fetch payment details from Razorpay to get the exact amount paid (optional but safe)
-      const paymentDetails = await this.razorpay.payments.fetch(payload.razorpay_payment_id);
+      const paymentDetails = await this.razorpay.payments.fetch(
+        payload.razorpay_payment_id,
+      );
       const amountPaid = paymentDetails.amount / 100; // Convert from paisa back to rupees
 
       return await this.sequelize.transaction(async (t) => {
@@ -815,7 +979,7 @@ export class BillingService {
             razorpay_signature: payload.razorpay_signature,
             received_by: user.sub,
           },
-          { transaction: t }
+          { transaction: t },
         );
 
         const newPaidAmount = Number(invoice.paid_amount) + amountPaid;
@@ -833,18 +997,26 @@ export class BillingService {
             pending_amount: newPendingAmount,
             status: newStatus,
           },
-          { transaction: t }
+          { transaction: t },
         );
 
         return {
           success: true,
           payment_id: payment.id,
-          message: 'Payment verified and recorded successfully.'
+          message: 'Payment verified and recorded successfully.',
         };
       });
     } catch (error) {
-      this.logger.error(`Verify Razorpay Payment Error: ${error.message}`, error.stack);
-      if (error instanceof NotFoundException || error instanceof BadRequestException || error instanceof InternalServerErrorException) throw error;
+      this.logger.error(
+        `Verify Razorpay Payment Error: ${error.message}`,
+        error.stack,
+      );
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException
+      )
+        throw error;
       throw new InternalServerErrorException('Failed to verify payment.');
     }
   }

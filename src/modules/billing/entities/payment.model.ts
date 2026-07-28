@@ -1,4 +1,16 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  BelongsTo,
+  ForeignKey,
+  CreatedAt,
+  UpdatedAt,
+} from 'sequelize-typescript';
 import { Organization } from '../../organization/entities/organization.model';
 import { Branch } from '../../organization/entities/branch.model';
 import { Patient } from '../../patient/entities/patient.model';
@@ -95,5 +107,4 @@ export class Payment extends Model {
   @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
-
 }

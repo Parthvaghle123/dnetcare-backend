@@ -13,10 +13,20 @@ export class CatalogService {
   private readonly logger = new Logger(CatalogService.name);
 
   constructor(
-    @InjectModel(ProcedureCatalog) private catalogModel: typeof ProcedureCatalog,
+    @InjectModel(ProcedureCatalog)
+    private catalogModel: typeof ProcedureCatalog,
   ) {}
 
-  async getCatalog(reqUser: any, filters: { search?: string, is_active?: string, is_deleted?: string, page?: string, limit?: string }) {
+  async getCatalog(
+    reqUser: any,
+    filters: {
+      search?: string;
+      is_active?: string;
+      is_deleted?: string;
+      page?: string;
+      limit?: string;
+    },
+  ) {
     try {
       const page = parseInt(filters.page || '1', 10);
       const limit = parseInt(filters.limit || '10', 10);
@@ -65,26 +75,32 @@ export class CatalogService {
           total_pages: totalPages,
           limit: limit,
           has_next: page < totalPages,
-          has_previous: page > 1
-        }
+          has_previous: page > 1,
+        },
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getCatalog] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async createCatalog(reqUser: any, dto: CreateCatalogDto) {
     try {
       if (reqUser.role !== Role.OWNER && reqUser.role !== Role.BRANCH_ADMIN) {
-        throw new HttpException('Only the clinic owner or branch admin can add procedures.', StatusCode.FORBIDDEN);
+        throw new HttpException(
+          'Only the clinic owner or branch admin can add procedures.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       const existingProcedure = await this.catalogModel.findOne({
         where: {
           organization_id: reqUser.org_id,
-          name: { [Op.iLike]: dto.name }
+          name: { [Op.iLike]: dto.name },
         },
       });
 
@@ -106,7 +122,10 @@ export class CatalogService {
             created_at: existingProcedure.created_at,
           };
         } else {
-          throw new HttpException('A procedure with this name already exists.', StatusCode.CONFLICT);
+          throw new HttpException(
+            'A procedure with this name already exists.',
+            StatusCode.CONFLICT,
+          );
         }
       }
 
@@ -129,14 +148,20 @@ export class CatalogService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[createCatalog] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async updateCatalog(reqUser: any, id: string, dto: UpdateCatalogDto) {
     try {
       if (reqUser.role !== Role.OWNER && reqUser.role !== Role.BRANCH_ADMIN) {
-        throw new HttpException('Only the clinic owner or branch admin can update procedures.', StatusCode.FORBIDDEN);
+        throw new HttpException(
+          'Only the clinic owner or branch admin can update procedures.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       const procedure = await this.catalogModel.findOne({
@@ -153,12 +178,15 @@ export class CatalogService {
             organization_id: reqUser.org_id,
             name: { [Op.iLike]: dto.name },
             id: { [Op.ne]: id },
-            is_deleted: false
+            is_deleted: false,
           },
         });
 
         if (existingProcedure) {
-          throw new HttpException('A procedure with this name already exists.', StatusCode.CONFLICT);
+          throw new HttpException(
+            'A procedure with this name already exists.',
+            StatusCode.CONFLICT,
+          );
         }
       }
 
@@ -179,14 +207,24 @@ export class CatalogService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updateCatalog] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async updateCatalogStatus(reqUser: any, id: string, dto: UpdateCatalogStatusDto) {
+  async updateCatalogStatus(
+    reqUser: any,
+    id: string,
+    dto: UpdateCatalogStatusDto,
+  ) {
     try {
       if (reqUser.role !== Role.OWNER && reqUser.role !== Role.BRANCH_ADMIN) {
-        throw new HttpException('Only the clinic owner or branch admin can update procedure status.', StatusCode.FORBIDDEN);
+        throw new HttpException(
+          'Only the clinic owner or branch admin can update procedure status.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       const procedure = await this.catalogModel.findOne({
@@ -207,14 +245,20 @@ export class CatalogService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updateCatalogStatus] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async deleteCatalog(reqUser: any, id: string) {
     try {
       if (reqUser.role !== Role.OWNER && reqUser.role !== Role.BRANCH_ADMIN) {
-        throw new HttpException('Only the clinic owner or branch admin can delete procedures.', StatusCode.FORBIDDEN);
+        throw new HttpException(
+          'Only the clinic owner or branch admin can delete procedures.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       const procedure = await this.catalogModel.findOne({
@@ -231,7 +275,10 @@ export class CatalogService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[deleteCatalog] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsOptional, IsString, MinLength, Length, Matches } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+  Length,
+  Matches,
+} from 'class-validator';
 
 export class CreateBranchDto {
   @IsNotEmpty()
@@ -28,12 +35,16 @@ export class CreateBranchDto {
   @IsOptional()
   @IsString()
   @Length(10, 10, { message: 'whatsapp_number must be exactly 10 digits' })
-  @Matches(/^[0-9]{10}$/, { message: 'whatsapp_number must contain only numbers' })
+  @Matches(/^[0-9]{10}$/, {
+    message: 'whatsapp_number must contain only numbers',
+  })
   whatsapp_number?: string;
 
   @IsNotEmpty()
   @IsString()
-  @Matches(/^#[0-9A-Fa-f]{6}$/, { message: 'color_code must be a valid hex color code (e.g. #3B82F6)' })
+  @Matches(/^#[0-9A-Fa-f]{6}$/, {
+    message: 'color_code must be a valid hex color code (e.g. #3B82F6)',
+  })
   color_code: string;
 
   @IsOptional()
@@ -42,11 +53,15 @@ export class CreateBranchDto {
 
   @IsOptional()
   @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'start_time must be in HH:MM format' })
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+    message: 'start_time must be in HH:MM format',
+  })
   start_time?: string;
 
   @IsOptional()
   @IsString()
-  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'end_time must be in HH:MM format' })
+  @Matches(/^([01]\d|2[0-3]):([0-5]\d)$/, {
+    message: 'end_time must be in HH:MM format',
+  })
   end_time?: string;
 }

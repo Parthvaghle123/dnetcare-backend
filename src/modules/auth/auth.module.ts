@@ -19,13 +19,23 @@ import { MedicalConditionMaster } from '../patient/entities/medical-condition-ma
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([User, Organization, Branch, UserBranch, RefreshToken, DoctorProfile, MedicalConditionMaster]),
+    SequelizeModule.forFeature([
+      User,
+      Organization,
+      Branch,
+      UserBranch,
+      RefreshToken,
+      DoctorProfile,
+      MedicalConditionMaster,
+    ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_ACCESS_SECRET') as string,
-        signOptions: { expiresIn: config.get<string>('JWT_ACCESS_EXPIRES_IN') as any },
+        signOptions: {
+          expiresIn: config.get<string>('JWT_ACCESS_EXPIRES_IN') as any,
+        },
       }),
     }),
     NotificationModule,

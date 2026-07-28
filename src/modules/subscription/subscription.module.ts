@@ -7,8 +7,10 @@ import { SubscriptionController } from './subscription.controller';
 import { SubscriptionService } from './subscription.service';
 
 @Module({
-  imports: [SequelizeModule.forFeature([Plan, Subscription, SubscriptionPayment])],
+  imports: [
+    SequelizeModule.forFeature([Plan, Subscription, SubscriptionPayment]),
+  ],
   controllers: [SubscriptionController],
-  providers: [SubscriptionService]
+  providers: [SubscriptionService],
 })
 export class SubscriptionModule {}

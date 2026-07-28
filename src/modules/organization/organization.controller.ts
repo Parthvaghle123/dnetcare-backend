@@ -1,4 +1,15 @@
-import { Controller, Get, Put, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Put,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { OrganizationService } from './organization.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -19,32 +30,41 @@ export class OrganizationController {
   }
 
   @Put('organization/me')
-  async updateMyOrganization(@CurrentUser() reqUser: any, @Body() dto: UpdateOrganizationDto) {
-    const data = await this.organizationService.updateMyOrganization(reqUser, dto);
+  async updateMyOrganization(
+    @CurrentUser() reqUser: any,
+    @Body() dto: UpdateOrganizationDto,
+  ) {
+    const data = await this.organizationService.updateMyOrganization(
+      reqUser,
+      dto,
+    );
     return { message: 'Organization updated successfully.', data };
   }
 
   @Get('branches')
   async getBranches(
-    @CurrentUser() reqUser: any, 
+    @CurrentUser() reqUser: any,
     @Query('is_active') is_active?: string,
     @Query('city') city?: string,
     @Query('state') state?: string,
     @Query('search') search?: string,
     @Query('page') page?: string,
-    @Query('limit') limit?: string
+    @Query('limit') limit?: string,
   ) {
     const filters = { is_active, city, state, search, page, limit };
     const result = await this.organizationService.getBranches(reqUser, filters);
-    return { 
-      message: 'Branches fetched successfully.', 
+    return {
+      message: 'Branches fetched successfully.',
       data: result.records,
-      meta: result.meta 
+      meta: result.meta,
     };
   }
 
   @Post('branches')
-  async createBranch(@CurrentUser() reqUser: any, @Body() dto: CreateBranchDto) {
+  async createBranch(
+    @CurrentUser() reqUser: any,
+    @Body() dto: CreateBranchDto,
+  ) {
     const data = await this.organizationService.createBranch(reqUser, dto);
     return { message: 'Branch created successfully.', data };
   }
@@ -56,15 +76,29 @@ export class OrganizationController {
   }
 
   @Put('branches/:id')
-  async updateBranch(@CurrentUser() reqUser: any, @Param('id') id: string, @Body() dto: UpdateBranchDto) {
+  async updateBranch(
+    @CurrentUser() reqUser: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateBranchDto,
+  ) {
     const data = await this.organizationService.updateBranch(reqUser, id, dto);
     return { message: 'Branch updated successfully.', data };
   }
 
   @Patch('branches/:id/status')
-  async updateBranchStatus(@CurrentUser() reqUser: any, @Param('id') id: string, @Body() dto: BranchStatusDto) {
-    const data = await this.organizationService.updateBranchStatus(reqUser, id, dto);
-    const message = dto.is_active ? 'Branch activated successfully.' : 'Branch deactivated successfully.';
+  async updateBranchStatus(
+    @CurrentUser() reqUser: any,
+    @Param('id') id: string,
+    @Body() dto: BranchStatusDto,
+  ) {
+    const data = await this.organizationService.updateBranchStatus(
+      reqUser,
+      id,
+      dto,
+    );
+    const message = dto.is_active
+      ? 'Branch activated successfully.'
+      : 'Branch deactivated successfully.';
     return { message, data };
   }
 

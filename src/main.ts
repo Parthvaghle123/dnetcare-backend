@@ -11,9 +11,14 @@ async function bootstrapServer() {
   if (!cachedApp) {
     const app = await NestFactory.create<NestExpressApplication>(AppModule);
     app.useStaticAssets(join(__dirname, '..', 'public'));
-    
+
     app.use((req: any, res: any, next: any) => {
-      console.log('======> req url:', req.url, '======> req method:', req.method);
+      console.log(
+        '======> req url:',
+        req.url,
+        '======> req method:',
+        req.method,
+      );
       next();
     });
 
@@ -23,15 +28,17 @@ async function bootstrapServer() {
       }
       next();
     });
-    
+
     app.enableCors();
     app.setGlobalPrefix('api/v1');
-    
-    app.useGlobalPipes(new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }));
+
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
 
     await app.init();
     cachedApp = app.getHttpAdapter().getInstance();
@@ -44,9 +51,14 @@ if (!process.env.VERCEL) {
   async function startLocal() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule);
     app.useStaticAssets(join(__dirname, '..', 'public'));
-    
+
     app.use((req: any, res: any, next: any) => {
-      console.log('======> req url:', req.url, '======> req method:', req.method);
+      console.log(
+        '======> req url:',
+        req.url,
+        '======> req method:',
+        req.method,
+      );
       next();
     });
 
@@ -56,22 +68,26 @@ if (!process.env.VERCEL) {
       }
       next();
     });
-    
+
     app.enableCors();
     app.setGlobalPrefix('api/v1');
-    
-    app.useGlobalPipes(new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }));
+
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
 
     const configService = app.get(ConfigService);
     const port = configService.get<number>('PORT') || 7000;
-    
+
     await app.listen(port);
     const logger = new Logger('Bootstrap');
-    logger.log(`🚀 Application successfully started and listening on port ${port}`);
+    logger.log(
+      `🚀 Application successfully started and listening on port ${port}`,
+    );
   }
   startLocal();
 }

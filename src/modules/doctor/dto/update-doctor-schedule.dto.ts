@@ -1,4 +1,13 @@
-import { IsString, IsEnum, IsBoolean, Matches, IsOptional, IsUUID, IsArray, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  IsEnum,
+  IsBoolean,
+  Matches,
+  IsOptional,
+  IsUUID,
+  IsArray,
+  IsNotEmpty,
+} from 'class-validator';
 import { DayOfWeek, Shift } from '../entities/doctor-schedule.model';
 
 export class UpdateDoctorScheduleDto {
@@ -13,12 +22,16 @@ export class UpdateDoctorScheduleDto {
 
   @IsString()
   @IsOptional()
-  @Matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: 'start_time must be in HH:MM format' })
+  @Matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: 'start_time must be in HH:MM format',
+  })
   start_time?: string;
 
   @IsString()
   @IsOptional()
-  @Matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: 'end_time must be in HH:MM format' })
+  @Matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: 'end_time must be in HH:MM format',
+  })
   end_time?: string;
 
   @IsEnum(Shift)

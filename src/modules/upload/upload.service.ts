@@ -27,10 +27,20 @@ export class UploadService {
         (error, result: UploadApiResponse) => {
           if (error) {
             this.logger.error('[uploadFile] Cloudinary upload error:', error);
-            return reject(new HttpException('File upload failed. Please try again.', StatusCode.INTERNAL_SERVER_ERROR));
+            return reject(
+              new HttpException(
+                'File upload failed. Please try again.',
+                StatusCode.INTERNAL_SERVER_ERROR,
+              ),
+            );
           }
           if (!result) {
-            return reject(new HttpException('File upload failed. Please try again.', StatusCode.INTERNAL_SERVER_ERROR));
+            return reject(
+              new HttpException(
+                'File upload failed. Please try again.',
+                StatusCode.INTERNAL_SERVER_ERROR,
+              ),
+            );
           }
           resolve({
             public_id: result.public_id,
@@ -58,7 +68,12 @@ export class UploadService {
       cloudinary.uploader.destroy(fileKey, (error, result) => {
         if (error) {
           this.logger.error('[deleteFile] Cloudinary delete error:', error);
-          return reject(new HttpException('File deletion failed.', StatusCode.INTERNAL_SERVER_ERROR));
+          return reject(
+            new HttpException(
+              'File deletion failed.',
+              StatusCode.INTERNAL_SERVER_ERROR,
+            ),
+          );
         }
         resolve(result);
       });

@@ -1,4 +1,10 @@
-import { IsString, IsUUID, IsOptional, IsEnum, IsDateString } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  IsOptional,
+  IsEnum,
+  IsDateString,
+} from 'class-validator';
 import { DentalChartType } from '../entities/consultation.model';
 
 export class CreateConsultationDto {

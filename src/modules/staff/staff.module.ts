@@ -11,7 +11,7 @@ import { AuthModule } from '../auth/auth.module';
 @Module({
   imports: [
     SequelizeModule.forFeature([User, UserBranch, RefreshToken, DoctorProfile]),
-    AuthModule
+    AuthModule,
   ],
   controllers: [StaffController],
   providers: [StaffService],

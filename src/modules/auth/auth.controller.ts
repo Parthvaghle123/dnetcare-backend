@@ -1,4 +1,18 @@
-import { Controller, Post, Body, Get, Delete, Patch, Param, UseGuards, HttpCode, Ip, Headers, Query, Put } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Delete,
+  Patch,
+  Param,
+  UseGuards,
+  HttpCode,
+  Ip,
+  Headers,
+  Query,
+  Put,
+} from '@nestjs/common';
 import { StatusCode } from '../../common/enums/status-code.enum';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -22,8 +36,9 @@ export class AuthController {
   async register(@Body() dto: RegisterDto) {
     const data = await this.authService.register(dto);
     return {
-      message: 'OTP sent to your email. Please verify to activate your account.',
-      data
+      message:
+        'OTP sent to your email. Please verify to activate your account.',
+      data,
     };
   }
 
@@ -33,7 +48,7 @@ export class AuthController {
     const data = await this.authService.sendOtp(dto);
     return {
       message: 'OTP sent to your email.',
-      data
+      data,
     };
   }
 
@@ -42,12 +57,12 @@ export class AuthController {
   async verifyOtp(
     @Body() dto: VerifyOtpDto,
     @Ip() ip: string,
-    @Headers('user-agent') userAgent: string
+    @Headers('user-agent') userAgent: string,
   ) {
     const data = await this.authService.verifyOtp(dto, ip, userAgent);
     return {
       message: 'Login successful.',
-      data
+      data,
     };
   }
 
@@ -56,12 +71,12 @@ export class AuthController {
   async refresh(
     @Body() dto: RefreshTokenDto,
     @Ip() ip: string,
-    @Headers('user-agent') userAgent: string
+    @Headers('user-agent') userAgent: string,
   ) {
     const data = await this.authService.refresh(dto, ip, userAgent);
     return {
       message: 'Token refreshed.',
-      data
+      data,
     };
   }
 
@@ -73,7 +88,7 @@ export class AuthController {
     await this.authService.logout(user.sub, user.session_id);
     return {
       message: 'Logged out successfully.',
-      data: null
+      data: null,
     };
   }
 
@@ -83,7 +98,7 @@ export class AuthController {
     const data = await this.authService.getMe(user.sub);
     return {
       message: 'User profile fetched.',
-      data
+      data,
     };
   }
 
@@ -93,7 +108,7 @@ export class AuthController {
     const data = await this.authService.updateProfile(user.sub, dto);
     return {
       message: 'Profile updated successfully.',
-      data
+      data,
     };
   }
 
@@ -104,7 +119,7 @@ export class AuthController {
     const data = await this.authService.updateEmail(user.sub, dto);
     return {
       message: 'Email updated successfully.',
-      data
+      data,
     };
   }
 }

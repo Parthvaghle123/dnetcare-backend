@@ -1,8 +1,19 @@
-import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Plan } from './entities/plan.model';
-import { Subscription, SubscriptionStatus } from './entities/subscription.model';
-import { SubscriptionPayment, PaymentStatus } from './entities/subscription-payment.model';
+import {
+  Subscription,
+  SubscriptionStatus,
+} from './entities/subscription.model';
+import {
+  SubscriptionPayment,
+  PaymentStatus,
+} from './entities/subscription-payment.model';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 
@@ -13,8 +24,10 @@ export class SubscriptionService {
 
   constructor(
     @InjectModel(Plan) private readonly planModel: typeof Plan,
-    @InjectModel(Subscription) private readonly subscriptionModel: typeof Subscription,
-    @InjectModel(SubscriptionPayment) private readonly paymentModel: typeof SubscriptionPayment,
+    @InjectModel(Subscription)
+    private readonly subscriptionModel: typeof Subscription,
+    @InjectModel(SubscriptionPayment)
+    private readonly paymentModel: typeof SubscriptionPayment,
   ) {
     if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
       this.razorpay = new Razorpay({
@@ -34,7 +47,11 @@ export class SubscriptionService {
 
     // Create a pending subscription in our DB if it doesn't exist
     let subscription = await this.subscriptionModel.findOne({
-      where: { organization_id: organizationId, status: SubscriptionStatus.PENDING, plan_id: planId }
+      where: {
+        organization_id: organizationId,
+        status: SubscriptionStatus.PENDING,
+        plan_id: planId,
+      },
     });
 
     if (!subscription) {
@@ -74,15 +91,22 @@ export class SubscriptionService {
         amount: options.amount,
         currency: options.currency,
         keyId: process.env.RAZORPAY_KEY_ID,
-        subscriptionId: subscription.id
+        subscriptionId: subscription.id,
       };
     } catch (error) {
-      this.logger.error('Error creating Razorpay order for subscription', error);
+      this.logger.error(
+        'Error creating Razorpay order for subscription',
+        error,
+      );
       throw new InternalServerErrorException('Failed to initiate checkout');
     }
   }
 
-  async verifyPayment(payload: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) {
+  async verifyPayment(payload: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+  }) {
     const secret = process.env.RAZORPAY_KEY_SECRET || '';
     const body = payload.razorpay_order_id + '|' + payload.razorpay_payment_id;
 
@@ -95,7 +119,9 @@ export class SubscriptionService {
       throw new InternalServerErrorException('Invalid payment signature');
     }
 
-    const payment = await this.paymentModel.findOne({ where: { razorpay_order_id: payload.razorpay_order_id } });
+    const payment = await this.paymentModel.findOne({
+      where: { razorpay_order_id: payload.razorpay_order_id },
+    });
     if (!payment) throw new NotFoundException('Payment record not found');
 
     payment.status = PaymentStatus.SUCCESS;
@@ -104,7 +130,9 @@ export class SubscriptionService {
     payment.paid_at = new Date();
     await payment.save();
 
-    const subscription = await this.subscriptionModel.findByPk(payment.subscription_id);
+    const subscription = await this.subscriptionModel.findByPk(
+      payment.subscription_id,
+    );
     if (subscription) {
       subscription.status = SubscriptionStatus.ACTIVE;
       subscription.start_date = new Date();
@@ -115,6 +143,9 @@ export class SubscriptionService {
       await subscription.save();
     }
 
-    return { success: true, message: 'Payment verified and subscription activated.' };
+    return {
+      success: true,
+      message: 'Payment verified and subscription activated.',
+    };
   }
 }

@@ -1,4 +1,16 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  BelongsTo,
+  ForeignKey,
+  CreatedAt,
+  UpdatedAt,
+} from 'sequelize-typescript';
 import { Invoice } from './invoice.model';
 import { ProcedureCatalog } from '../../catalog/entities/procedure-catalog.model';
 import { TreatmentPlanPhase } from '../../treatment/entities/treatment-plan-phase.model';
@@ -62,9 +74,7 @@ export class InvoiceLineItem extends Model {
   @Column(DataType.DATE)
   created_at: Date;
 
-
   @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
-
 }

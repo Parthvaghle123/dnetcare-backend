@@ -19,32 +19,47 @@ export class StaffService {
     @InjectModel(User) private userModel: typeof User,
     @InjectModel(UserBranch) private userBranchModel: typeof UserBranch,
     @InjectModel(RefreshToken) private refreshTokenModel: typeof RefreshToken,
-    @InjectModel(DoctorProfile) private doctorProfileModel: typeof DoctorProfile,
-  ) { }
+    @InjectModel(DoctorProfile)
+    private doctorProfileModel: typeof DoctorProfile,
+  ) {}
 
-  async getStaffList(reqUser: any, filters: { branch_id?: string, role?: string, status?: string, is_active?: string, is_deleted?: string, is_pending?: string, search?: string, page?: string, limit?: string }) {
+  async getStaffList(
+    reqUser: any,
+    filters: {
+      branch_id?: string;
+      role?: string;
+      status?: string;
+      is_active?: string;
+      is_deleted?: string;
+      is_pending?: string;
+      search?: string;
+      page?: string;
+      limit?: string;
+    },
+  ) {
     try {
       const orgId = reqUser.org_id;
-      let branchFilter = filters.branch_id ? [filters.branch_id] : reqUser.branch_ids;
+      const branchFilter = filters.branch_id
+        ? [filters.branch_id]
+        : reqUser.branch_ids;
 
       const page = parseInt(filters.page || '1', 10);
       const limit = parseInt(filters.limit || '10', 10);
       const offset = (page - 1) * limit;
 
       const whereClause: any = {
-        organization_id: orgId
+        organization_id: orgId,
       };
 
-      const doctorProfiles = await this.doctorProfileModel.findAll({ attributes: ['user_id'] });
-      const doctorUserIds = doctorProfiles.map(dp => dp.user_id);
+      const doctorProfiles = await this.doctorProfileModel.findAll({
+        attributes: ['user_id'],
+      });
+      const doctorUserIds = doctorProfiles.map((dp) => dp.user_id);
 
       if (filters.role === Role.DOCTOR) {
         whereClause[Op.and] = whereClause[Op.and] || [];
         whereClause[Op.and].push({
-          [Op.or]: [
-            { role: Role.DOCTOR },
-            { id: { [Op.in]: doctorUserIds } }
-          ]
+          [Op.or]: [{ role: Role.DOCTOR }, { id: { [Op.in]: doctorUserIds } }],
         });
       } else if (filters.role && filters.role !== Role.OWNER) {
         whereClause.role = filters.role;
@@ -54,8 +69,8 @@ export class StaffService {
         whereClause[Op.and].push({
           [Op.or]: [
             { role: { [Op.ne]: Role.OWNER } },
-            { id: { [Op.in]: doctorUserIds } }
-          ]
+            { id: { [Op.in]: doctorUserIds } },
+          ],
         });
       }
 
@@ -82,7 +97,7 @@ export class StaffService {
           { first_name: { [Op.iLike]: `%${filters.search}%` } },
           { last_name: { [Op.iLike]: `%${filters.search}%` } },
           { email: { [Op.iLike]: `%${filters.search}%` } },
-          { phone: { [Op.iLike]: `%${filters.search}%` } }
+          { phone: { [Op.iLike]: `%${filters.search}%` } },
         ];
       }
 
@@ -91,24 +106,27 @@ export class StaffService {
         limit,
         offset,
         distinct: true, // Necessary when counting with includes
-        order: [['created_at', 'DESC']]
+        order: [['created_at', 'DESC']],
       };
 
       if (reqUser.role === Role.OWNER && !filters.branch_id) {
         queryOptions.include = [{ model: UserBranch, include: [Branch] }];
       } else {
-        queryOptions.include = [{
-          model: UserBranch,
-          where: { branch_id: branchFilter },
-          include: [Branch]
-        }];
+        queryOptions.include = [
+          {
+            model: UserBranch,
+            where: { branch_id: branchFilter },
+            include: [Branch],
+          },
+        ];
       }
 
-      const { rows, count } = await this.userModel.findAndCountAll(queryOptions);
+      const { rows, count } =
+        await this.userModel.findAndCountAll(queryOptions);
 
       const totalPages = Math.ceil(count / limit);
 
-      const records = rows.map(user => ({
+      const records = rows.map((user) => ({
         id: user.id,
         first_name: user.first_name,
         last_name: user.last_name,
@@ -118,12 +136,13 @@ export class StaffService {
         status: user.status,
         is_active: user.is_active,
         is_deleted: user.is_deleted,
-        branches: user.user_branches?.map((ub: any) => ({
-          id: ub.branch.id,
-          name: ub.branch.name,
-          color_code: ub.branch.color_code,
-          is_primary: ub.is_primary
-        })) || []
+        branches:
+          user.user_branches?.map((ub: any) => ({
+            id: ub.branch.id,
+            name: ub.branch.name,
+            color_code: ub.branch.color_code,
+            is_primary: ub.is_primary,
+          })) || [],
       }));
 
       return {
@@ -134,13 +153,16 @@ export class StaffService {
           total_pages: totalPages,
           limit: limit,
           has_next: page < totalPages,
-          has_previous: page > 1
-        }
+          has_previous: page > 1,
+        },
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getStaffList] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -148,14 +170,21 @@ export class StaffService {
     try {
       const staff = await this.userModel.findOne({
         where: { id: staffId, organization_id: reqUser.org_id },
-        include: [{ model: UserBranch, include: [Branch] }]
+        include: [{ model: UserBranch, include: [Branch] }],
       });
 
-      if (!staff) throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);
+      if (!staff)
+        throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);
 
       if (reqUser.role === Role.BRANCH_ADMIN) {
-        const sharedBranch = staff.user_branches?.some((ub: any) => reqUser.branch_ids.includes(ub.branch_id));
-        if (!sharedBranch) throw new HttpException('You do not have access to this staff.', StatusCode.FORBIDDEN);
+        const sharedBranch = staff.user_branches?.some((ub: any) =>
+          reqUser.branch_ids.includes(ub.branch_id),
+        );
+        if (!sharedBranch)
+          throw new HttpException(
+            'You do not have access to this staff.',
+            StatusCode.FORBIDDEN,
+          );
       }
 
       return {
@@ -167,17 +196,21 @@ export class StaffService {
         role: staff.role,
         status: staff.status,
         is_active: staff.is_active,
-        branches: staff.user_branches?.map((ub: any) => ({
-          id: ub.branch.id,
-          name: ub.branch.name,
-          color_code: ub.branch.color_code,
-          is_primary: ub.is_primary
-        })) || []
+        branches:
+          staff.user_branches?.map((ub: any) => ({
+            id: ub.branch.id,
+            name: ub.branch.name,
+            color_code: ub.branch.color_code,
+            is_primary: ub.is_primary,
+          })) || [],
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getStaffById] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -185,23 +218,41 @@ export class StaffService {
     try {
       const staff = await this.userModel.findOne({
         where: { id: staffId, organization_id: reqUser.org_id },
-        include: [{ model: UserBranch }]
+        include: [{ model: UserBranch }],
       });
 
-      if (!staff) throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);
+      if (!staff)
+        throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);
 
       if (reqUser.role === Role.BRANCH_ADMIN && reqUser.id !== staff.id) {
-        if (staff.role as string === Role.OWNER || staff.role as string === Role.BRANCH_ADMIN) {
-          throw new HttpException('You do not have permission to modify this staff.', StatusCode.FORBIDDEN);
+        if (
+          (staff.role as string) === Role.OWNER ||
+          (staff.role as string) === Role.BRANCH_ADMIN
+        ) {
+          throw new HttpException(
+            'You do not have permission to modify this staff.',
+            StatusCode.FORBIDDEN,
+          );
         }
-        const sharedBranch = staff.user_branches?.some((ub: any) => reqUser.branch_ids.includes(ub.branch_id));
-        if (!sharedBranch) throw new HttpException('You do not have access to update this staff.', StatusCode.FORBIDDEN);
+        const sharedBranch = staff.user_branches?.some((ub: any) =>
+          reqUser.branch_ids.includes(ub.branch_id),
+        );
+        if (!sharedBranch)
+          throw new HttpException(
+            'You do not have access to update this staff.',
+            StatusCode.FORBIDDEN,
+          );
       }
 
       if (dto.phone && dto.phone !== staff.phone) {
-        const phoneExists = await this.userModel.findOne({ where: { phone: dto.phone } });
+        const phoneExists = await this.userModel.findOne({
+          where: { phone: dto.phone },
+        });
         if (phoneExists) {
-          throw new HttpException('Phone number is already in use by another account.', StatusCode.CONFLICT);
+          throw new HttpException(
+            'Phone number is already in use by another account.',
+            StatusCode.CONFLICT,
+          );
         }
       }
 
@@ -211,34 +262,57 @@ export class StaffService {
         id: staff.id,
         first_name: staff.first_name,
         last_name: staff.last_name,
-        phone: staff.phone
+        phone: staff.phone,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updateStaff] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async updateStaffStatus(reqUser: any, staffId: string, dto: UpdateStaffStatusDto) {
+  async updateStaffStatus(
+    reqUser: any,
+    staffId: string,
+    dto: UpdateStaffStatusDto,
+  ) {
     try {
       const staff = await this.userModel.findOne({
         where: { id: staffId, organization_id: reqUser.org_id },
-        include: [{ model: UserBranch }]
+        include: [{ model: UserBranch }],
       });
 
-      if (!staff) throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);
+      if (!staff)
+        throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);
 
       if (reqUser.role === Role.BRANCH_ADMIN && reqUser.id !== staff.id) {
-        if (staff.role as string === Role.OWNER || staff.role as string === Role.BRANCH_ADMIN) {
-          throw new HttpException('You do not have permission to modify this staff.', StatusCode.FORBIDDEN);
+        if (
+          (staff.role as string) === Role.OWNER ||
+          (staff.role as string) === Role.BRANCH_ADMIN
+        ) {
+          throw new HttpException(
+            'You do not have permission to modify this staff.',
+            StatusCode.FORBIDDEN,
+          );
         }
-        const sharedBranch = staff.user_branches?.some((ub: any) => reqUser.branch_ids.includes(ub.branch_id));
-        if (!sharedBranch) throw new HttpException('You do not have access to update this staff.', StatusCode.FORBIDDEN);
+        const sharedBranch = staff.user_branches?.some((ub: any) =>
+          reqUser.branch_ids.includes(ub.branch_id),
+        );
+        if (!sharedBranch)
+          throw new HttpException(
+            'You do not have access to update this staff.',
+            StatusCode.FORBIDDEN,
+          );
       }
 
-      if (staff.role as string === Role.OWNER) {
-        throw new HttpException('Cannot modify the organization owner status.', StatusCode.FORBIDDEN);
+      if ((staff.role as string) === Role.OWNER) {
+        throw new HttpException(
+          'Cannot modify the organization owner status.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       await staff.update({ is_active: dto.is_active, status: dto.status });
@@ -246,144 +320,216 @@ export class StaffService {
       if (!dto.is_active || dto.status === UserStatus.INACTIVE) {
         await this.refreshTokenModel.update(
           { is_revoked: true },
-          { where: { user_id: staffId, is_revoked: false } }
+          { where: { user_id: staffId, is_revoked: false } },
         );
       }
 
       return {
         id: staff.id,
         is_active: staff.is_active,
-        status: staff.status
+        status: staff.status,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updateStaffStatus] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async getStaffBranches(reqUser: any, staffId: string) {
     try {
       const staff = await this.userModel.findOne({
-        where: { id: staffId, organization_id: reqUser.org_id }
+        where: { id: staffId, organization_id: reqUser.org_id },
       });
 
-      if (!staff) throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);
+      if (!staff)
+        throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);
 
       const branches = await this.userBranchModel.findAll({
         where: { user_id: staffId },
-        include: [{ model: Branch }]
+        include: [{ model: Branch }],
       });
 
       return branches.map((ub: any) => ({
         id: ub.branch.id,
         name: ub.branch.name,
         color_code: ub.branch.color_code,
-        is_primary: ub.is_primary
+        is_primary: ub.is_primary,
       }));
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getStaffBranches] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async removeStaffFromBranch(reqUser: any, staffId: string, branchId: string) {
     try {
-      if (reqUser.role === Role.BRANCH_ADMIN && !reqUser.branch_ids.includes(branchId)) {
-        throw new HttpException('You do not have access to this branch.', StatusCode.FORBIDDEN);
+      if (
+        reqUser.role === Role.BRANCH_ADMIN &&
+        !reqUser.branch_ids.includes(branchId)
+      ) {
+        throw new HttpException(
+          'You do not have access to this branch.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
-      const staff = await this.userModel.findOne({ where: { id: staffId, organization_id: reqUser.org_id } });
+      const staff = await this.userModel.findOne({
+        where: { id: staffId, organization_id: reqUser.org_id },
+      });
       if (!staff) {
         throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);
       }
 
-      if (staff.role as string === Role.OWNER) {
-        throw new HttpException('Cannot modify the organization owner.', StatusCode.FORBIDDEN);
+      if ((staff.role as string) === Role.OWNER) {
+        throw new HttpException(
+          'Cannot modify the organization owner.',
+          StatusCode.FORBIDDEN,
+        );
       }
-      if (reqUser.role === Role.BRANCH_ADMIN && staff.role as string === Role.BRANCH_ADMIN) {
-        throw new HttpException('You do not have permission to manage branches for this role.', StatusCode.FORBIDDEN);
+      if (
+        reqUser.role === Role.BRANCH_ADMIN &&
+        (staff.role as string) === Role.BRANCH_ADMIN
+      ) {
+        throw new HttpException(
+          'You do not have permission to manage branches for this role.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
-      const deleted = await this.userBranchModel.destroy({ where: { user_id: staffId, branch_id: branchId } });
+      const deleted = await this.userBranchModel.destroy({
+        where: { user_id: staffId, branch_id: branchId },
+      });
       if (!deleted) {
-        throw new HttpException('Staff is not assigned to this branch.', StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          'Staff is not assigned to this branch.',
+          StatusCode.BAD_REQUEST,
+        );
       }
       return true;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[removeStaffFromBranch] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async assignStaffToBranch(reqUser: any, staffId: string, branchId: string) {
     try {
-      if (reqUser.role === Role.BRANCH_ADMIN && !reqUser.branch_ids.includes(branchId)) {
-        throw new HttpException('You do not have access to this branch.', StatusCode.FORBIDDEN);
+      if (
+        reqUser.role === Role.BRANCH_ADMIN &&
+        !reqUser.branch_ids.includes(branchId)
+      ) {
+        throw new HttpException(
+          'You do not have access to this branch.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
-      const staff = await this.userModel.findOne({ where: { id: staffId, organization_id: reqUser.org_id } });
+      const staff = await this.userModel.findOne({
+        where: { id: staffId, organization_id: reqUser.org_id },
+      });
       if (!staff) {
         throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);
       }
 
-      if (staff.role as string === Role.OWNER) {
-        throw new HttpException('Cannot modify the organization owner.', StatusCode.FORBIDDEN);
+      if ((staff.role as string) === Role.OWNER) {
+        throw new HttpException(
+          'Cannot modify the organization owner.',
+          StatusCode.FORBIDDEN,
+        );
       }
-      if (reqUser.role === Role.BRANCH_ADMIN && staff.role as string === Role.BRANCH_ADMIN) {
-        throw new HttpException('You do not have permission to manage branches for this role.', StatusCode.FORBIDDEN);
+      if (
+        reqUser.role === Role.BRANCH_ADMIN &&
+        (staff.role as string) === Role.BRANCH_ADMIN
+      ) {
+        throw new HttpException(
+          'You do not have permission to manage branches for this role.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
-      const existingAssignment = await this.userBranchModel.findOne({ where: { user_id: staffId, branch_id: branchId } });
+      const existingAssignment = await this.userBranchModel.findOne({
+        where: { user_id: staffId, branch_id: branchId },
+      });
       if (existingAssignment) {
-        throw new HttpException('Staff is already assigned to this branch.', StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          'Staff is already assigned to this branch.',
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       await this.userBranchModel.create({
         user_id: staffId,
         branch_id: branchId,
-        is_primary: false
+        is_primary: false,
       });
 
       return true;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[assignStaffToBranch] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async deleteStaff(reqUser: any, staffId: string) {
     try {
       if (reqUser.role !== Role.OWNER) {
-        throw new HttpException('Only the clinic owner can delete staff.', StatusCode.FORBIDDEN);
+        throw new HttpException(
+          'Only the clinic owner can delete staff.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
-      const staff = await this.userModel.findOne({ where: { id: staffId, organization_id: reqUser.org_id } });
+      const staff = await this.userModel.findOne({
+        where: { id: staffId, organization_id: reqUser.org_id },
+      });
       if (!staff) {
         throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);
       }
 
-      if (staff.role as string === Role.OWNER) {
-        throw new HttpException('Cannot delete the organization owner.', StatusCode.FORBIDDEN);
+      if ((staff.role as string) === Role.OWNER) {
+        throw new HttpException(
+          'Cannot delete the organization owner.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       // Soft delete user via is_deleted
-      await staff.update({ is_deleted: true, is_active: false, status: UserStatus.INACTIVE });
+      await staff.update({
+        is_deleted: true,
+        is_active: false,
+        status: UserStatus.INACTIVE,
+      });
 
       // Revoke all active sessions
       await this.refreshTokenModel.update(
         { is_revoked: true },
-        { where: { user_id: staffId, is_revoked: false } }
+        { where: { user_id: staffId, is_revoked: false } },
       );
 
       return true;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[deleteStaff] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

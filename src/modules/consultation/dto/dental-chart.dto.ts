@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsEnum, IsArray, ValidateNested, ArrayMinSize } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsArray,
+  ValidateNested,
+  ArrayMinSize,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum ToothCondition {
@@ -13,7 +20,7 @@ export enum ToothCondition {
   RCT_DONE = 'RCT_DONE',
   CROWN = 'CROWN',
   BRIDGE = 'BRIDGE',
-  IMPLANT = 'IMPLANT'
+  IMPLANT = 'IMPLANT',
 }
 
 export class DentalChartDto {

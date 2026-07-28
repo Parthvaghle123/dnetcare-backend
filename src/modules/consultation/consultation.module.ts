@@ -21,12 +21,12 @@ import { UploadModule } from '../upload/upload.module';
       Patient,
       Branch,
       User,
-      Appointment
+      Appointment,
     ]),
-    UploadModule
+    UploadModule,
   ],
   controllers: [ConsultationController],
   providers: [ConsultationService],
-  exports: [SequelizeModule, ConsultationService]
+  exports: [SequelizeModule, ConsultationService],
 })
 export class ConsultationModule {}

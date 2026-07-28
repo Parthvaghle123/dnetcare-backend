@@ -1,4 +1,16 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  BelongsTo,
+  ForeignKey,
+  CreatedAt,
+  UpdatedAt,
+} from 'sequelize-typescript';
 import { Organization } from '../../organization/entities/organization.model';
 
 @Table({ tableName: 'expense_categories', timestamps: true })
@@ -32,9 +44,7 @@ export class ExpenseCategory extends Model {
   @Column(DataType.DATE)
   created_at: Date;
 
-
   @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
-
 }

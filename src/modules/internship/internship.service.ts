@@ -13,8 +13,10 @@ import { InternshipInquiryStatus } from './enums/internship-status.enum';
 @Injectable()
 export class InternshipService {
   constructor(
-    @InjectModel(InternshipInquiry) private internshipModel: typeof InternshipInquiry,
-    @InjectModel(InternshipExperience) private experienceModel: typeof InternshipExperience,
+    @InjectModel(InternshipInquiry)
+    private internshipModel: typeof InternshipInquiry,
+    @InjectModel(InternshipExperience)
+    private experienceModel: typeof InternshipExperience,
     private uploadService: UploadService,
     private emailService: EmailService,
   ) {}
@@ -48,10 +50,16 @@ export class InternshipService {
     };
   }
 
-  async updateProfessionalDetails(id: string, dto: UpdateInternshipProfessionalDto) {
+  async updateProfessionalDetails(
+    id: string,
+    dto: UpdateInternshipProfessionalDto,
+  ) {
     const inquiry = await this.internshipModel.findByPk(id);
     if (!inquiry) {
-      throw new NotFoundException({ message: 'Internship inquiry not found.', error: ErrorCode.NOT_FOUND });
+      throw new NotFoundException({
+        message: 'Internship inquiry not found.',
+        error: ErrorCode.NOT_FOUND,
+      });
     }
 
     const { experiences, ...updateData } = dto;
@@ -63,7 +71,7 @@ export class InternshipService {
     // If experiences are provided, clear old ones and insert new ones
     if (experiences && experiences.length > 0) {
       await this.experienceModel.destroy({ where: { inquiry_id: id } });
-      const experiencesToCreate = experiences.map(exp => ({
+      const experiencesToCreate = experiences.map((exp) => ({
         ...exp,
         inquiry_id: id,
       }));
@@ -79,28 +87,42 @@ export class InternshipService {
   async uploadPhotoAndComplete(id: string, file?: Express.Multer.File) {
     const inquiry = await this.internshipModel.findByPk(id);
     if (!inquiry) {
-      throw new NotFoundException({ message: 'Internship inquiry not found.', error: ErrorCode.NOT_FOUND });
+      throw new NotFoundException({
+        message: 'Internship inquiry not found.',
+        error: ErrorCode.NOT_FOUND,
+      });
     }
 
     if (!file) {
-      throw new HttpException({ message: 'Profile photo is required.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      throw new HttpException(
+        { message: 'Profile photo is required.', error: ErrorCode.BAD_REQUEST },
+        StatusCode.BAD_REQUEST,
+      );
     }
 
     try {
       const uploadResult = await this.uploadService.uploadFile(file);
       await inquiry.update({ profile_image_url: uploadResult.url });
-      
+
       // Trigger email confirmation asynchronously
-      this.emailService.sendInternshipConfirmationEmail(inquiry.email, inquiry.full_name).catch(e => {
-        console.error('Failed to send internship confirmation email:', e);
-      });
+      this.emailService
+        .sendInternshipConfirmationEmail(inquiry.email, inquiry.full_name)
+        .catch((e) => {
+          console.error('Failed to send internship confirmation email:', e);
+        });
 
       return {
         message: 'Internship application completed successfully.',
         inquiry_id: inquiry.id,
       };
     } catch (error) {
-      throw new HttpException({ message: 'Failed to upload profile image.', error: ErrorCode.INTERNAL_ERROR }, StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        {
+          message: 'Failed to upload profile image.',
+          error: ErrorCode.INTERNAL_ERROR,
+        },
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -128,7 +150,10 @@ export class InternshipService {
   async updateStatus(id: string, status: InternshipInquiryStatus) {
     const inquiry = await this.internshipModel.findByPk(id);
     if (!inquiry) {
-      throw new NotFoundException({ message: 'Internship inquiry not found.', error: ErrorCode.NOT_FOUND });
+      throw new NotFoundException({
+        message: 'Internship inquiry not found.',
+        error: ErrorCode.NOT_FOUND,
+      });
     }
 
     await inquiry.update({ status });
@@ -141,7 +166,10 @@ export class InternshipService {
 
   async checkByEmail(email: string) {
     if (!email) {
-      throw new HttpException({ message: 'Email is required.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+      throw new HttpException(
+        { message: 'Email is required.', error: ErrorCode.BAD_REQUEST },
+        StatusCode.BAD_REQUEST,
+      );
     }
 
     const inquiry = await this.internshipModel.findOne({

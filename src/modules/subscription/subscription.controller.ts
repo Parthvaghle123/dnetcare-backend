@@ -15,7 +15,7 @@ export class SubscriptionController {
   @UseGuards(JwtAuthGuard)
   @Post('checkout')
   async checkout(@Body() body: { plan_id: string }, @CurrentUser() user: any) {
-    const organizationId = user.org_id; 
+    const organizationId = user.org_id;
     return this.subscriptionService.checkout(organizationId, body.plan_id);
   }
 

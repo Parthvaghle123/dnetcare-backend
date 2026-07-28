@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Patch, Delete, Body, Param, ParseUUIDPipe, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  ParseUUIDPipe,
+  UseGuards,
+} from '@nestjs/common';
 import { PatientService } from './patient.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -18,7 +29,10 @@ export class MedicalConditionController {
   }
 
   @Post()
-  async createMedicalCondition(@Body() dto: CreateMedicalConditionDto, @CurrentUser() user: any) {
+  async createMedicalCondition(
+    @Body() dto: CreateMedicalConditionDto,
+    @CurrentUser() user: any,
+  ) {
     const data = await this.patientService.createMedicalCondition(user, dto);
     return { message: 'Medical condition created successfully.', data };
   }
@@ -27,9 +41,13 @@ export class MedicalConditionController {
   async updateMedicalCondition(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateMedicalConditionDto,
-    @CurrentUser() user: any
+    @CurrentUser() user: any,
   ) {
-    const data = await this.patientService.updateMedicalCondition(user, id, dto);
+    const data = await this.patientService.updateMedicalCondition(
+      user,
+      id,
+      dto,
+    );
     return { message: 'Medical condition updated successfully.', data };
   }
 
@@ -37,16 +55,20 @@ export class MedicalConditionController {
   async updateMedicalConditionStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateMedicalConditionStatusDto,
-    @CurrentUser() user: any
+    @CurrentUser() user: any,
   ) {
-    const data = await this.patientService.updateMedicalConditionStatus(user, id, dto);
+    const data = await this.patientService.updateMedicalConditionStatus(
+      user,
+      id,
+      dto,
+    );
     return { message: 'Medical condition status updated successfully.', data };
   }
 
   @Delete(':id')
   async deleteMedicalCondition(
     @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: any
+    @CurrentUser() user: any,
   ) {
     await this.patientService.deleteMedicalCondition(user, id);
     return { message: 'Medical condition deleted successfully.', data: null };

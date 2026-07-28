@@ -7,10 +7,10 @@ export class AppController {
   @Get()
   getHello() {
     this.logger.log('Health check endpoint / was accessed');
-    return { 
-      success: true, 
-      message: "Dental API is running", 
-      timestamp: new Date().toISOString() 
+    return {
+      success: true,
+      message: 'Dental API is running',
+      timestamp: new Date().toISOString(),
     };
   }
 }

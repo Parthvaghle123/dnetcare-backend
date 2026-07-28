@@ -2,7 +2,9 @@ import { SequelizeModuleOptions } from '@nestjs/sequelize';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 
-export const getDatabaseConfig = (configService: ConfigService): SequelizeModuleOptions => {
+export const getDatabaseConfig = (
+  configService: ConfigService,
+): SequelizeModuleOptions => {
   const logger = new Logger('DatabaseConfig');
   logger.log('Initializing database configuration connection settings...');
 

@@ -6,7 +6,10 @@ import { Role } from '../../common/enums/role.enum';
 import { Organization } from './entities/organization.model';
 import { Branch } from './entities/branch.model';
 import { UserBranch } from '../auth/entities/user-branch.model';
-import { Subscription, SubscriptionStatus } from '../subscription/entities/subscription.model';
+import {
+  Subscription,
+  SubscriptionStatus,
+} from '../subscription/entities/subscription.model';
 import { Plan } from '../subscription/entities/plan.model';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { CreateBranchDto } from './dto/create-branch.dto';
@@ -32,7 +35,10 @@ export class OrganizationService {
       const org = await this.orgModel.findByPk(orgId);
 
       if (!org) {
-        throw new HttpException('Organization not found.', StatusCode.NOT_FOUND);
+        throw new HttpException(
+          'Organization not found.',
+          StatusCode.NOT_FOUND,
+        );
       }
 
       return {
@@ -46,25 +52,41 @@ export class OrganizationService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getMyOrganization] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async updateMyOrganization(reqUser: any, dto: UpdateOrganizationDto) {
     try {
       if (reqUser.role !== Role.OWNER) {
-        throw new HttpException('Only the clinic owner can update organization details.', StatusCode.FORBIDDEN);
+        throw new HttpException(
+          'Only the clinic owner can update organization details.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
-      if (dto.name === undefined && dto.phone === undefined && dto.logo_url === undefined) {
-        throw new HttpException('Provide at least one field to update.', StatusCode.BAD_REQUEST);
+      if (
+        dto.name === undefined &&
+        dto.phone === undefined &&
+        dto.logo_url === undefined
+      ) {
+        throw new HttpException(
+          'Provide at least one field to update.',
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       const orgId = reqUser.org_id;
       const org = await this.orgModel.findByPk(orgId);
 
       if (!org) {
-        throw new HttpException('Organization not found.', StatusCode.NOT_FOUND);
+        throw new HttpException(
+          'Organization not found.',
+          StatusCode.NOT_FOUND,
+        );
       }
 
       const updateData: any = {};
@@ -73,7 +95,7 @@ export class OrganizationService {
       if (dto.logo_url !== undefined) updateData.logo_url = dto.logo_url;
 
       await this.orgModel.update(updateData, { where: { id: org.id } });
-      
+
       const updatedOrg = await this.orgModel.findByPk(org.id);
 
       return {
@@ -87,11 +109,24 @@ export class OrganizationService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updateMyOrganization] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async getBranches(reqUser: any, filters: { is_active?: string, city?: string, state?: string, search?: string, page?: string, limit?: string }) {
+  async getBranches(
+    reqUser: any,
+    filters: {
+      is_active?: string;
+      city?: string;
+      state?: string;
+      search?: string;
+      page?: string;
+      limit?: string;
+    },
+  ) {
     try {
       const page = parseInt(filters.page || '1', 10);
       const limit = parseInt(filters.limit || '10', 10);
@@ -117,7 +152,7 @@ export class OrganizationService {
           { city: { [Op.iLike]: `%${filters.search}%` } },
           { state: { [Op.iLike]: `%${filters.search}%` } },
           { phone: { [Op.iLike]: `%${filters.search}%` } },
-          { address: { [Op.iLike]: `%${filters.search}%` } }
+          { address: { [Op.iLike]: `%${filters.search}%` } },
         ];
       }
 
@@ -158,20 +193,26 @@ export class OrganizationService {
           total_pages: totalPages,
           limit: limit,
           has_next: page < totalPages,
-          has_previous: page > 1
-        }
+          has_previous: page > 1,
+        },
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getBranches] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async createBranch(reqUser: any, dto: CreateBranchDto) {
     try {
       if (reqUser.role !== Role.OWNER) {
-        throw new HttpException('Only the clinic owner can create new branches.', StatusCode.FORBIDDEN);
+        throw new HttpException(
+          'Only the clinic owner can create new branches.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       const existingBranch = await this.branchModel.findOne({
@@ -179,22 +220,35 @@ export class OrganizationService {
       });
 
       if (existingBranch) {
-        throw new HttpException('A branch with this name already exists in your clinic.', StatusCode.CONFLICT);
+        throw new HttpException(
+          'A branch with this name already exists in your clinic.',
+          StatusCode.CONFLICT,
+        );
       }
 
       // Check plan limits
       const subscription = await this.subscriptionModel.findOne({
-        where: { organization_id: reqUser.org_id, status: SubscriptionStatus.ACTIVE },
+        where: {
+          organization_id: reqUser.org_id,
+          status: SubscriptionStatus.ACTIVE,
+        },
         include: [Plan],
       });
 
-      if (subscription && subscription.plan && subscription.plan.max_branches !== null) {
+      if (
+        subscription &&
+        subscription.plan &&
+        subscription.plan.max_branches !== null
+      ) {
         const currentBranchesCount = await this.branchModel.count({
           where: { organization_id: reqUser.org_id },
         });
 
         if (currentBranchesCount >= subscription.plan.max_branches) {
-          throw new HttpException(`Plan limit reached: You can only create up to ${subscription.plan.max_branches} branches on your current plan.`, StatusCode.FORBIDDEN);
+          throw new HttpException(
+            `Plan limit reached: You can only create up to ${subscription.plan.max_branches} branches on your current plan.`,
+            StatusCode.FORBIDDEN,
+          );
         }
       }
 
@@ -231,7 +285,10 @@ export class OrganizationService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[createBranch] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -247,7 +304,10 @@ export class OrganizationService {
 
       if (reqUser.role === Role.DOCTOR || reqUser.role === Role.RECEPTIONIST) {
         if (!reqUser.branch_ids.includes(id)) {
-          throw new HttpException('You do not have access to this branch.', StatusCode.FORBIDDEN);
+          throw new HttpException(
+            'You do not have access to this branch.',
+            StatusCode.FORBIDDEN,
+          );
         }
       }
 
@@ -270,14 +330,20 @@ export class OrganizationService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getBranchById] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async updateBranch(reqUser: any, id: string, dto: UpdateBranchDto) {
     try {
       if (reqUser.role !== Role.OWNER) {
-        throw new HttpException('Only the clinic owner can update branch details.', StatusCode.FORBIDDEN);
+        throw new HttpException(
+          'Only the clinic owner can update branch details.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       if (
@@ -292,7 +358,10 @@ export class OrganizationService {
         dto.start_time === undefined &&
         dto.end_time === undefined
       ) {
-        throw new HttpException('Provide at least one field to update.', StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          'Provide at least one field to update.',
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       const branch = await this.branchModel.findOne({
@@ -313,7 +382,10 @@ export class OrganizationService {
         });
 
         if (existingBranch) {
-          throw new HttpException('Another branch with this name already exists.', StatusCode.CONFLICT);
+          throw new HttpException(
+            'Another branch with this name already exists.',
+            StatusCode.CONFLICT,
+          );
         }
       }
 
@@ -323,7 +395,8 @@ export class OrganizationService {
       if (dto.phone !== undefined) updateData.phone = dto.phone;
       if (dto.address !== undefined) updateData.address = dto.address;
       if (dto.state !== undefined) updateData.state = dto.state;
-      if (dto.whatsapp_number !== undefined) updateData.whatsapp_number = dto.whatsapp_number;
+      if (dto.whatsapp_number !== undefined)
+        updateData.whatsapp_number = dto.whatsapp_number;
       if (dto.color_code !== undefined) updateData.color_code = dto.color_code;
       if (dto.logo_url !== undefined) updateData.logo_url = dto.logo_url;
       if (dto.start_time !== undefined) updateData.start_time = dto.start_time;
@@ -352,14 +425,20 @@ export class OrganizationService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updateBranch] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async updateBranchStatus(reqUser: any, id: string, dto: BranchStatusDto) {
     try {
       if (reqUser.role !== Role.OWNER) {
-        throw new HttpException('Only the clinic owner can change branch status.', StatusCode.FORBIDDEN);
+        throw new HttpException(
+          'Only the clinic owner can change branch status.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       const branch = await this.branchModel.findOne({
@@ -371,10 +450,16 @@ export class OrganizationService {
       }
 
       if (branch.is_active === dto.is_active) {
-        throw new HttpException(`Branch is already ${dto.is_active ? 'active' : 'inactive'}.`, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          `Branch is already ${dto.is_active ? 'active' : 'inactive'}.`,
+          StatusCode.BAD_REQUEST,
+        );
       }
 
-      await this.branchModel.update({ is_active: dto.is_active }, { where: { id } });
+      await this.branchModel.update(
+        { is_active: dto.is_active },
+        { where: { id } },
+      );
 
       return {
         id: branch.id,
@@ -384,7 +469,10 @@ export class OrganizationService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updateBranchStatus] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -392,7 +480,10 @@ export class OrganizationService {
     const transaction = await this.sequelize.transaction();
     try {
       if (reqUser.role !== Role.OWNER) {
-        throw new HttpException('Only the clinic owner can delete a branch.', StatusCode.FORBIDDEN);
+        throw new HttpException(
+          'Only the clinic owner can delete a branch.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       const branch = await this.branchModel.findOne({
@@ -409,11 +500,17 @@ export class OrganizationService {
       });
 
       if (totalBranches <= 1) {
-        throw new HttpException('Cannot delete the last remaining branch of the organization.', StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          'Cannot delete the last remaining branch of the organization.',
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       // Delete user branch assignments first
-      await this.userBranchModel.destroy({ where: { branch_id: id }, transaction });
+      await this.userBranchModel.destroy({
+        where: { branch_id: id },
+        transaction,
+      });
 
       // Then delete the branch
       await this.branchModel.destroy({ where: { id }, transaction });
@@ -423,11 +520,17 @@ export class OrganizationService {
     } catch (error: any) {
       await transaction.rollback();
       if (error.name === 'SequelizeForeignKeyConstraintError') {
-        throw new HttpException('Cannot delete this branch because it contains active patients, appointments, or billing records. Please deactivate it instead.', StatusCode.CONFLICT);
+        throw new HttpException(
+          'Cannot delete this branch because it contains active patients, appointments, or billing records. Please deactivate it instead.',
+          StatusCode.CONFLICT,
+        );
       }
       if (error instanceof HttpException) throw error;
       this.logger.error(`[deleteBranch] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

@@ -24,8 +24,10 @@ export class ConsultationService {
 
   constructor(
     @InjectModel(Consultation) private consultationModel: typeof Consultation,
-    @InjectModel(DentalChartEntry) private dentalChartEntryModel: typeof DentalChartEntry,
-    @InjectModel(ConsultationDocument) private consultationDocModel: typeof ConsultationDocument,
+    @InjectModel(DentalChartEntry)
+    private dentalChartEntryModel: typeof DentalChartEntry,
+    @InjectModel(ConsultationDocument)
+    private consultationDocModel: typeof ConsultationDocument,
     @InjectModel(Patient) private patientModel: typeof Patient,
     @InjectModel(Branch) private branchModel: typeof Branch,
     @InjectModel(User) private userModel: typeof User,
@@ -35,28 +37,37 @@ export class ConsultationService {
   async createConsultation(user: any, dto: CreateConsultationDto) {
     try {
       const patient = await this.patientModel.findOne({
-        where: { id: dto.patient_id, organization_id: user.org_id }
+        where: { id: dto.patient_id, organization_id: user.org_id },
       });
       if (!patient) {
-        throw new HttpException({ message: 'Patient not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'Patient not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       const branch = await this.branchModel.findOne({
-        where: { id: dto.branch_id, organization_id: user.org_id }
+        where: { id: dto.branch_id, organization_id: user.org_id },
       });
       if (!branch) {
-        throw new HttpException({ message: 'Invalid branch.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          { message: 'Invalid branch.', error: ErrorCode.BAD_REQUEST },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       const doctor = await this.userModel.findOne({
-        where: { 
-          id: dto.doctor_id, 
-          organization_id: user.org_id, 
-          role: { [Op.in]: [Role.DOCTOR, Role.OWNER] } 
-        }
+        where: {
+          id: dto.doctor_id,
+          organization_id: user.org_id,
+          role: { [Op.in]: [Role.DOCTOR, Role.OWNER] },
+        },
       });
       if (!doctor) {
-        throw new HttpException({ message: 'Invalid doctor selected.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          { message: 'Invalid doctor selected.', error: ErrorCode.BAD_REQUEST },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       const consultation = await this.consultationModel.create({
@@ -74,52 +85,66 @@ export class ConsultationService {
         notes_upper: dto.notes_upper || null,
         notes_lower: dto.notes_lower || null,
         follow_up_date: dto.follow_up_date || null,
-        is_completed: false
+        is_completed: false,
       });
 
       return consultation;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[createConsultation] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async getConsultationById(user: any, id: string) {
     try {
       const consultation = await this.consultationModel.findOne({
-        where: { id, organization_id: user.org_id }
+        where: { id, organization_id: user.org_id },
       });
 
       if (!consultation) {
-        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'Consultation not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       const patient = await this.patientModel.findOne({
         where: { id: consultation.patient_id },
-        attributes: ['id', 'file_number', 'first_name', 'last_name', 'mobile', 'gender', 'age']
+        attributes: [
+          'id',
+          'file_number',
+          'first_name',
+          'last_name',
+          'mobile',
+          'gender',
+          'age',
+        ],
       });
 
       const doctor = await this.userModel.findOne({
         where: { id: consultation.doctor_id },
-        attributes: ['id', 'first_name', 'last_name']
+        attributes: ['id', 'first_name', 'last_name'],
       });
 
       const branch = await this.branchModel.findOne({
         where: { id: consultation.branch_id },
-        attributes: ['id', 'name', 'city', 'color_code']
+        attributes: ['id', 'name', 'city', 'color_code'],
       });
 
       const dental_chart = await this.dentalChartEntryModel.findAll({
         where: { consultation_id: id },
         order: [['created_at', 'ASC']],
-        attributes: ['id', 'tooth_number', 'condition', 'notes', 'created_at']
+        attributes: ['id', 'tooth_number', 'condition', 'notes', 'created_at'],
       });
 
       const documents = await this.consultationDocModel.findAll({
         where: { consultation_id: id },
         order: [['created_at', 'ASC']],
-        attributes: ['id', 'file_url', 'file_name', 'file_type', 'created_at']
+        attributes: ['id', 'file_url', 'file_name', 'file_type', 'created_at'],
       });
 
       return {
@@ -140,36 +165,65 @@ export class ConsultationService {
         dental_chart,
         documents,
         created_at: consultation.created_at,
-        updated_at: consultation.updated_at
+        updated_at: consultation.updated_at,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getConsultationById] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async updateConsultation(user: any, id: string, dto: UpdateConsultationDto) {
     try {
       const consultation = await this.consultationModel.findOne({
-        where: { id, organization_id: user.org_id }
+        where: { id, organization_id: user.org_id },
       });
 
       if (!consultation) {
-        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'Consultation not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       if (consultation.is_completed) {
-        throw new HttpException({ message: 'Cannot edit a completed consultation.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          {
+            message: 'Cannot edit a completed consultation.',
+            error: ErrorCode.BAD_REQUEST,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       if (Object.keys(dto).length === 0) {
-        throw new HttpException({ message: 'Provide at least one field to update.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          {
+            message: 'Provide at least one field to update.',
+            error: ErrorCode.BAD_REQUEST,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       const updateData: any = {};
-      const allowedFields = ['chief_complaint', 'clinical_findings', 'diagnosis', 'advice', 'notes_upper', 'notes_lower', 'follow_up_date', 'dental_chart_type', 'consultation_date', 'is_completed'];
-      
+      const allowedFields = [
+        'chief_complaint',
+        'clinical_findings',
+        'diagnosis',
+        'advice',
+        'notes_upper',
+        'notes_lower',
+        'follow_up_date',
+        'dental_chart_type',
+        'consultation_date',
+        'is_completed',
+      ];
+
       for (const field of allowedFields) {
         if (dto[field as keyof UpdateConsultationDto] !== undefined) {
           updateData[field] = dto[field as keyof UpdateConsultationDto];
@@ -177,28 +231,40 @@ export class ConsultationService {
       }
 
       await consultation.update(updateData);
-      
+
       // Return the updated data using the existing getConsultationById
       return await this.getConsultationById(user, id);
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updateConsultation] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async addDentalChartEntry(user: any, id: string, dto: BulkDentalChartDto) {
     try {
       const consultation = await this.consultationModel.findOne({
-        where: { id, organization_id: user.org_id }
+        where: { id, organization_id: user.org_id },
       });
 
       if (!consultation) {
-        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'Consultation not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       if (consultation.is_completed) {
-        throw new HttpException({ message: 'Cannot modify chart of a completed consultation.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          {
+            message: 'Cannot modify chart of a completed consultation.',
+            error: ErrorCode.BAD_REQUEST,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       const results: any[] = [];
@@ -208,8 +274,8 @@ export class ConsultationService {
           where: {
             consultation_id: id,
             tooth_number: item.tooth_number,
-            condition: item.condition
-          }
+            condition: item.condition,
+          },
         });
 
         if (entry) {
@@ -220,17 +286,17 @@ export class ConsultationService {
             patient_id: consultation.patient_id,
             tooth_number: item.tooth_number,
             condition: item.condition,
-            notes: item.notes || null
+            notes: item.notes || null,
           });
         }
-        
+
         results.push({
           id: entry.id,
           tooth_number: entry.tooth_number,
           condition: entry.condition,
           notes: entry.notes,
           created_at: entry.created_at,
-          updated_at: entry.updated_at
+          updated_at: entry.updated_at,
         });
       }
 
@@ -238,18 +304,24 @@ export class ConsultationService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[addDentalChartEntry] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async addDocument(user: any, id: string, dto: BulkConsultationDocumentDto) {
     try {
       const consultation = await this.consultationModel.findOne({
-        where: { id, organization_id: user.org_id }
+        where: { id, organization_id: user.org_id },
       });
 
       if (!consultation) {
-        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'Consultation not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       const validTypes = ['XRAY', 'INTRAORAL_PHOTO', 'LAB_REPORT', 'OTHER'];
@@ -257,7 +329,13 @@ export class ConsultationService {
 
       for (const item of dto.documents) {
         if (!validTypes.includes(item.file_type)) {
-          throw new HttpException({ message: `Invalid file type: ${item.file_type}`, error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+          throw new HttpException(
+            {
+              message: `Invalid file type: ${item.file_type}`,
+              error: ErrorCode.BAD_REQUEST,
+            },
+            StatusCode.BAD_REQUEST,
+          );
         }
 
         const document = await this.consultationDocModel.create({
@@ -268,7 +346,7 @@ export class ConsultationService {
           file_key: item.file_key,
           file_name: item.file_name,
           file_type: item.file_type,
-          uploaded_by: user.sub
+          uploaded_by: user.sub,
         });
 
         results.push({
@@ -277,7 +355,7 @@ export class ConsultationService {
           file_name: document.file_name,
           file_type: document.file_type,
           uploaded_by: document.uploaded_by,
-          created_at: document.created_at
+          created_at: document.created_at,
         });
       }
 
@@ -285,12 +363,24 @@ export class ConsultationService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[addDocument] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
   async listConsultations(user: any, query: any) {
     try {
-      const { patient_id, branch_id, doctor_id, date_from, date_to, is_completed, page = 1, limit = 10 } = query;
+      const {
+        patient_id,
+        branch_id,
+        doctor_id,
+        date_from,
+        date_to,
+        is_completed,
+        page = 1,
+        limit = 10,
+      } = query;
       const offset = (Number(page) - 1) * Number(limit);
 
       const whereClause: any = { organization_id: user.org_id };
@@ -298,9 +388,10 @@ export class ConsultationService {
       if (patient_id) whereClause.patient_id = patient_id;
       if (branch_id) whereClause.branch_id = branch_id;
       if (doctor_id) whereClause.doctor_id = doctor_id;
-      
+
       if (is_completed !== undefined) {
-        whereClause.is_completed = is_completed === 'true' || is_completed === true;
+        whereClause.is_completed =
+          is_completed === 'true' || is_completed === true;
       }
 
       if (date_from && date_to) {
@@ -317,10 +408,16 @@ export class ConsultationService {
         limit: Number(limit),
         offset: Number(offset),
         include: [
-          { model: this.patientModel, attributes: ['id', 'file_number', 'first_name', 'last_name'] },
-          { model: this.userModel, attributes: ['id', 'first_name', 'last_name'] },
-          { model: this.branchModel, attributes: ['id', 'name', 'color_code'] }
-        ]
+          {
+            model: this.patientModel,
+            attributes: ['id', 'file_number', 'first_name', 'last_name'],
+          },
+          {
+            model: this.userModel,
+            attributes: ['id', 'first_name', 'last_name'],
+          },
+          { model: this.branchModel, attributes: ['id', 'name', 'color_code'] },
+        ],
       });
 
       const items = rows.map((row: any) => ({
@@ -334,7 +431,7 @@ export class ConsultationService {
         patient: row.patient,
         doctor: row.doctor,
         branch: row.branch,
-        created_at: row.created_at
+        created_at: row.created_at,
       }));
 
       return {
@@ -343,28 +440,40 @@ export class ConsultationService {
           total: count,
           page: Number(page),
           limit: Number(limit),
-          total_pages: Math.ceil(count / Number(limit))
-        }
+          total_pages: Math.ceil(count / Number(limit)),
+        },
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[listConsultations] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async completeConsultation(user: any, id: string) {
     try {
       const consultation = await this.consultationModel.findOne({
-        where: { id, organization_id: user.org_id }
+        where: { id, organization_id: user.org_id },
       });
 
       if (!consultation) {
-        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'Consultation not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       if (consultation.is_completed) {
-        throw new HttpException({ message: 'Consultation is already completed.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          {
+            message: 'Consultation is already completed.',
+            error: ErrorCode.BAD_REQUEST,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       await consultation.update({ is_completed: true });
@@ -372,33 +481,41 @@ export class ConsultationService {
       return {
         id: consultation.id,
         is_completed: true,
-        updated_at: consultation.updated_at
+        updated_at: consultation.updated_at,
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[completeConsultation] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async getConsultationDocuments(id: string, user: any) {
     try {
       const consultation = await this.consultationModel.findOne({
-        where: { id, organization_id: user.org_id }
+        where: { id, organization_id: user.org_id },
       });
 
       if (!consultation) {
-        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'Consultation not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       const documents = await this.consultationDocModel.findAll({
         where: { consultation_id: id },
         order: [['created_at', 'ASC']],
-        include: [{
-          model: this.userModel,
-          as: 'uploaded_by_relation',
-          attributes: ['id', 'first_name', 'last_name']
-        }]
+        include: [
+          {
+            model: this.userModel,
+            as: 'uploaded_by_relation',
+            attributes: ['id', 'first_name', 'last_name'],
+          },
+        ],
       });
 
       return documents.map((doc: any) => {
@@ -408,95 +525,148 @@ export class ConsultationService {
           file_url: doc.file_url,
           file_name: doc.file_name,
           file_type: doc.file_type,
-          uploaded_by: u ? {
-            id: u.id,
-            first_name: u.first_name,
-            last_name: u.last_name
-          } : null,
-          created_at: doc.created_at
+          uploaded_by: u
+            ? {
+                id: u.id,
+                first_name: u.first_name,
+                last_name: u.last_name,
+              }
+            : null,
+          created_at: doc.created_at,
         };
       });
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getConsultationDocuments] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
   async getDentalChartEntries(user: any, consultationId: string) {
     try {
       const consultation = await this.consultationModel.findOne({
-        where: { id: consultationId, organization_id: user.org_id }
+        where: { id: consultationId, organization_id: user.org_id },
       });
 
       if (!consultation) {
-        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'Consultation not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       const entries = await this.dentalChartEntryModel.findAll({
         where: { consultation_id: consultationId },
         order: [['created_at', 'ASC']],
-        attributes: ['id', 'tooth_number', 'condition', 'notes', 'created_at', 'updated_at']
+        attributes: [
+          'id',
+          'tooth_number',
+          'condition',
+          'notes',
+          'created_at',
+          'updated_at',
+        ],
       });
 
       return entries;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getDentalChartEntries] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async removeDentalChartEntry(user: any, consultationId: string, entryId: string) {
+  async removeDentalChartEntry(
+    user: any,
+    consultationId: string,
+    entryId: string,
+  ) {
     try {
       const consultation = await this.consultationModel.findOne({
-        where: { id: consultationId, organization_id: user.org_id }
+        where: { id: consultationId, organization_id: user.org_id },
       });
 
       if (!consultation) {
-        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'Consultation not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       if (consultation.is_completed) {
-        throw new HttpException({ message: 'Cannot modify chart of a completed consultation.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          {
+            message: 'Cannot modify chart of a completed consultation.',
+            error: ErrorCode.BAD_REQUEST,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       const deleted = await this.dentalChartEntryModel.destroy({
-        where: { id: entryId, consultation_id: consultationId }
+        where: { id: entryId, consultation_id: consultationId },
       });
 
       if (!deleted) {
-        throw new HttpException({ message: 'Chart entry not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'Chart entry not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       return true;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[removeDentalChartEntry] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
-  async deleteConsultationDocument(user: any, consultationId: string, documentId: string) {
+  async deleteConsultationDocument(
+    user: any,
+    consultationId: string,
+    documentId: string,
+  ) {
     try {
       const consultation = await this.consultationModel.findOne({
-        where: { id: consultationId, organization_id: user.org_id }
+        where: { id: consultationId, organization_id: user.org_id },
       });
 
       if (!consultation) {
-        throw new HttpException({ message: 'Consultation not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'Consultation not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       if (consultation.is_completed) {
-        throw new HttpException({ message: 'Cannot delete documents of a completed consultation.', error: ErrorCode.BAD_REQUEST }, StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          {
+            message: 'Cannot delete documents of a completed consultation.',
+            error: ErrorCode.BAD_REQUEST,
+          },
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       const document = await this.consultationDocModel.findOne({
-        where: { id: documentId, consultation_id: consultationId }
+        where: { id: documentId, consultation_id: consultationId },
       });
 
       if (!document) {
-        throw new HttpException({ message: 'Document not found.', error: ErrorCode.NOT_FOUND }, StatusCode.NOT_FOUND);
+        throw new HttpException(
+          { message: 'Document not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
       }
 
       // Delete from Cloudinary
@@ -504,7 +674,10 @@ export class ConsultationService {
         try {
           await this.uploadService.deleteFile(document.file_key);
         } catch (uploadError) {
-          this.logger.warn(`[deleteConsultationDocument] Failed to delete file from Cloudinary: ${document.file_key}`, uploadError);
+          this.logger.warn(
+            `[deleteConsultationDocument] Failed to delete file from Cloudinary: ${document.file_key}`,
+            uploadError,
+          );
           // Proceed to delete DB record even if Cloudinary deletion fails (e.g., file already deleted from cloud)
         }
       }
@@ -515,7 +688,10 @@ export class ConsultationService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[deleteConsultationDocument] Error:`, error);
-      throw new HttpException('Something went wrong. Please try again.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 }

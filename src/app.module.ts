@@ -24,6 +24,7 @@ import { EntitiesModule } from './database/entities.module';
 import { InternshipModule } from './modules/internship/internship.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
+import { WebsiteModule } from './modules/website/website.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { SubscriptionModule } from './modules/subscription/subscription.module';
     InternshipModule,
     ScheduleModule.forRoot(),
     SubscriptionModule,
+    WebsiteModule,
   ],
   controllers: [AppController],
   providers: [

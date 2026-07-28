@@ -12,7 +12,7 @@ import { InternshipCronService } from './internship-cron.service';
   imports: [
     SequelizeModule.forFeature([InternshipInquiry, InternshipExperience]),
     UploadModule,
-    NotificationModule
+    NotificationModule,
   ],
   controllers: [InternshipController],
   providers: [InternshipService, InternshipCronService],

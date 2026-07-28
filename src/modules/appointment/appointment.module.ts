@@ -25,12 +25,12 @@ import { TreatmentModule } from '../treatment/treatment.module';
       DoctorSchedule,
       DoctorLeave,
       TreatmentPlan,
-      TreatmentPlanPhase
+      TreatmentPlanPhase,
     ]),
-    TreatmentModule
+    TreatmentModule,
   ],
   controllers: [AppointmentController],
   providers: [AppointmentService],
-  exports: [AppointmentService, SequelizeModule]
+  exports: [AppointmentService, SequelizeModule],
 })
 export class AppointmentModule {}

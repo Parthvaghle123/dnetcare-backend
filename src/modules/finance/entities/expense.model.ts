@@ -1,4 +1,16 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  BelongsTo,
+  ForeignKey,
+  CreatedAt,
+  UpdatedAt,
+} from 'sequelize-typescript';
 import { Organization } from '../../organization/entities/organization.model';
 import { Branch } from '../../organization/entities/branch.model';
 import { ExpenseCategory } from './expense-category.model';
@@ -53,7 +65,9 @@ export class Expense extends Model {
   expense_date: Date;
 
   @AllowNull(false)
-  @Column(DataType.ENUM('CASH', 'ONLINE', 'CARD', 'UPI', 'CHEQUE', 'BANK_TRANSFER'))
+  @Column(
+    DataType.ENUM('CASH', 'ONLINE', 'CARD', 'UPI', 'CHEQUE', 'BANK_TRANSFER'),
+  )
   payment_mode: ExpensePaymentMode;
 
   @AllowNull(true)
@@ -83,5 +97,4 @@ export class Expense extends Model {
   @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
-
 }

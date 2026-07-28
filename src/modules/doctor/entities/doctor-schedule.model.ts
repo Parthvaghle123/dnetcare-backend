@@ -1,4 +1,16 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, BelongsTo, ForeignKey , CreatedAt, UpdatedAt } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  BelongsTo,
+  ForeignKey,
+  CreatedAt,
+  UpdatedAt,
+} from 'sequelize-typescript';
 import { User } from '../../auth/entities/user.model';
 import { Branch } from '../../organization/entities/branch.model';
 
@@ -41,7 +53,17 @@ export class DoctorSchedule extends Model {
   branch: Branch;
 
   @AllowNull(false)
-  @Column(DataType.ENUM('MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'))
+  @Column(
+    DataType.ENUM(
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+      'SUNDAY',
+    ),
+  )
   day_of_week: DayOfWeek;
 
   @AllowNull(false)
@@ -67,5 +89,4 @@ export class DoctorSchedule extends Model {
   @UpdatedAt
   @Column(DataType.DATE)
   updated_at: Date;
-
 }

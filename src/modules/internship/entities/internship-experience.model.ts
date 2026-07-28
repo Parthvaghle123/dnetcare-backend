@@ -1,4 +1,14 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, ForeignKey, BelongsTo } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  ForeignKey,
+  BelongsTo,
+} from 'sequelize-typescript';
 import { InternshipInquiry } from './internship-inquiry.model';
 
 @Table({ tableName: 'internship_experiences', timestamps: true })

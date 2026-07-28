@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsEnum, IsDateString, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsDateString,
+  IsBoolean,
+} from 'class-validator';
 import { DentalChartType } from '../entities/consultation.model';
 
 export class UpdateConsultationDto {

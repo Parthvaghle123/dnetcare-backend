@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsEnum, IsUUID, MinLength, Matches, IsInt } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsUUID,
+  MinLength,
+  Matches,
+  IsInt,
+} from 'class-validator';
 
 export class UpdatePatientDto {
   @IsString()

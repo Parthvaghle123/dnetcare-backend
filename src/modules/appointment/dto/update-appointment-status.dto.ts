@@ -5,14 +5,14 @@ export enum UpdateAppointmentStatusEnum {
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
   NO_SHOW = 'NO_SHOW',
-  CANCELLED = 'CANCELLED'
+  CANCELLED = 'CANCELLED',
 }
 
 export class UpdateAppointmentStatusDto {
   @IsEnum(UpdateAppointmentStatusEnum)
   status: UpdateAppointmentStatusEnum;
 
-  @ValidateIf(o => o.status === UpdateAppointmentStatusEnum.CANCELLED)
+  @ValidateIf((o) => o.status === UpdateAppointmentStatusEnum.CANCELLED)
   @IsString()
   cancellation_reason?: string;
 }

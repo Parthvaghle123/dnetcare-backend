@@ -1,4 +1,13 @@
-import { Table, Column, Model, DataType, PrimaryKey, Default, AllowNull, HasMany } from 'sequelize-typescript';
+import {
+  Table,
+  Column,
+  Model,
+  DataType,
+  PrimaryKey,
+  Default,
+  AllowNull,
+  HasMany,
+} from 'sequelize-typescript';
 import { Subscription } from './subscription.model';
 
 export enum PlanType {
