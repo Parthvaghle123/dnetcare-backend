@@ -8,6 +8,10 @@ import {
 export class UpdateWebsiteDto {
   @IsOptional()
   @IsString()
+  slug?: string;
+
+  @IsOptional()
+  @IsString()
   template_id?: string;
 
   @IsOptional()

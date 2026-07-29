@@ -16,14 +16,14 @@ export class UploadService {
     });
   }
 
-  async uploadFile(file: Express.Multer.File): Promise<any> {
+  async uploadFile(file: Express.Multer.File, folder: string = 'dental-software'): Promise<any> {
     if (!file) {
       throw new HttpException('No file provided.', StatusCode.BAD_REQUEST);
     }
 
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: 'dental-software', resource_type: 'auto' },
+        { folder, resource_type: 'auto' },
         (error, result: UploadApiResponse) => {
           if (error) {
             this.logger.error('[uploadFile] Cloudinary upload error:', error);
