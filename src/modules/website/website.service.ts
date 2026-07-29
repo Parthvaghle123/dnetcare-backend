@@ -30,6 +30,7 @@ export class WebsiteService {
   }
 
   async getMyWebsiteConfig(organizationId: string) {
+    const org = await this.organizationModel.findByPk(organizationId);
     let config = await this.websiteConfigModel.findOne({
       where: { organization_id: organizationId },
     });
@@ -40,7 +41,9 @@ export class WebsiteService {
       });
     }
 
-    return config;
+    const configJson = config.get({ plain: true }) as any;
+    configJson.slug = org?.subdomain || '';
+    return configJson;
   }
 
   async updateWebsiteConfig(
@@ -112,9 +115,12 @@ export class WebsiteService {
     // Invalidate cache when updated
     if (slug) {
       await this.cacheManager.del(`website_public_${slug}`);
+      await this.cacheManager.del(`website_preview_${slug}`);
     }
 
-    return config;
+    const configJson = config.get({ plain: true }) as any;
+    configJson.slug = slug;
+    return configJson;
   }
 
   async publishWebsite(organizationId: string) {
@@ -124,26 +130,31 @@ export class WebsiteService {
     return config;
   }
 
-  async getPublicWebsite(subdomain: string) {
-    const cacheKey = `website_public_${subdomain}`;
+  async getPublicWebsite(subdomain: string, isPreview: boolean = false) {
+    const cacheKey = isPreview ? `website_preview_${subdomain}` : `website_public_${subdomain}`;
     const cachedData = await this.cacheManager.get(cacheKey);
 
     if (cachedData) {
       return cachedData;
     }
 
+    const includeOptions: any = {
+      model: WebsiteConfig,
+    };
+
+    if (!isPreview) {
+      includeOptions.where = { is_published: true };
+    }
+
     const org = await this.organizationModel.findOne({
       where: { subdomain, is_active: true },
-      include: [
-        {
-          model: WebsiteConfig,
-          where: { is_published: true },
-        },
-      ],
+      include: [includeOptions],
     });
 
     if (!org || !org.websiteConfig) {
-      throw new NotFoundException('Website not found or not published');
+      throw new NotFoundException(
+        isPreview ? 'Website not found' : 'Website not found or not published',
+      );
     }
 
     const payload = {
@@ -156,8 +167,9 @@ export class WebsiteService {
       config: org.websiteConfig,
     };
 
-    // Cache for 5 minutes (300000 ms in cache-manager v5, or seconds depending on version, usually ms)
-    await this.cacheManager.set(cacheKey, payload, 300000);
+    // Cache for 5 minutes (300000 ms) for public, or 5 seconds (5000 ms) for preview
+    const ttl = isPreview ? 5000 : 300000;
+    await this.cacheManager.set(cacheKey, payload, ttl);
 
     return payload;
   }

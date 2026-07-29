@@ -6,10 +6,14 @@ export class PublicWebsiteController {
   constructor(private readonly websiteService: WebsiteService) {}
 
   @Get()
-  async getPublicWebsite(@Query('subdomain') subdomain: string) {
+  async getPublicWebsite(
+    @Query('subdomain') subdomain: string,
+    @Query('preview') preview?: string,
+  ) {
     if (!subdomain) {
       throw new BadRequestException('Subdomain query parameter is required');
     }
-    return this.websiteService.getPublicWebsite(subdomain);
+    const isPreview = preview === 'true';
+    return this.websiteService.getPublicWebsite(subdomain, isPreview);
   }
 }
