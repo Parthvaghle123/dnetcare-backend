@@ -95,7 +95,7 @@ export class WebsiteService {
         const uploadResult = await this.uploadService.uploadFile(file, folder);
         
         // Put the URL in the dto using the fieldname as path
-        setNestedValue(updateDto, file.fieldname, uploadResult.secure_url);
+        setNestedValue(updateDto, file.fieldname, uploadResult.url);
       }
     }
 

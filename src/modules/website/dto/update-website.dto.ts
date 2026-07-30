@@ -68,6 +68,11 @@ export class UpdateWebsiteDto {
   @IsOptional()
   @Transform(parseJsonIfNeeded)
   @IsObject()
+  branches_section?: Record<string, any>;
+
+  @IsOptional()
+  @Transform(parseJsonIfNeeded)
+  @IsObject()
   doctors_section?: Record<string, any>;
 
   @IsOptional()

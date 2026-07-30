@@ -72,6 +72,11 @@ export class WebsiteConfig extends Model {
   @AllowNull(false)
   @Default({})
   @Column(DataType.JSONB)
+  branches_section: any;
+
+  @AllowNull(false)
+  @Default({})
+  @Column(DataType.JSONB)
   doctors_section: any;
 
   @AllowNull(false)
