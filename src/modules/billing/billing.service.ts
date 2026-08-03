@@ -458,7 +458,7 @@ export class BillingService {
               'gender',
             ],
           },
-          { model: Branch, attributes: ['id', 'name', 'city', 'phone'] },
+          { model: Branch, attributes: ['id', 'name', 'city', 'phone', 'logo_url', 'address', 'state'] },
           {
             model: User,
             as: 'created_by_relation',

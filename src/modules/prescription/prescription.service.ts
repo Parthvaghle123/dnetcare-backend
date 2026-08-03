@@ -113,6 +113,9 @@ export class PrescriptionService {
         name: branch?.name,
         city: branch?.city,
         phone: branch?.phone,
+        address: branch?.address || null,
+        state: branch?.state || null,
+        logo_url: branch?.logo_url || null,
       },
       medicines: medicines.map((m) => ({
         id: m.id,
