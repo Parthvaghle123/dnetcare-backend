@@ -16,7 +16,7 @@ export class SubscriptionController {
   @Get('current')
   async getCurrentSubscription(@CurrentUser() user: any) {
     const organizationId = user.org_id;
-    return this.subscriptionService.getCurrentSubscription(organizationId);
+    return this.subscriptionService.getCurrentSubscription(organizationId, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)

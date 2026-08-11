@@ -14,6 +14,7 @@ import {
   SubscriptionPayment,
   PaymentStatus,
 } from './entities/subscription-payment.model';
+import { User } from '../auth/entities/user.model';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 
@@ -28,6 +29,7 @@ export class SubscriptionService {
     private readonly subscriptionModel: typeof Subscription,
     @InjectModel(SubscriptionPayment)
     private readonly paymentModel: typeof SubscriptionPayment,
+    @InjectModel(User) private readonly userModel: typeof User,
   ) {
     if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
       this.razorpay = new Razorpay({
@@ -141,6 +143,24 @@ export class SubscriptionService {
       endDate.setMonth(endDate.getMonth() + 1);
       subscription.end_date = endDate;
       await subscription.save();
+
+      // Find the plan to update the users
+      const plan = await this.planModel.findByPk(subscription.plan_id);
+      if (plan) {
+        // Update all users belonging to this organization to upgrade them
+        await this.userModel.update(
+          {
+            plan: plan.name,
+            planStatus: 'ACTIVE',
+            planStartedAt: subscription.start_date,
+            planExpiresAt: subscription.end_date,
+            isTrial: false,
+          },
+          {
+            where: { organization_id: subscription.organization_id },
+          },
+        );
+      }
     }
 
     return {
@@ -149,7 +169,43 @@ export class SubscriptionService {
     };
   }
 
-  async getCurrentSubscription(organizationId: string) {
+  async getCurrentSubscription(organizationId: string, userId?: string) {
+    if (userId) {
+      const user = await this.userModel.findByPk(userId);
+      if (user && user.plan === 'ULTRA_PRO' && user.isTrial) {
+        const isExpired = user.planStatus === 'EXPIRED' || !!(
+          user.planExpiresAt &&
+          new Date() > new Date(user.planExpiresAt)
+        );
+
+        const ultraProPlan = await this.planModel.findOne({
+          where: { name: 'Ultra Pro Plan' },
+        });
+
+        return {
+          id: 'trial_subscription',
+          organization_id: organizationId,
+          plan_id: ultraProPlan ? ultraProPlan.id : 'ultra_pro_id',
+          status: isExpired ? SubscriptionStatus.EXPIRED : SubscriptionStatus.ACTIVE,
+          start_date: user.planStartedAt,
+          end_date: user.planExpiresAt,
+          is_active: !isExpired,
+          isTrial: true,
+          plan: ultraProPlan || {
+            id: 'ultra_pro_id',
+            name: 'Ultra Pro Plan',
+            price_monthly: 3999,
+            type: 'SOFTWARE',
+            max_branches: 3,
+            max_patients: null,
+            max_appointments: null,
+            is_active: true,
+          },
+          plan_key: 'ultra_pro',
+        };
+      }
+    }
+
     return this.subscriptionModel.findOne({
       where: {
         organization_id: organizationId,

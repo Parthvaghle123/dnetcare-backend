@@ -4,12 +4,14 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/sequelize';
 import { RefreshToken } from '../entities/refresh-token.model';
+import { User } from '../entities/user.model';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
     private configService: ConfigService,
     @InjectModel(RefreshToken) private refreshTokenModel: typeof RefreshToken,
+    @InjectModel(User) private userModel: typeof User,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -28,12 +30,25 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Session has been revoked or expired.');
     }
 
+    const user = await this.userModel.findByPk(payload.sub, {
+      attributes: ['id', 'plan', 'planStatus', 'planStartedAt', 'planExpiresAt', 'isTrial', 'role'],
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found.');
+    }
+
     return {
       sub: payload.sub,
       org_id: payload.org_id,
-      role: payload.role,
+      role: user.role,
       branch_ids: payload.branch_ids,
       session_id: payload.session_id,
+      plan: user.plan,
+      planStatus: user.planStatus,
+      planStartedAt: user.planStartedAt,
+      planExpiresAt: user.planExpiresAt,
+      isTrial: user.isTrial,
     };
   }
 }

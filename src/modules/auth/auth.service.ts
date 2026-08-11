@@ -15,6 +15,8 @@ import { UserBranch } from './entities/user-branch.model';
 import { RefreshToken } from './entities/refresh-token.model';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
 import { MedicalConditionMaster } from '../patient/entities/medical-condition-master.model';
+import { Plan } from '../subscription/entities/plan.model';
+import { Subscription, SubscriptionStatus } from '../subscription/entities/subscription.model';
 
 import { RegisterDto } from './dto/register.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
@@ -44,6 +46,8 @@ export class AuthService implements OnModuleInit {
     private doctorProfileModel: typeof DoctorProfile,
     @InjectModel(MedicalConditionMaster)
     private medicalConditionMasterModel: typeof MedicalConditionMaster,
+    @InjectModel(Plan) private planModel: typeof Plan,
+    @InjectModel(Subscription) private subscriptionModel: typeof Subscription,
     private configService: ConfigService,
     private jwtService: JwtService,
     private emailService: EmailService,
@@ -408,6 +412,38 @@ export class AuthService implements OnModuleInit {
         otp_attempts: 0,
       });
 
+      // Detect first login and assign Ultra Pro trial if no plan is set yet
+      if (!user.plan) {
+        const existingSub = await this.subscriptionModel.findOne({
+          where: {
+            organization_id: user.organization_id,
+            status: SubscriptionStatus.ACTIVE,
+          },
+        });
+
+        if (existingSub) {
+          const planObj = await this.planModel.findByPk(existingSub.plan_id);
+          await user.update({
+            plan: planObj ? planObj.name : 'PRO',
+            planStatus: 'ACTIVE',
+            planStartedAt: existingSub.start_date,
+            planExpiresAt: existingSub.end_date,
+            isTrial: false,
+          });
+        } else {
+          const now = new Date();
+          const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
+          await user.update({
+            plan: 'ULTRA_PRO',
+            planStatus: 'ACTIVE',
+            planStartedAt: now,
+            planExpiresAt: expiresAt,
+            isTrial: true,
+          });
+        }
+        await user.reload();
+      }
+
       const userBranches = await this.userBranchModel.findAll({
         where: { user_id: user.id },
       });
@@ -418,6 +454,13 @@ export class AuthService implements OnModuleInit {
         branchIds,
         ipAddress,
         userAgent,
+      );
+
+      const isExpired = user.planStatus === 'EXPIRED' || !!(
+        user.plan === 'ULTRA_PRO' &&
+        user.isTrial &&
+        user.planExpiresAt &&
+        new Date() > new Date(user.planExpiresAt)
       );
 
       return {
@@ -433,6 +476,12 @@ export class AuthService implements OnModuleInit {
           status: user.status,
           org_id: user.organization_id,
           branch_ids: branchIds,
+          plan: user.plan,
+          planStatus: isExpired ? 'EXPIRED' : user.planStatus,
+          isTrial: user.isTrial,
+          planStartedAt: user.planStartedAt,
+          planExpiresAt: user.planExpiresAt,
+          isReadOnly: isExpired,
         },
       };
     } catch (error) {
@@ -943,6 +992,13 @@ export class AuthService implements OnModuleInit {
         }
       }
 
+      const isExpired = user.planStatus === 'EXPIRED' || !!(
+        user.plan === 'ULTRA_PRO' &&
+        user.isTrial &&
+        user.planExpiresAt &&
+        new Date() > new Date(user.planExpiresAt)
+      );
+
       return {
         id: user.id,
         first_name: user.first_name,
@@ -954,6 +1010,12 @@ export class AuthService implements OnModuleInit {
         org_id: user.organization_id,
         org_name: user.organization ? user.organization.name : 'System Admin',
         branches,
+        plan: user.plan,
+        planStatus: isExpired ? 'EXPIRED' : user.planStatus,
+        isTrial: user.isTrial,
+        planStartedAt: user.planStartedAt,
+        planExpiresAt: user.planExpiresAt,
+        isReadOnly: isExpired,
         ...(doctorProfile ? { doctor_profile: doctorProfile } : {}),
       };
     } catch (error) {

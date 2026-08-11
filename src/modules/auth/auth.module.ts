@@ -16,6 +16,8 @@ import { Branch } from '../organization/entities/branch.model';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
 import { NotificationModule } from '../notification/notification.module';
 import { MedicalConditionMaster } from '../patient/entities/medical-condition-master.model';
+import { Plan } from '../subscription/entities/plan.model';
+import { Subscription } from '../subscription/entities/subscription.model';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { MedicalConditionMaster } from '../patient/entities/medical-condition-ma
       RefreshToken,
       DoctorProfile,
       MedicalConditionMaster,
+      Plan,
+      Subscription,
     ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({

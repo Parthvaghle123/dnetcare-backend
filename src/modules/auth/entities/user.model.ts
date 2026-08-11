@@ -171,6 +171,26 @@ export class User extends Model {
   @Column(DataType.DATE)
   last_login_at: Date;
 
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  plan: string;
+
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  planStatus: string;
+
+  @AllowNull(true)
+  @Column(DataType.DATE)
+  planStartedAt: Date;
+
+  @AllowNull(true)
+  @Column(DataType.DATE)
+  planExpiresAt: Date;
+
+  @AllowNull(true)
+  @Column(DataType.BOOLEAN)
+  isTrial: boolean;
+
   @HasMany(() => UserBranch)
   user_branches: UserBranch[];
 
