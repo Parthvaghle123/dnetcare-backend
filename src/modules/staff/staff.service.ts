@@ -47,7 +47,7 @@ export class StaffService {
       const limit = parseInt(filters.limit || '10', 10);
       const offset = (page - 1) * limit;
 
-      const whereClause: any = {
+      const whereClause: any = reqUser.role === 'MAIN_ADMIN' ? {} : {
         organization_id: orgId,
       };
 
@@ -169,7 +169,7 @@ export class StaffService {
   async getStaffById(reqUser: any, staffId: string) {
     try {
       const staff = await this.userModel.findOne({
-        where: { id: staffId, organization_id: reqUser.org_id },
+        where: reqUser.role === 'MAIN_ADMIN' ? { id: staffId } : { id: staffId, organization_id: reqUser.org_id },
         include: [{ model: UserBranch, include: [Branch] }],
       });
 
@@ -217,7 +217,7 @@ export class StaffService {
   async updateStaff(reqUser: any, staffId: string, dto: UpdateStaffDto) {
     try {
       const staff = await this.userModel.findOne({
-        where: { id: staffId, organization_id: reqUser.org_id },
+        where: reqUser.role === 'MAIN_ADMIN' ? { id: staffId } : { id: staffId, organization_id: reqUser.org_id },
         include: [{ model: UserBranch }],
       });
 
@@ -281,7 +281,7 @@ export class StaffService {
   ) {
     try {
       const staff = await this.userModel.findOne({
-        where: { id: staffId, organization_id: reqUser.org_id },
+        where: reqUser.role === 'MAIN_ADMIN' ? { id: staffId } : { id: staffId, organization_id: reqUser.org_id },
         include: [{ model: UserBranch }],
       });
 
@@ -342,7 +342,7 @@ export class StaffService {
   async getStaffBranches(reqUser: any, staffId: string) {
     try {
       const staff = await this.userModel.findOne({
-        where: { id: staffId, organization_id: reqUser.org_id },
+        where: reqUser.role === 'MAIN_ADMIN' ? { id: staffId } : { id: staffId, organization_id: reqUser.org_id },
       });
 
       if (!staff)
@@ -382,7 +382,7 @@ export class StaffService {
       }
 
       const staff = await this.userModel.findOne({
-        where: { id: staffId, organization_id: reqUser.org_id },
+        where: reqUser.role === 'MAIN_ADMIN' ? { id: staffId } : { id: staffId, organization_id: reqUser.org_id },
       });
       if (!staff) {
         throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);
@@ -437,7 +437,7 @@ export class StaffService {
       }
 
       const staff = await this.userModel.findOne({
-        where: { id: staffId, organization_id: reqUser.org_id },
+        where: reqUser.role === 'MAIN_ADMIN' ? { id: staffId } : { id: staffId, organization_id: reqUser.org_id },
       });
       if (!staff) {
         throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);
@@ -488,7 +488,7 @@ export class StaffService {
 
   async deleteStaff(reqUser: any, staffId: string) {
     try {
-      if (reqUser.role !== Role.OWNER) {
+      if (reqUser.role !== Role.OWNER && reqUser.role !== 'MAIN_ADMIN') {
         throw new HttpException(
           'Only the clinic owner can delete staff.',
           StatusCode.FORBIDDEN,
@@ -496,7 +496,7 @@ export class StaffService {
       }
 
       const staff = await this.userModel.findOne({
-        where: { id: staffId, organization_id: reqUser.org_id },
+        where: reqUser.role === 'MAIN_ADMIN' ? { id: staffId } : { id: staffId, organization_id: reqUser.org_id },
       });
       if (!staff) {
         throw new HttpException('Staff not found.', StatusCode.NOT_FOUND);

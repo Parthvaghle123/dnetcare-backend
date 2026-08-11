@@ -1,4 +1,4 @@
-import { Injectable, HttpException, Logger } from '@nestjs/common';
+import { Injectable, HttpException, Logger, OnModuleInit } from '@nestjs/common';
 import { StatusCode } from '../../common/enums/status-code.enum';
 import { ErrorCode } from '../../common/enums/error-code.enum';
 import { InjectModel } from '@nestjs/sequelize';
@@ -31,7 +31,7 @@ import { InjectConnection } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
@@ -49,6 +49,56 @@ export class AuthService {
     private emailService: EmailService,
     @InjectConnection() private sequelize: Sequelize,
   ) {}
+
+  async onModuleInit() {
+    try {
+      // 1. Ensure MAIN_ADMIN role exists in database enum type
+      await this.sequelize.query(
+        `ALTER TYPE enum_users_role ADD VALUE IF NOT EXISTS 'MAIN_ADMIN';`,
+      ).catch((err) => {
+        this.logger.warn('Could not alter enum type (it might not exist yet or error): ' + err.message);
+      });
+
+      // 2. Drop NOT NULL constraint on organization_id in users table
+      await this.sequelize.query(
+        `ALTER TABLE users ALTER COLUMN organization_id DROP NOT NULL;`,
+      ).catch((err) => {
+        this.logger.warn('Could not drop NOT NULL constraint on users.organization_id: ' + err.message);
+      });
+
+      // 3. Ensure the default MAIN_ADMIN user exists
+      const email = 'dentcare360.official@gmail.com';
+      let admin = await this.userModel.findOne({ where: { email } });
+      
+      if (!admin) {
+        this.logger.log('Default MAIN_ADMIN user not found. Creating...');
+        await this.userModel.create({
+          first_name: 'Dental',
+          last_name: 'Admin',
+          email,
+          role: 'MAIN_ADMIN' as any,
+          status: UserStatus.ACTIVE,
+          is_active: true,
+          is_deleted: false,
+          organization_id: null,
+        });
+        this.logger.log('Default MAIN_ADMIN user created successfully.');
+      } else {
+        // Ensure its role, status, and activity flags are correct
+        if (admin.role !== ('MAIN_ADMIN' as any) || !admin.is_active || admin.is_deleted || admin.status !== UserStatus.ACTIVE) {
+          this.logger.log('Restoring default MAIN_ADMIN user properties...');
+          await admin.update({
+            role: 'MAIN_ADMIN' as any,
+            status: UserStatus.ACTIVE,
+            is_active: true,
+            is_deleted: false,
+          });
+        }
+      }
+    } catch (error) {
+      this.logger.error('Error in Auth module initialization:', error);
+    }
+  }
 
   private generateOtp(): string {
     if (this.configService.get('NODE_ENV') === 'development') {
@@ -902,7 +952,7 @@ export class AuthService {
         role: user.role,
         status: user.status,
         org_id: user.organization_id,
-        org_name: user.organization.name,
+        org_name: user.organization ? user.organization.name : 'System Admin',
         branches,
         ...(doctorProfile ? { doctor_profile: doctorProfile } : {}),
       };

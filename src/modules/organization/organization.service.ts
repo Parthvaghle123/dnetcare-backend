@@ -132,7 +132,7 @@ export class OrganizationService {
       const limit = parseInt(filters.limit || '10', 10);
       const offset = (page - 1) * limit;
 
-      const whereClause: any = { organization_id: reqUser.org_id };
+      const whereClause: any = reqUser.role === 'MAIN_ADMIN' ? {} : { organization_id: reqUser.org_id };
 
       if (filters.is_active !== undefined) {
         whereClause.is_active = filters.is_active === 'true';

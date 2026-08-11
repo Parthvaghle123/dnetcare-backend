@@ -25,6 +25,7 @@ import { InternshipModule } from './modules/internship/internship.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { WebsiteModule } from './modules/website/website.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { WebsiteModule } from './modules/website/website.module';
     DatabaseModule,
     EntitiesModule,
     AuthModule,
+    AdminModule,
     OrganizationModule,
     UploadModule,
     NotificationModule,

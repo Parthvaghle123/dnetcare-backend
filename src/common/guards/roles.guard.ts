@@ -32,6 +32,10 @@ export class RolesGuard implements CanActivate {
       );
     }
 
+    if (user.role && user.role.toUpperCase() === 'MAIN_ADMIN') {
+      return true;
+    }
+
     const hasRole = requiredRoles.includes(user.role);
     if (!hasRole) {
       throw new HttpException(

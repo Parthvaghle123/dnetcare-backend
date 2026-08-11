@@ -15,8 +15,10 @@ import {
 } from 'sequelize-typescript';
 import { Organization } from '../../organization/entities/organization.model';
 import { UserBranch } from './user-branch.model';
+import { Op } from 'sequelize';
 
 export enum UserRole {
+  MAIN_ADMIN = 'MAIN_ADMIN',
   OWNER = 'OWNER',
   BRANCH_ADMIN = 'BRANCH_ADMIN',
   DOCTOR = 'DOCTOR',
@@ -29,7 +31,68 @@ export enum UserStatus {
   INACTIVE = 'INACTIVE',
 }
 
-@Table({ tableName: 'users', timestamps: true })
+@Table({
+  tableName: 'users',
+  timestamps: true,
+  hooks: {
+    beforeDestroy: (instance: User) => {
+      if (instance.email === 'dentcare360.official@gmail.com' || instance.role === UserRole.MAIN_ADMIN) {
+        throw new Error('Deletion of default MAIN_ADMIN user is not allowed.');
+      }
+    },
+    beforeUpdate: (instance: User) => {
+      if (instance.email === 'dentcare360.official@gmail.com' || instance.role === UserRole.MAIN_ADMIN) {
+        if (instance.changed('is_deleted') && instance.is_deleted === true) {
+          throw new Error('Deactivation/soft-deletion of default MAIN_ADMIN user is not allowed.');
+        }
+        if (instance.changed('is_active') && instance.is_active === false) {
+          throw new Error('Deactivation of default MAIN_ADMIN user is not allowed.');
+        }
+        if (instance.changed('role') && instance.role !== UserRole.MAIN_ADMIN) {
+          throw new Error('Role of default MAIN_ADMIN user cannot be changed.');
+        }
+      }
+    },
+    beforeBulkDestroy: (options: any) => {
+      if (options.where) {
+        options.where = {
+          [Op.and]: [
+            options.where,
+            {
+              email: { [Op.ne]: 'dentcare360.official@gmail.com' },
+              role: { [Op.ne]: 'MAIN_ADMIN' }
+            }
+          ]
+        };
+      } else {
+        options.where = {
+          email: { [Op.ne]: 'dentcare360.official@gmail.com' },
+          role: { [Op.ne]: 'MAIN_ADMIN' }
+        };
+      }
+    },
+    beforeBulkUpdate: (options: any) => {
+      if (options.attributes && (options.attributes.is_deleted === true || options.attributes.is_active === false || options.attributes.status === 'INACTIVE')) {
+        if (options.where) {
+          options.where = {
+            [Op.and]: [
+              options.where,
+              {
+                email: { [Op.ne]: 'dentcare360.official@gmail.com' },
+                role: { [Op.ne]: 'MAIN_ADMIN' }
+              }
+            ]
+          };
+        } else {
+          options.where = {
+            email: { [Op.ne]: 'dentcare360.official@gmail.com' },
+            role: { [Op.ne]: 'MAIN_ADMIN' }
+          };
+        }
+      }
+    }
+  }
+})
 export class User extends Model {
   @PrimaryKey
   @Default(DataType.UUIDV4)
@@ -37,9 +100,9 @@ export class User extends Model {
   declare id: string;
 
   @ForeignKey(() => Organization)
-  @AllowNull(false)
+  @AllowNull(true)
   @Column(DataType.UUID)
-  organization_id: string;
+  organization_id: string | null;
 
   @BelongsTo(() => Organization)
   organization: Organization;
@@ -62,7 +125,7 @@ export class User extends Model {
   phone: string;
 
   @AllowNull(false)
-  @Column(DataType.ENUM('OWNER', 'BRANCH_ADMIN', 'DOCTOR', 'RECEPTIONIST'))
+  @Column(DataType.ENUM('MAIN_ADMIN', 'OWNER', 'BRANCH_ADMIN', 'DOCTOR', 'RECEPTIONIST'))
   role: UserRole;
 
   @AllowNull(false)
