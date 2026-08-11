@@ -58,6 +58,10 @@ export class Plan extends Model {
   @Column(DataType.STRING)
   razorpay_plan_id: string; // If using Razorpay Subscriptions
 
+  @AllowNull(true)
+  @Column(DataType.JSONB)
+  allowed_features: string[];
+
   @AllowNull(false)
   @Default(true)
   @Column(DataType.BOOLEAN)

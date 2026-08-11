@@ -15,6 +15,7 @@ import { TreatmentPlanPhase } from '../treatment/entities/treatment-plan-phase.m
 import { DoctorSchedule } from '../doctor/entities/doctor-schedule.model';
 import { DoctorLeave } from '../doctor/entities/doctor-leave.model';
 import { TreatmentService } from '../treatment/treatment.service';
+import { SubscriptionService } from '../subscription/subscription.service';
 
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import {
@@ -41,6 +42,7 @@ export class AppointmentService {
     @InjectModel(DoctorLeave) private doctorLeaveModel: typeof DoctorLeave,
     private treatmentService: TreatmentService,
     private sequelize: Sequelize,
+    private readonly subscriptionService: SubscriptionService,
   ) {}
 
   private getFormatDate(val: any): string {
@@ -472,6 +474,13 @@ export class AppointmentService {
           { message: 'Patient not found.', error: ErrorCode.NOT_FOUND },
           StatusCode.NOT_FOUND,
         );
+
+      // Check plan limits for appointment creation
+      const count = await this.appointmentModel.count({
+        where: { organization_id: user.org_id },
+        transaction,
+      });
+      await this.subscriptionService.checkFeatureLimits(user.org_id, 'max_appointments', count, user.sub);
 
       const branch = await this.branchModel.findOne({
         where: { id: dto.branch_id, organization_id: user.org_id },

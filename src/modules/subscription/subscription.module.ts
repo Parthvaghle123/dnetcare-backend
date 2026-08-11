@@ -13,5 +13,6 @@ import { User } from '../auth/entities/user.model';
   ],
   controllers: [SubscriptionController],
   providers: [SubscriptionService],
+  exports: [SubscriptionService],
 })
 export class SubscriptionModule {}

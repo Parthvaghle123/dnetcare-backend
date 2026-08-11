@@ -11,6 +11,7 @@ import { PatientMedicalCondition } from './entities/patient-medical-condition.mo
 import { BillingModule } from '../billing/billing.module';
 import { Consultation } from '../consultation/entities/consultation.model';
 import { DentalChartEntry } from '../consultation/entities/dental-chart-entry.model';
+import { SubscriptionModule } from '../subscription/subscription.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { DentalChartEntry } from '../consultation/entities/dental-chart-entry.mo
       DentalChartEntry,
     ]),
     BillingModule,
+    SubscriptionModule,
   ],
   controllers: [PatientController, MedicalConditionController],
   providers: [PatientService],

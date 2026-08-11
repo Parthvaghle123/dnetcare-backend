@@ -18,6 +18,7 @@ import { UpdateMedicalConditionDto } from './dto/update-medical-condition.dto';
 import { UpdateMedicalConditionStatusDto } from './dto/update-medical-condition-status.dto';
 import { UpdatePatientMedicalConditionDto } from './dto/update-patient-medical-condition.dto';
 import { Op } from 'sequelize';
+import { SubscriptionService } from '../subscription/subscription.service';
 
 @Injectable()
 export class PatientService {
@@ -35,6 +36,7 @@ export class PatientService {
     @InjectModel(DentalChartEntry)
     private dentalChartEntryModel: typeof DentalChartEntry,
     @InjectConnection() private sequelize: Sequelize,
+    private readonly subscriptionService: SubscriptionService,
   ) {}
 
   async createPatient(reqUser: any, dto: CreatePatientDto) {
@@ -71,6 +73,9 @@ export class PatientService {
         where: { organization_id: reqUser.org_id },
         transaction,
       });
+
+      // Check plan limits for patient creation
+      await this.subscriptionService.checkFeatureLimits(reqUser.org_id, 'max_patients', count, reqUser.sub);
 
       const fileNumber = String(count + 1).padStart(6, '0');
 

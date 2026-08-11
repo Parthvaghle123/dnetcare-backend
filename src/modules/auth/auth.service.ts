@@ -999,6 +999,21 @@ export class AuthService implements OnModuleInit {
         new Date() > new Date(user.planExpiresAt)
       );
 
+      let allowedFeatures: string[] = [];
+      if (user.plan) {
+        // user.plan is typically the name of the plan (e.g., 'Pro Plan', 'Growth Plan', 'ULTRA_PRO')
+        let queryName = user.plan;
+        if (user.plan === 'ULTRA_PRO') queryName = 'Ultra Pro Plan'; // Fix for trial ultra pro naming mismatch if any
+
+        const planData = await this.planModel.findOne({
+          where: { name: queryName },
+        });
+
+        if (planData && planData.allowed_features) {
+          allowedFeatures = planData.allowed_features;
+        }
+      }
+
       return {
         id: user.id,
         first_name: user.first_name,
@@ -1016,6 +1031,7 @@ export class AuthService implements OnModuleInit {
         planStartedAt: user.planStartedAt,
         planExpiresAt: user.planExpiresAt,
         isReadOnly: isExpired,
+        allowed_features: allowedFeatures,
         ...(doctorProfile ? { doctor_profile: doctorProfile } : {}),
       };
     } catch (error) {
