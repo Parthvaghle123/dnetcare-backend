@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class EmailService {
@@ -371,4 +372,130 @@ export class EmailService {
       throw error;
     }
   }
+
+  async sendPricingInquiryEmail(
+    firstName: string,
+    lastName: string,
+    email: string,
+    phone: string,
+    submittedAt: Date,
+  ) {
+    const adminEmail = this.configService.get<string>('ADMIN_EMAIL') || 'dentcare360.official@gmail.com';
+    const dateTimeStr = dayjs(submittedAt).format('DD MMMM YYYY, hh:mm A');
+
+    const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>New Pricing Inquiry</title>
+      <style>
+        body { margin: 0; padding: 0; background-color: #f4f7f6; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+        .wrapper { width: 100%; background-color: #f4f7f6; padding: 40px 0; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+      </style>
+    </head>
+    <body>
+      <div class="wrapper">
+        <div class="container">
+          <!-- Header -->
+          <div style="background: #2563eb; padding: 40px 20px; text-align: center; color: #ffffff;">
+            <h2 style="font-size: 26px; font-weight: 800; margin: 0 0 8px 0; color: #ffffff;">New Pricing Inquiry Received</h2>
+            <p style="font-size: 15px; color: #bfdbfe; margin: 0; line-height: 1.5;">A user has shown interest in the DentCare360 subscription plans and pricing options from the landing page.</p>
+          </div>
+
+          <!-- Content -->
+          <div style="padding: 40px;">
+            <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">User Details</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 32px;">
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; width: 150px; font-size: 14px;">First Name:</td>
+                <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">${firstName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px;">Last Name:</td>
+                <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">${lastName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px;">Email Address:</td>
+                <td style="padding: 10px 0; color: #2563eb; font-size: 14px;"><a href="mailto:${email}" style="color: #2563eb; text-decoration: none; font-weight: 500;">${email}</a></td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px;">Phone Number:</td>
+                <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">${phone}</td>
+              </tr>
+            </table>
+
+            <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">Inquiry Details</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 32px;">
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; width: 150px; font-size: 14px;">Inquiry Type:</td>
+                <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">Pricing Inquiry</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px;">Source:</td>
+                <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">Landing Page &rarr; Pricing</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px;">Submitted At:</td>
+                <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">${dateTimeStr}</td>
+              </tr>
+            </table>
+
+            <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">Action Required</h3>
+            <p style="font-size: 15px; line-height: 1.6; color: #475569; margin: 0;">Please contact the user to provide information about the available subscription plans and pricing options.</p>
+          </div>
+
+          <!-- Footer -->
+          <div style="padding: 32px 40px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+            <strong style="color: #0f172a; font-weight: 700; font-size: 15px; display: block;">DentCare360</strong>
+            <span style="color: #64748b; font-size: 13px; margin-top: 4px; display: block;">Pricing Inquiry Notification</span>
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    const apiKey = this.configService.get<string>('BREVO_API_KEY') || '';
+    if (!apiKey) {
+      this.logger.warn('BREVO_API_KEY is missing. Pricing Inquiry email will not be sent.');
+      return;
+    }
+
+    try {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'api-key': apiKey.trim(),
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: {
+            name: 'DentCare360',
+            email: this.configService.get<string>('MAIL_FROM') || 'noreply@dentcare360.in',
+          },
+          to: [{ email: adminEmail }],
+          subject: 'New Pricing Inquiry – DentCare360',
+          htmlContent: html,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.error(`Brevo send failed for admin email ${adminEmail}: ${errorText}`);
+        throw new Error(errorText);
+      }
+
+      const data = await response.json();
+      this.logger.log(`Pricing Inquiry email sent successfully to ${adminEmail}. MessageID: ${data.messageId}`);
+      return data;
+    } catch (error: any) {
+      this.logger.error(`Failed to send Pricing Inquiry email to ${adminEmail}`, error);
+      throw error;
+    }
+  }
 }
+
