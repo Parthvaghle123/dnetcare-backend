@@ -64,6 +64,36 @@ export class SupportService {
     }
   }
 
+  async getTicketById(id: string) {
+    try {
+      const ticket = await this.supportTicketModel.findByPk(id, {
+        include: [
+          {
+            model: User,
+            attributes: ['id', 'first_name', 'last_name', 'email', 'phone', 'role'],
+          },
+          {
+            model: Organization,
+            attributes: ['id', 'name'],
+          },
+        ],
+      });
+      if (!ticket) {
+        throw new HttpException('Support ticket not found.', StatusCode.NOT_FOUND);
+      }
+      return { success: true, data: ticket };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error('[getTicketById] Error retrieving ticket:', error);
+      throw new HttpException(
+        'Failed to retrieve support ticket.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   async getAllTickets() {
     try {
       const tickets = await this.supportTicketModel.findAll({

@@ -25,6 +25,11 @@ export class SupportController {
     return this.supportService.getTicketsByUser(user.sub);
   }
 
+  @Get(':id')
+  async getTicketById(@Param('id') id: string) {
+    return this.supportService.getTicketById(id);
+  }
+
   @Patch(':id/status')
   async updateStatus(
     @Param('id') id: string,
