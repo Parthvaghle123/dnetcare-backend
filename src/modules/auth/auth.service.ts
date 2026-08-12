@@ -432,7 +432,8 @@ export class AuthService implements OnModuleInit {
           });
         } else {
           const now = new Date();
-          const expiresAt = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes
+          const expiresAt = new Date(now);
+          expiresAt.setMonth(expiresAt.getMonth() + 1); // 1 month
           await user.update({
             plan: 'Premium Growth',
             planStatus: 'ACTIVE',
