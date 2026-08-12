@@ -432,9 +432,10 @@ export class AuthService implements OnModuleInit {
           });
         } else {
           const now = new Date();
-          const expiresAt = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes
+          const expiresAt = new Date(now);
+          expiresAt.setMonth(expiresAt.getMonth() + 1); // 1 month
           await user.update({
-            plan: 'ULTRA_PRO',
+            plan: 'Premium Growth',
             planStatus: 'ACTIVE',
             planStartedAt: now,
             planExpiresAt: expiresAt,
@@ -457,11 +458,25 @@ export class AuthService implements OnModuleInit {
       );
 
       const isExpired = user.planStatus === 'EXPIRED' || !!(
-        user.plan === 'ULTRA_PRO' &&
+        (user.plan === 'Premium Growth' || user.plan === 'PRACTICE_GROWTH') &&
         user.isTrial &&
         user.planExpiresAt &&
         new Date() > new Date(user.planExpiresAt)
       );
+
+      let allowedFeatures: string[] = [];
+      if (user.plan) {
+        let queryName = user.plan;
+        if (user.plan === 'PRACTICE_GROWTH') queryName = 'Premium Growth';
+
+        const planData = await this.planModel.findOne({
+          where: { name: queryName },
+        });
+
+        if (planData && planData.allowed_features) {
+          allowedFeatures = planData.allowed_features;
+        }
+      }
 
       return {
         access_token: tokens.access_token,
@@ -482,6 +497,7 @@ export class AuthService implements OnModuleInit {
           planStartedAt: user.planStartedAt,
           planExpiresAt: user.planExpiresAt,
           isReadOnly: isExpired,
+          allowed_features: allowedFeatures,
         },
       };
     } catch (error) {
@@ -993,7 +1009,7 @@ export class AuthService implements OnModuleInit {
       }
 
       const isExpired = user.planStatus === 'EXPIRED' || !!(
-        user.plan === 'ULTRA_PRO' &&
+        (user.plan === 'Premium Growth' || user.plan === 'PRACTICE_GROWTH') &&
         user.isTrial &&
         user.planExpiresAt &&
         new Date() > new Date(user.planExpiresAt)
@@ -1003,7 +1019,7 @@ export class AuthService implements OnModuleInit {
       if (user.plan) {
         // user.plan is typically the name of the plan (e.g., 'Pro Plan', 'Growth Plan', 'ULTRA_PRO')
         let queryName = user.plan;
-        if (user.plan === 'ULTRA_PRO') queryName = 'Ultra Pro Plan'; // Fix for trial ultra pro naming mismatch if any
+        if (user.plan === 'PRACTICE_GROWTH') queryName = 'Premium Growth'; // Fix for trial practice growth naming mismatch if any
 
         const planData = await this.planModel.findOne({
           where: { name: queryName },

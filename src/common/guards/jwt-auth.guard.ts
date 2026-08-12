@@ -21,7 +21,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
       // Check if the user's trial is expired
       const isExpired = user.planStatus === 'EXPIRED' || !!(
-        user.plan === 'ULTRA_PRO' &&
+        (user.plan === 'Premium Growth' || user.plan === 'PRACTICE_GROWTH') &&
         user.isTrial &&
         user.planExpiresAt &&
         (!isNaN(new Date(user.planExpiresAt).getTime())) &&

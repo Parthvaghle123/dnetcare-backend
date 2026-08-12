@@ -130,18 +130,10 @@ export class AdminService {
   }
 
   async deactivatePlan(planId: string) {
-    try {
-      const plan = await this.planModel.findByPk(planId);
-      if (!plan) {
-        throw new HttpException('Plan not found.', StatusCode.NOT_FOUND);
-      }
-      await plan.update({ is_active: false });
-      return plan;
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      this.logger.error('[deactivatePlan] Error:', error);
-      throw new HttpException('Failed to deactivate plan.', StatusCode.INTERNAL_SERVER_ERROR);
-    }
+    throw new HttpException(
+      'Plans cannot be deleted or deactivated from the database.',
+      StatusCode.FORBIDDEN,
+    );
   }
 
   // ==========================================

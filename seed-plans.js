@@ -7,8 +7,8 @@ const plans = [
   { name: 'Ultra Pro Plan', type: 'SOFTWARE', price_monthly: 3999, max_branches: 3, max_patients: null, max_appointments: null },
   { name: 'Digital Presence', type: 'MARKETING', price_monthly: 1999, max_branches: 1, max_patients: null, max_appointments: null },
   { name: 'Growth Plan', type: 'MARKETING', price_monthly: 4999, max_branches: 1, max_patients: null, max_appointments: null },
-  { name: 'Practice Growth Bundle', type: 'BUNDLE', price_monthly: 8999, max_branches: 1, max_patients: null, max_appointments: null },
-  { name: 'Premium Growth', type: 'BUNDLE', price_monthly: 16999, max_branches: 999, max_patients: null, max_appointments: null },
+  { name: 'Premium Growth', type: 'BUNDLE', price_monthly: 9999, max_branches: 1, max_patients: null, max_appointments: null },
+
 ];
 
 async function seed() {
