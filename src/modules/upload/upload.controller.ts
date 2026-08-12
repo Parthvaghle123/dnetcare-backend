@@ -21,13 +21,13 @@ export class UploadController {
     FileInterceptor('file', {
       fileFilter: (req, file, cb) => {
         const allowedExtensions =
-          /\.(jpg|jpeg|png|gif|webp|bmp|tiff|pdf|doc|docx|dcm|stl|ply|obj|zip|rar|7z)$/i;
+          /\.(jpg|jpeg|png|gif|webp|bmp|tiff|pdf|doc|docx|dcm|stl|ply|obj|zip|rar|7z|mp4|webm|mov|mkv)$/i;
         const originalName = file.originalname || '';
 
         if (!originalName.match(allowedExtensions)) {
           return cb(
             new HttpException(
-              'Invalid file type. Only Images, PDFs, Documents, Scans (DCM, STL), and Archives are allowed.',
+              'Invalid file type. Only Images, Videos, PDFs, Documents, Scans (DCM, STL), and Archives are allowed.',
               StatusCode.BAD_REQUEST,
             ),
             false,

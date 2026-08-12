@@ -17,6 +17,7 @@ import { Plan } from '../modules/subscription/entities/plan.model';
 import { Subscription } from '../modules/subscription/entities/subscription.model';
 import { SubscriptionPayment } from '../modules/subscription/entities/subscription-payment.model';
 import { WebsiteConfig } from '../modules/website/entities/website-config.model';
+import { SupportTicket } from '../modules/support/entities/support.model';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { WebsiteConfig } from '../modules/website/entities/website-config.model'
       Subscription,
       SubscriptionPayment,
       WebsiteConfig,
+      SupportTicket,
     ]),
   ],
   exports: [SequelizeModule],

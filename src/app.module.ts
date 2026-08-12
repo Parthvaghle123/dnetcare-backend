@@ -26,6 +26,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { WebsiteModule } from './modules/website/website.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { SupportModule } from './modules/support/support.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { AdminModule } from './modules/admin/admin.module';
     ScheduleModule.forRoot(),
     SubscriptionModule,
     WebsiteModule,
+    SupportModule,
   ],
   controllers: [AppController],
   providers: [
