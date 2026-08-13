@@ -1,6 +1,7 @@
 import {
   Controller,
   Post,
+  Get,
   UseInterceptors,
   UploadedFile,
   UseGuards,
@@ -15,6 +16,11 @@ import { StatusCode } from '../../common/enums/status-code.enum';
 @UseGuards(JwtAuthGuard)
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
+
+  @Get('signature')
+  getSignature() {
+    return this.uploadService.getSignature();
+  }
 
   @Post('file')
   @UseInterceptors(

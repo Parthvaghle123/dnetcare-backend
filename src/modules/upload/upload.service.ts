@@ -79,4 +79,31 @@ export class UploadService {
       });
     });
   }
+
+  getSignature(folder: string = 'dental-software') {
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    const apiSecret = this.configService.get<string>('CLOUDINARY_API_SECRET');
+    const cloudName = this.configService.get<string>('CLOUDINARY_CLOUD_NAME');
+    const apiKey = this.configService.get<string>('CLOUDINARY_API_KEY');
+
+    if (!apiSecret || !cloudName || !apiKey) {
+      throw new HttpException('Cloudinary configuration is missing', StatusCode.INTERNAL_SERVER_ERROR);
+    }
+
+    const signature = cloudinary.utils.api_sign_request(
+      {
+        timestamp,
+        folder,
+      },
+      apiSecret,
+    );
+
+    return {
+      timestamp,
+      signature,
+      cloudName,
+      apiKey,
+      folder,
+    };
+  }
 }
