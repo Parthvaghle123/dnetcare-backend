@@ -1,3 +1,11 @@
 {
-  "headers": []
+  "headers": [],
+  "functions": {
+    "src/main.ts": {
+      "maxDuration": 60
+    },
+    "dist/src/main.js": {
+      "maxDuration": 60
+    }
+  }
 }
