@@ -29,6 +29,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           return ErrorCode.NOT_FOUND;
         case 409:
           return ErrorCode.CONFLICT;
+        case 413:
+          return ErrorCode.PAYLOAD_TOO_LARGE;
         case 422:
           return ErrorCode.UNPROCESSABLE_ENTITY;
         case 429:
@@ -56,10 +58,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           res.error &&
           typeof res.error === 'string' &&
           res.error !== 'Bad Request' &&
-          res.error !== 'Not Found'
+          res.error !== 'Not Found' &&
+          res.error !== 'Payload Too Large'
         ) {
           // Only override if they provided a custom error code string, avoid Nest's default 'Bad Request' overwriting it
           error = res.error.toUpperCase().replace(/\s+/g, '_');
+        }
+        
+        if (statusCode === 413 && message === 'File too large') {
+          message = 'File size must be less than 5 MB';
         }
       } else if (typeof res === 'string') {
         message = res;

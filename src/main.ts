@@ -5,6 +5,54 @@ import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 
+const corsOptions = {
+  origin: (origin: string, callback: any) => {
+    const allowedOrigins = [
+      'https://www.dentcare360.in',
+      'https://dentcare360.in',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://dental-frontend.vercel.app'
+    ];
+
+    const envFrontendUrl = process.env.FRONTEND_URL;
+    if (envFrontendUrl) {
+      const urls = envFrontendUrl
+        .split(/[\s,]+/)
+        .map((url) => url.trim())
+        .filter(Boolean);
+      urls.forEach((url) => {
+        if (!allowedOrigins.includes(url)) {
+          allowedOrigins.push(url);
+        }
+      });
+    }
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Accept-Version',
+    'Content-Length',
+    'Content-MD5',
+    'Date',
+    'X-Api-Version',
+    'X-CSRF-Token',
+    'ngrok-skip-browser-warning',
+  ],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
+
 let cachedApp: any;
 
 async function bootstrapServer() {
@@ -29,7 +77,7 @@ async function bootstrapServer() {
       next();
     });
 
-    app.enableCors();
+    app.enableCors(corsOptions);
     app.setGlobalPrefix('api/v1');
 
     app.useGlobalPipes(
@@ -69,7 +117,7 @@ if (!process.env.VERCEL) {
       next();
     });
 
-    app.enableCors();
+    app.enableCors(corsOptions);
     app.setGlobalPrefix('api/v1');
 
     app.useGlobalPipes(
