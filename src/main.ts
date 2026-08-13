@@ -4,14 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
-import { json, urlencoded } from 'express';
-
-// Disable Vercel's default 1MB body parser so Multer can handle the multipart stream
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
 
 let cachedApp: any;
 
@@ -19,9 +11,6 @@ async function bootstrapServer() {
   if (!cachedApp) {
     const app = await NestFactory.create<NestExpressApplication>(AppModule);
     app.useStaticAssets(join(__dirname, '..', 'public'));
-    
-    app.use(json({ limit: '50mb' }));
-    app.use(urlencoded({ extended: true, limit: '50mb' }));
 
     app.use((req: any, res: any, next: any) => {
       console.log(
@@ -62,9 +51,6 @@ if (!process.env.VERCEL) {
   async function startLocal() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule);
     app.useStaticAssets(join(__dirname, '..', 'public'));
-    
-    app.use(json({ limit: '50mb' }));
-    app.use(urlencoded({ extended: true, limit: '50mb' }));
 
     app.use((req: any, res: any, next: any) => {
       console.log(
