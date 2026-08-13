@@ -5,7 +5,7 @@ import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 
-const corsOptions = {
+export const corsOptions = {
   origin: (origin: string, callback: any) => {
     const allowedOrigins = [
       'https://www.dentcare360.in',
