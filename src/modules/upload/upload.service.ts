@@ -55,28 +55,7 @@ export class UploadService {
         },
       );
 
-      uploadStream.on('error', (err) => {
-        this.logger.error('[uploadStream] Stream error:', err);
-        reject(
-          new HttpException(
-            'File upload stream error.',
-            StatusCode.INTERNAL_SERVER_ERROR,
-          ),
-        );
-      });
-
-      const readStream = streamifier.createReadStream(file.buffer);
-      readStream.on('error', (err) => {
-        this.logger.error('[readStream] Stream error:', err);
-        reject(
-          new HttpException(
-            'File read stream error.',
-            StatusCode.INTERNAL_SERVER_ERROR,
-          ),
-        );
-      });
-
-      readStream.pipe(uploadStream);
+      streamifier.createReadStream(file.buffer).pipe(uploadStream);
     });
   }
 
