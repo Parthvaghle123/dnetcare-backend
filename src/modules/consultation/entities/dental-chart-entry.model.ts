@@ -46,23 +46,12 @@ export class DentalChartEntry extends Model {
   surface: string;
 
   @AllowNull(true)
-  @Column(
-    DataType.ENUM(
-      'CARIES',
-      'FRACTURE',
-      'MOBILITY',
-      'ROOT_STUMP',
-      'MISSING_TOOTH',
-      'IMPACTED',
-      'SUPRA_ERUPTED',
-      'PERIAPICAL_ABSCESS',
-      'RCT_DONE',
-      'CROWN',
-      'BRIDGE',
-      'IMPLANT',
-    ),
-  )
+  @Column(DataType.STRING)
   condition: string;
+
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  color: string;
 
   @AllowNull(true)
   @Column(DataType.TEXT)

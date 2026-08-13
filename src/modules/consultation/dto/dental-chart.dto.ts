@@ -27,8 +27,12 @@ export class DentalChartDto {
   @IsString()
   tooth_number: string;
 
-  @IsEnum(ToothCondition)
-  condition: ToothCondition;
+  @IsString()
+  condition: string;
+
+  @IsOptional()
+  @IsString()
+  color?: string;
 
   @IsOptional()
   @IsString()

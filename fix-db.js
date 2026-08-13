@@ -26,6 +26,10 @@ async function run() {
     await sequelize.query('ALTER TABLE payments ADD COLUMN IF NOT EXISTS razorpay_payment_id VARCHAR(255);');
     await sequelize.query('ALTER TABLE payments ADD COLUMN IF NOT EXISTS razorpay_signature VARCHAR(255);');
     console.log('Added Razorpay columns to payments.');
+
+    await sequelize.query('ALTER TABLE dental_chart_entries ALTER COLUMN condition TYPE VARCHAR(255) USING condition::varchar;');
+    await sequelize.query('ALTER TABLE dental_chart_entries ADD COLUMN IF NOT EXISTS color VARCHAR(50);');
+    console.log('Modified dental_chart_entries columns.');
     
   } catch(e) {
     console.error('Error:', e);

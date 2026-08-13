@@ -138,7 +138,7 @@ export class ConsultationService {
       const dental_chart = await this.dentalChartEntryModel.findAll({
         where: { consultation_id: id },
         order: [['created_at', 'ASC']],
-        attributes: ['id', 'tooth_number', 'condition', 'notes', 'created_at'],
+        attributes: ['id', 'tooth_number', 'condition', 'notes', 'color', 'created_at'],
       });
 
       const documents = await this.consultationDocModel.findAll({
@@ -279,7 +279,7 @@ export class ConsultationService {
         });
 
         if (entry) {
-          await entry.update({ notes: item.notes || null });
+          await entry.update({ notes: item.notes || null, color: item.color || null });
         } else {
           entry = await this.dentalChartEntryModel.create({
             consultation_id: id,
@@ -287,6 +287,7 @@ export class ConsultationService {
             tooth_number: item.tooth_number,
             condition: item.condition,
             notes: item.notes || null,
+            color: item.color || null,
           });
         }
 
@@ -295,6 +296,7 @@ export class ConsultationService {
           tooth_number: entry.tooth_number,
           condition: entry.condition,
           notes: entry.notes,
+          color: entry.color,
           created_at: entry.created_at,
           updated_at: entry.updated_at,
         });
@@ -566,6 +568,7 @@ export class ConsultationService {
           'tooth_number',
           'condition',
           'notes',
+          'color',
           'created_at',
           'updated_at',
         ],
