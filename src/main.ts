@@ -145,3 +145,10 @@ export default async function handler(req: any, res: any) {
   const app = await bootstrapServer();
   return app(req, res);
 }
+
+// Disable Vercel's default 1MB body parser so Multer can handle the multipart stream
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
