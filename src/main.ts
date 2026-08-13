@@ -5,11 +5,59 @@ import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 
+const corsOptions = {
+  origin: (origin: string, callback: any) => {
+    const allowedOrigins = [
+      'https://www.dentcare360.in',
+      'https://dentcare360.in',
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ];
+
+    const envFrontendUrl = process.env.FRONTEND_URL;
+    if (envFrontendUrl) {
+      const urls = envFrontendUrl
+        .split(/[\s,]+/)
+        .map((url) => url.trim())
+        .filter(Boolean);
+      urls.forEach((url) => {
+        if (!allowedOrigins.includes(url)) {
+          allowedOrigins.push(url);
+        }
+      });
+    }
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Accept-Version',
+    'Content-Length',
+    'Content-MD5',
+    'Date',
+    'X-Api-Version',
+    'X-CSRF-Token',
+    'ngrok-skip-browser-warning',
+  ],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
+
 let cachedApp: any;
 
 async function bootstrapServer() {
   if (!cachedApp) {
     const app = await NestFactory.create<NestExpressApplication>(AppModule);
+    app.enableCors(corsOptions);
     app.useStaticAssets(join(__dirname, '..', 'public'));
 
     app.use((req: any, res: any, next: any) => {
@@ -29,7 +77,6 @@ async function bootstrapServer() {
       next();
     });
 
-    app.enableCors();
     app.setGlobalPrefix('api/v1');
 
     app.useGlobalPipes(
@@ -50,6 +97,7 @@ async function bootstrapServer() {
 if (!process.env.VERCEL) {
   async function startLocal() {
     const app = await NestFactory.create<NestExpressApplication>(AppModule);
+    app.enableCors(corsOptions);
     app.useStaticAssets(join(__dirname, '..', 'public'));
 
     app.use((req: any, res: any, next: any) => {
@@ -69,7 +117,6 @@ if (!process.env.VERCEL) {
       next();
     });
 
-    app.enableCors();
     app.setGlobalPrefix('api/v1');
 
     app.useGlobalPipes(
