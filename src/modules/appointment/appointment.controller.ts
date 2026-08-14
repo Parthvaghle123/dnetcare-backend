@@ -4,6 +4,7 @@ import {
   Post,
   Put,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -85,5 +86,13 @@ export class AppointmentController {
       dto,
     );
     return { message: 'Appointment rescheduled successfully.', data };
+  }
+
+  @Delete(':id')
+  async deleteAppointment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.appointmentService.deleteAppointment(user, id);
   }
 }

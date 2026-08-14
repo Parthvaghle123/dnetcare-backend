@@ -139,4 +139,12 @@ export class ConsultationController {
     );
     return { message: 'Document deleted.', data: null };
   }
+
+  @Delete(':id')
+  async deleteConsultation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.consultationService.deleteConsultation(user, id);
+  }
 }

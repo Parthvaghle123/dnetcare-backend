@@ -17,6 +17,9 @@ import { UpdateConsultationDto } from './dto/update-consultation.dto';
 import { BulkDentalChartDto } from './dto/dental-chart.dto';
 import { BulkConsultationDocumentDto } from './dto/consultation-document.dto';
 import { UploadService } from '../upload/upload.service';
+import { TreatmentPlan } from '../treatment/entities/treatment-plan.model';
+import { Invoice } from '../billing/entities/invoice.model';
+import { Prescription } from '../prescription/entities/prescription.model';
 
 @Injectable()
 export class ConsultationService {
@@ -691,6 +694,73 @@ export class ConsultationService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[deleteConsultationDocument] Error:`, error);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async deleteConsultation(user: any, id: string) {
+    try {
+      const consultation = await this.consultationModel.findOne({
+        where: { id, organization_id: user.org_id },
+      });
+
+      if (!consultation) {
+        throw new HttpException(
+          { message: 'Consultation not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
+      }
+
+      // 1. Find and delete all attached documents from Cloudinary & DB
+      const documents = await this.consultationDocModel.findAll({
+        where: { consultation_id: id },
+      });
+
+      for (const doc of documents) {
+        if (doc.file_key) {
+          try {
+            await this.uploadService.deleteFile(doc.file_key);
+          } catch (uploadError) {
+            this.logger.warn(
+              `[deleteConsultation] Failed to delete file from Cloudinary: ${doc.file_key}`,
+              uploadError,
+            );
+          }
+        }
+        await doc.destroy();
+      }
+
+      // 2. Delete all dental chart entries
+      await this.dentalChartEntryModel.destroy({
+        where: { consultation_id: id },
+      });
+
+      // 3. Nullify consultation_id in TreatmentPlans, Invoices, Prescriptions
+      await TreatmentPlan.update(
+        { consultation_id: null },
+        { where: { consultation_id: id, organization_id: user.org_id } },
+      );
+
+      await Invoice.update(
+        { consultation_id: null },
+        { where: { consultation_id: id, organization_id: user.org_id } },
+      );
+
+      await Prescription.update(
+        { consultation_id: null },
+        { where: { consultation_id: id } },
+      );
+
+      // 4. Delete the consultation itself
+      await consultation.destroy();
+
+      return { message: 'Consultation permanently deleted.' };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[deleteConsultation] Error:`, error);
       throw new HttpException(
         'Something went wrong. Please try again.',
         StatusCode.INTERNAL_SERVER_ERROR,

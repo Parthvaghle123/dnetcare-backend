@@ -16,6 +16,7 @@ import { DoctorSchedule } from '../doctor/entities/doctor-schedule.model';
 import { DoctorLeave } from '../doctor/entities/doctor-leave.model';
 import { TreatmentService } from '../treatment/treatment.service';
 import { SubscriptionService } from '../subscription/subscription.service';
+import { AppointmentStatusHistory } from './entities/appointment-status-history.model';
 
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import {
@@ -1324,6 +1325,55 @@ export class AppointmentService {
       this.logger.error('[rescheduleAppointment] Error:', error);
       throw new HttpException(
         'Something went wrong.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async deleteAppointment(user: any, id: string) {
+    const transaction = await this.sequelize.transaction();
+    try {
+      const appointment = await this.appointmentModel.findOne({
+        where: { id, organization_id: user.org_id },
+        transaction,
+      });
+
+      if (!appointment) {
+        throw new HttpException(
+          { message: 'Appointment not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
+      }
+
+      // 1. Delete associated AppointmentStatusHistory
+      await AppointmentStatusHistory.destroy({
+        where: { appointment_id: id },
+        transaction,
+      });
+
+      // 2. Nullify appointment_id in TreatmentPlanPhases
+      await this.phaseModel.update(
+        { appointment_id: null },
+        { where: { appointment_id: id }, transaction }
+      );
+
+      // 3. Nullify appointment_id in Consultations
+      await this.sequelize.models.Consultation.update(
+        { appointment_id: null },
+        { where: { appointment_id: id }, transaction }
+      );
+
+      // 5. Delete the appointment itself
+      await appointment.destroy({ transaction });
+
+      await transaction.commit();
+      return { message: 'Appointment deleted successfully.' };
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[deleteAppointment] Error:`, error);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
         StatusCode.INTERNAL_SERVER_ERROR,
       );
     }

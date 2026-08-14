@@ -20,6 +20,8 @@ import { User } from '../auth/entities/user.model';
 import { Invoice, InvoiceStatus } from '../billing/entities/invoice.model';
 import { InvoiceLineItem } from '../billing/entities/invoice-line-item.model';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
+import { Appointment } from '../appointment/entities/appointment.model';
+import { Prescription } from '../prescription/entities/prescription.model';
 import { Op } from 'sequelize';
 
 import { CreateTreatmentPlanDto } from './dto/create-treatment-plan.dto';
@@ -1129,6 +1131,83 @@ export class TreatmentService {
       await transaction.rollback();
       if (error instanceof HttpException) throw error;
       this.logger.error('[removePhase] Error:', error);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async deleteTreatmentPlan(user: any, id: string) {
+    const transaction = await this.sequelize.transaction();
+    try {
+      const plan = await this.treatmentPlanModel.findOne({
+        where: { id, organization_id: user.org_id },
+        transaction,
+      });
+
+      if (!plan) {
+        throw new HttpException(
+          { message: 'Treatment plan not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
+      }
+
+      // Find all phases for this treatment plan
+      const phases = await this.phaseModel.findAll({
+        where: { treatment_plan_id: id },
+        transaction,
+      });
+
+      const phaseIds = phases.map(p => p.id);
+
+      if (phaseIds.length > 0) {
+        // Nullify plan_phase_id in InvoiceLineItems
+        await this.invoiceLineItemModel.update(
+          { plan_phase_id: null },
+          { where: { plan_phase_id: { [Op.in]: phaseIds } }, transaction }
+        );
+
+        // Nullify plan_phase_id in Appointments
+        await Appointment.update(
+          { plan_phase_id: null },
+          { where: { plan_phase_id: { [Op.in]: phaseIds } }, transaction }
+        );
+
+        // Nullify treatment_plan_phase_id in Prescriptions
+        await Prescription.update(
+          { treatment_plan_phase_id: null },
+          { where: { treatment_plan_phase_id: { [Op.in]: phaseIds } }, transaction }
+        );
+
+        // Delete all phases
+        await this.phaseModel.destroy({
+          where: { treatment_plan_id: id },
+          transaction,
+        });
+      }
+
+      // Nullify treatment_plan_id in Invoices
+      await this.invoiceModel.update(
+        { treatment_plan_id: null },
+        { where: { treatment_plan_id: id, organization_id: user.org_id }, transaction }
+      );
+
+      // Nullify treatment_plan_id in Appointments
+      await Appointment.update(
+        { treatment_plan_id: null },
+        { where: { treatment_plan_id: id }, transaction }
+      );
+
+      // Delete the treatment plan itself
+      await plan.destroy({ transaction });
+
+      await transaction.commit();
+      return { message: 'Treatment plan deleted successfully.' };
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[deleteTreatmentPlan] Error:`, error);
       throw new HttpException(
         'Something went wrong. Please try again.',
         StatusCode.INTERNAL_SERVER_ERROR,

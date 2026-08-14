@@ -139,4 +139,12 @@ export class TreatmentController {
     const data = await this.treatmentService.removePhase(user, planId, phaseId);
     return { message: 'Treatment plan phase removed.', data };
   }
+
+  @Delete(':id')
+  async deleteTreatmentPlan(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: any,
+  ) {
+    return this.treatmentService.deleteTreatmentPlan(user, id);
+  }
 }
