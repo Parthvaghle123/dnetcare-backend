@@ -73,12 +73,45 @@ export class ConsultationService {
         );
       }
 
+      let linkedAppointmentId = dto.appointment_id || null;
+      if (!linkedAppointmentId) {
+        const sequelize = this.consultationModel.sequelize;
+        if (sequelize) {
+          const Appointment = sequelize.models.Appointment;
+          if (Appointment) {
+            let activeApt = await Appointment.findOne({
+              where: {
+                patient_id: dto.patient_id,
+                branch_id: dto.branch_id,
+                doctor_id: dto.doctor_id,
+                status: { [Op.in]: ['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS'] },
+              },
+              order: [['scheduled_at', 'ASC']],
+            });
+
+            if (!activeApt) {
+              activeApt = await Appointment.findOne({
+                where: {
+                  patient_id: dto.patient_id,
+                  status: { [Op.in]: ['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS'] },
+                },
+                order: [['scheduled_at', 'ASC']],
+              });
+            }
+
+            if (activeApt) {
+              linkedAppointmentId = (activeApt as any).id;
+            }
+          }
+        }
+      }
+
       const consultation = await this.consultationModel.create({
         organization_id: user.org_id,
         branch_id: dto.branch_id,
         patient_id: dto.patient_id,
         doctor_id: dto.doctor_id,
-        appointment_id: dto.appointment_id || null,
+        appointment_id: linkedAppointmentId,
         consultation_date: dto.consultation_date,
         dental_chart_type: dto.dental_chart_type || 'ADULT',
         chief_complaint: dto.chief_complaint || null,
@@ -141,7 +174,14 @@ export class ConsultationService {
       const dental_chart = await this.dentalChartEntryModel.findAll({
         where: { consultation_id: id },
         order: [['created_at', 'ASC']],
-        attributes: ['id', 'tooth_number', 'condition', 'notes', 'color', 'created_at'],
+        attributes: [
+          'id',
+          'tooth_number',
+          'condition',
+          'notes',
+          'color',
+          'created_at',
+        ],
       });
 
       const documents = await this.consultationDocModel.findAll({
@@ -282,7 +322,10 @@ export class ConsultationService {
         });
 
         if (entry) {
-          await entry.update({ notes: item.notes || null, color: item.color || null });
+          await entry.update({
+            notes: item.notes || null,
+            color: item.color || null,
+          });
         } else {
           entry = await this.dentalChartEntryModel.create({
             consultation_id: id,

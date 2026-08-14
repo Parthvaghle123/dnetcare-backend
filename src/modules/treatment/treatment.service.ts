@@ -1159,25 +1159,28 @@ export class TreatmentService {
         transaction,
       });
 
-      const phaseIds = phases.map(p => p.id);
+      const phaseIds = phases.map((p) => p.id);
 
       if (phaseIds.length > 0) {
         // Nullify plan_phase_id in InvoiceLineItems
         await this.invoiceLineItemModel.update(
           { plan_phase_id: null },
-          { where: { plan_phase_id: { [Op.in]: phaseIds } }, transaction }
+          { where: { plan_phase_id: { [Op.in]: phaseIds } }, transaction },
         );
 
         // Nullify plan_phase_id in Appointments
         await Appointment.update(
           { plan_phase_id: null },
-          { where: { plan_phase_id: { [Op.in]: phaseIds } }, transaction }
+          { where: { plan_phase_id: { [Op.in]: phaseIds } }, transaction },
         );
 
         // Nullify treatment_plan_phase_id in Prescriptions
         await Prescription.update(
           { treatment_plan_phase_id: null },
-          { where: { treatment_plan_phase_id: { [Op.in]: phaseIds } }, transaction }
+          {
+            where: { treatment_plan_phase_id: { [Op.in]: phaseIds } },
+            transaction,
+          },
         );
 
         // Delete all phases
@@ -1190,13 +1193,16 @@ export class TreatmentService {
       // Nullify treatment_plan_id in Invoices
       await this.invoiceModel.update(
         { treatment_plan_id: null },
-        { where: { treatment_plan_id: id, organization_id: user.org_id }, transaction }
+        {
+          where: { treatment_plan_id: id, organization_id: user.org_id },
+          transaction,
+        },
       );
 
       // Nullify treatment_plan_id in Appointments
       await Appointment.update(
         { treatment_plan_id: null },
-        { where: { treatment_plan_id: id }, transaction }
+        { where: { treatment_plan_id: id }, transaction },
       );
 
       // Delete the treatment plan itself

@@ -22,10 +22,7 @@ export class AdminWebsiteController {
   constructor(private readonly websiteService: WebsiteService) {}
 
   @Get('check-slug')
-  async checkSlug(
-    @Request() req,
-    @Query('slug') slug: string,
-  ) {
+  async checkSlug(@Request() req, @Query('slug') slug: string) {
     if (!slug) {
       throw new BadRequestException('Slug query parameter is required');
     }
@@ -47,11 +44,14 @@ export class AdminWebsiteController {
     @UploadedFiles() files: Array<Express.Multer.File>,
   ) {
     const organizationId = req.user.org_id;
-    
+
     // Parse JSON strings in body if they exist (multipart/form-data converts objects to strings)
     const parsedDto = { ...updateDto };
     for (const key of Object.keys(parsedDto)) {
-      if (typeof parsedDto[key] === 'string' && (parsedDto[key].startsWith('{') || parsedDto[key].startsWith('['))) {
+      if (
+        typeof parsedDto[key] === 'string' &&
+        (parsedDto[key].startsWith('{') || parsedDto[key].startsWith('['))
+      ) {
         try {
           parsedDto[key] = JSON.parse(parsedDto[key]);
         } catch (e) {
@@ -60,7 +60,11 @@ export class AdminWebsiteController {
       }
     }
 
-    return this.websiteService.updateWebsiteConfig(organizationId, parsedDto, files);
+    return this.websiteService.updateWebsiteConfig(
+      organizationId,
+      parsedDto,
+      files,
+    );
   }
 
   @Post('publish')

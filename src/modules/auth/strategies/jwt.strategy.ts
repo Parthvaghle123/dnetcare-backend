@@ -31,7 +31,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     const user = await this.userModel.findByPk(payload.sub, {
-      attributes: ['id', 'plan', 'planStatus', 'planStartedAt', 'planExpiresAt', 'isTrial', 'role'],
+      attributes: [
+        'id',
+        'plan',
+        'planStatus',
+        'planStartedAt',
+        'planExpiresAt',
+        'isTrial',
+        'role',
+      ],
     });
 
     if (!user) {

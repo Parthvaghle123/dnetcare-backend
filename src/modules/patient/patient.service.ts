@@ -37,7 +37,7 @@ export class PatientService {
     private dentalChartEntryModel: typeof DentalChartEntry,
     @InjectConnection() private sequelize: Sequelize,
     private readonly subscriptionService: SubscriptionService,
-  ) {}
+  ) { }
 
   async createPatient(reqUser: any, dto: CreatePatientDto) {
     const transaction = await this.sequelize.transaction();
@@ -75,7 +75,12 @@ export class PatientService {
       });
 
       // Check plan limits for patient creation
-      await this.subscriptionService.checkFeatureLimits(reqUser.org_id, 'max_patients', count, reqUser.sub);
+      await this.subscriptionService.checkFeatureLimits(
+        reqUser.org_id,
+        'max_patients',
+        count,
+        reqUser.sub,
+      );
 
       const fileNumber = String(count + 1).padStart(6, '0');
 
@@ -108,6 +113,33 @@ export class PatientService {
         },
         { transaction },
       );
+
+      if (dto.medical_conditions && dto.medical_conditions.length > 0) {
+        for (const conditionId of dto.medical_conditions) {
+          const condition = await this.conditionMasterModel.findOne({
+            where: {
+              id: conditionId,
+              is_active: true,
+              [Op.or]: [
+                { organization_id: null },
+                { organization_id: reqUser.org_id },
+              ],
+            },
+            transaction,
+          });
+          if (condition) {
+            await this.patientConditionModel.create(
+              {
+                patient_id: patient.id,
+                condition_id: conditionId,
+                notes: null,
+                recorded_by: reqUser.sub,
+              },
+              { transaction },
+            );
+          }
+        }
+      }
 
       await transaction.commit();
 
@@ -230,6 +262,16 @@ export class PatientService {
       const branch = await this.branchModel.findByPk(patient.branch_id);
       const user = await this.userModel.findByPk(patient.created_by);
 
+      const patientConditions = await this.patientConditionModel.findAll({
+        where: { patient_id: id },
+        include: [{ model: MedicalConditionMaster, attributes: ['id', 'name'] }],
+      });
+
+      const medical_conditions = patientConditions.map((pc: any) => ({
+        id: pc.condition_id,
+        name: pc.condition?.name || null,
+      }));
+
       return {
         id: patient.id,
         file_number: patient.file_number,
@@ -258,6 +300,7 @@ export class PatientService {
               last_name: user.last_name,
             }
           : null,
+        medical_conditions,
         created_at: patient.created_at,
         updated_at: patient.updated_at,
       };
@@ -272,9 +315,11 @@ export class PatientService {
   }
 
   async updatePatient(reqUser: any, id: string, dto: UpdatePatientDto) {
+    const transaction = await this.sequelize.transaction();
     try {
       const patient = await this.patientModel.findOne({
         where: { id, organization_id: reqUser.org_id },
+        transaction,
       });
 
       if (!patient) {
@@ -295,6 +340,7 @@ export class PatientService {
             organization_id: reqUser.org_id,
             id: { [Op.ne]: id },
           },
+          transaction,
         });
 
         if (duplicateMobile) {
@@ -325,10 +371,49 @@ export class PatientService {
         updateData.age = dto.age;
       }
 
-      await this.patientModel.update(updateData, { where: { id } });
+      await this.patientModel.update(updateData, { where: { id }, transaction });
 
+      // Save medical conditions if provided in payload
+      if (dto.medical_conditions !== undefined) {
+        // Delete existing ones first
+        await this.patientConditionModel.destroy({
+          where: { patient_id: id },
+          transaction,
+        });
+
+        // Insert new ones
+        if (dto.medical_conditions && dto.medical_conditions.length > 0) {
+          for (const conditionId of dto.medical_conditions) {
+            const condition = await this.conditionMasterModel.findOne({
+              where: {
+                id: conditionId,
+                is_active: true,
+                [Op.or]: [
+                  { organization_id: null },
+                  { organization_id: reqUser.org_id },
+                ],
+              },
+              transaction,
+            });
+            if (condition) {
+              await this.patientConditionModel.create(
+                {
+                  patient_id: patient.id,
+                  condition_id: conditionId,
+                  notes: null,
+                  recorded_by: reqUser.sub,
+                },
+                { transaction },
+              );
+            }
+          }
+        }
+      }
+
+      await transaction.commit();
       return await this.getPatientById(reqUser, id);
     } catch (error) {
+      await transaction.rollback();
       if (error instanceof HttpException) throw error;
       this.logger.error(`[updatePatient] Error:`, error);
       throw new HttpException(
@@ -397,10 +482,10 @@ export class PatientService {
         notes: pc.notes,
         recorded_by: pc.recorded_by_relation
           ? {
-              id: pc.recorded_by_relation.id,
-              first_name: pc.recorded_by_relation.first_name,
-              last_name: pc.recorded_by_relation.last_name,
-            }
+            id: pc.recorded_by_relation.id,
+            first_name: pc.recorded_by_relation.first_name,
+            last_name: pc.recorded_by_relation.last_name,
+          }
           : null,
         created_at: pc.created_at,
       }));
@@ -820,16 +905,16 @@ export class PatientService {
         notes: entry.notes,
         consultation: entry.consultation
           ? {
-              id: entry.consultation.id,
-              consultation_date: entry.consultation.consultation_date,
-              doctor: entry.consultation.doctor
-                ? {
-                    id: entry.consultation.doctor.id,
-                    first_name: entry.consultation.doctor.first_name,
-                    last_name: entry.consultation.doctor.last_name,
-                  }
-                : null,
-            }
+            id: entry.consultation.id,
+            consultation_date: entry.consultation.consultation_date,
+            doctor: entry.consultation.doctor
+              ? {
+                id: entry.consultation.doctor.id,
+                first_name: entry.consultation.doctor.first_name,
+                last_name: entry.consultation.doctor.last_name,
+              }
+              : null,
+          }
           : null,
         created_at: entry.created_at,
         updated_at: entry.updated_at,

@@ -40,7 +40,10 @@ export class SupportService {
         data: ticket,
       };
     } catch (error) {
-      this.logger.error('[createTicket] Error submitting support ticket:', error);
+      this.logger.error(
+        '[createTicket] Error submitting support ticket:',
+        error,
+      );
       throw new HttpException(
         'Failed to submit support ticket. Please try again.',
         StatusCode.INTERNAL_SERVER_ERROR,
@@ -70,7 +73,14 @@ export class SupportService {
         include: [
           {
             model: User,
-            attributes: ['id', 'first_name', 'last_name', 'email', 'phone', 'role'],
+            attributes: [
+              'id',
+              'first_name',
+              'last_name',
+              'email',
+              'phone',
+              'role',
+            ],
           },
           {
             model: Organization,
@@ -79,7 +89,10 @@ export class SupportService {
         ],
       });
       if (!ticket) {
-        throw new HttpException('Support ticket not found.', StatusCode.NOT_FOUND);
+        throw new HttpException(
+          'Support ticket not found.',
+          StatusCode.NOT_FOUND,
+        );
       }
       return { success: true, data: ticket };
     } catch (error) {
@@ -100,7 +113,14 @@ export class SupportService {
         include: [
           {
             model: User,
-            attributes: ['id', 'first_name', 'last_name', 'email', 'phone', 'role'],
+            attributes: [
+              'id',
+              'first_name',
+              'last_name',
+              'email',
+              'phone',
+              'role',
+            ],
           },
           {
             model: Organization,
@@ -123,18 +143,30 @@ export class SupportService {
     try {
       const ticket = await this.supportTicketModel.findByPk(id);
       if (!ticket) {
-        throw new HttpException('Support ticket not found.', StatusCode.NOT_FOUND);
+        throw new HttpException(
+          'Support ticket not found.',
+          StatusCode.NOT_FOUND,
+        );
       }
 
       // Revert/Backward status transition checks
       if (ticket.status === 'RESOLVED') {
-        throw new HttpException('Resolved tickets cannot be changed.', StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          'Resolved tickets cannot be changed.',
+          StatusCode.BAD_REQUEST,
+        );
       }
       if (ticket.status === 'IN_PROGRESS' && status === 'OPEN') {
-        throw new HttpException('Cannot revert status from In Progress to Open.', StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          'Cannot revert status from In Progress to Open.',
+          StatusCode.BAD_REQUEST,
+        );
       }
       if (ticket.status === status) {
-        throw new HttpException('Ticket is already in this status.', StatusCode.BAD_REQUEST);
+        throw new HttpException(
+          'Ticket is already in this status.',
+          StatusCode.BAD_REQUEST,
+        );
       }
 
       await ticket.update({ status });

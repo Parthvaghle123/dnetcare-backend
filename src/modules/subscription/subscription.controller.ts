@@ -16,11 +16,13 @@ export class SubscriptionController {
   @Get('current')
   async getCurrentSubscription(@CurrentUser() user: any) {
     const organizationId = user.org_id;
-    return this.subscriptionService.getCurrentSubscription(organizationId, user.sub);
+    return this.subscriptionService.getCurrentSubscription(
+      organizationId,
+      user.sub,
+    );
   }
 
   @UseGuards(JwtAuthGuard)
-
   @Post('checkout')
   async checkout(@Body() body: { plan_id: string }, @CurrentUser() user: any) {
     const organizationId = user.org_id;

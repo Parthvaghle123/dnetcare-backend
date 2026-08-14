@@ -380,7 +380,9 @@ export class EmailService {
     phone: string,
     submittedAt: Date,
   ) {
-    const adminEmail = this.configService.get<string>('ADMIN_EMAIL') || 'dentcare360.official@gmail.com';
+    const adminEmail =
+      this.configService.get<string>('ADMIN_EMAIL') ||
+      'dentcare360.official@gmail.com';
     const dateTimeStr = dayjs(submittedAt).format('DD MMMM YYYY, hh:mm A');
 
     const html = `
@@ -460,7 +462,9 @@ export class EmailService {
 
     const apiKey = this.configService.get<string>('BREVO_API_KEY') || '';
     if (!apiKey) {
-      this.logger.warn('BREVO_API_KEY is missing. Pricing Inquiry email will not be sent.');
+      this.logger.warn(
+        'BREVO_API_KEY is missing. Pricing Inquiry email will not be sent.',
+      );
       return;
     }
 
@@ -475,7 +479,9 @@ export class EmailService {
         body: JSON.stringify({
           sender: {
             name: 'DentCare360',
-            email: this.configService.get<string>('MAIL_FROM') || 'noreply@dentcare360.in',
+            email:
+              this.configService.get<string>('MAIL_FROM') ||
+              'noreply@dentcare360.in',
           },
           to: [{ email: adminEmail }],
           subject: 'New Pricing Inquiry – DentCare360',
@@ -485,17 +491,23 @@ export class EmailService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        this.logger.error(`Brevo send failed for admin email ${adminEmail}: ${errorText}`);
+        this.logger.error(
+          `Brevo send failed for admin email ${adminEmail}: ${errorText}`,
+        );
         throw new Error(errorText);
       }
 
       const data = await response.json();
-      this.logger.log(`Pricing Inquiry email sent successfully to ${adminEmail}. MessageID: ${data.messageId}`);
+      this.logger.log(
+        `Pricing Inquiry email sent successfully to ${adminEmail}. MessageID: ${data.messageId}`,
+      );
       return data;
     } catch (error: any) {
-      this.logger.error(`Failed to send Pricing Inquiry email to ${adminEmail}`, error);
+      this.logger.error(
+        `Failed to send Pricing Inquiry email to ${adminEmail}`,
+        error,
+      );
       throw error;
     }
   }
 }
-

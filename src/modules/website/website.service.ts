@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
@@ -19,7 +24,10 @@ export class WebsiteService {
     private readonly uploadService: UploadService,
   ) {}
 
-  async checkSlugAvailable(organizationId: string, slug: string): Promise<{ available: boolean }> {
+  async checkSlugAvailable(
+    organizationId: string,
+    slug: string,
+  ): Promise<{ available: boolean }> {
     const existingOrg = await this.organizationModel.findOne({
       where: {
         subdomain: slug,
@@ -41,7 +49,7 @@ export class WebsiteService {
       });
     }
 
-    const configJson = config.get({ plain: true }) as any;
+    const configJson = config.get({ plain: true });
     configJson.slug = org?.subdomain || '';
     return configJson;
   }
@@ -59,7 +67,10 @@ export class WebsiteService {
     let slug = org.subdomain;
 
     if (updateDto.slug && updateDto.slug !== org.subdomain) {
-      const isAvailable = await this.checkSlugAvailable(organizationId, updateDto.slug);
+      const isAvailable = await this.checkSlugAvailable(
+        organizationId,
+        updateDto.slug,
+      );
       if (!isAvailable.available) {
         throw new BadRequestException('subdomain is taken already');
       }
@@ -91,9 +102,9 @@ export class WebsiteService {
         // fieldname e.g., "gallery_section.image", extract first part as section name
         const sectionName = file.fieldname.split('.')[0] || 'general';
         const folder = `website/${slug || organizationId}/${sectionName}/assets`;
-        
+
         const uploadResult = await this.uploadService.uploadFile(file, folder);
-        
+
         // Put the URL in the dto using the fieldname as path
         setNestedValue(updateDto, file.fieldname, uploadResult.url);
       }
@@ -118,7 +129,7 @@ export class WebsiteService {
       await this.cacheManager.del(`website_preview_${slug}`);
     }
 
-    const configJson = config.get({ plain: true }) as any;
+    const configJson = config.get({ plain: true });
     configJson.slug = slug;
     return configJson;
   }
@@ -131,7 +142,9 @@ export class WebsiteService {
   }
 
   async getPublicWebsite(subdomain: string, isPreview: boolean = false) {
-    const cacheKey = isPreview ? `website_preview_${subdomain}` : `website_public_${subdomain}`;
+    const cacheKey = isPreview
+      ? `website_preview_${subdomain}`
+      : `website_public_${subdomain}`;
     const cachedData = await this.cacheManager.get(cacheKey);
 
     if (cachedData) {

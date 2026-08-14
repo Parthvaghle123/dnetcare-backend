@@ -64,7 +64,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           // Only override if they provided a custom error code string, avoid Nest's default 'Bad Request' overwriting it
           error = res.error.toUpperCase().replace(/\s+/g, '_');
         }
-        
+
         if (statusCode === 413 && message === 'File too large') {
           message = 'File size must be less than 5 MB';
         }

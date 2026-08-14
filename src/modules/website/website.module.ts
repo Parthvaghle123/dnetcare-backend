@@ -17,7 +17,11 @@ import { PricingInquiryController } from './controllers/pricing-inquiry.controll
     UploadModule,
     NotificationModule,
   ],
-  controllers: [AdminWebsiteController, PublicWebsiteController, PricingInquiryController],
+  controllers: [
+    AdminWebsiteController,
+    PublicWebsiteController,
+    PricingInquiryController,
+  ],
   providers: [WebsiteService],
   exports: [WebsiteService],
 })

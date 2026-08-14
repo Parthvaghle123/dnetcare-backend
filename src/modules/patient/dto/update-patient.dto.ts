@@ -6,6 +6,7 @@ import {
   MinLength,
   Matches,
   IsInt,
+  IsArray,
 } from 'class-validator';
 
 export class UpdatePatientDto {
@@ -56,4 +57,9 @@ export class UpdatePatientDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  medical_conditions?: string[];
 }

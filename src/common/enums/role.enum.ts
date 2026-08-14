@@ -5,4 +5,3 @@ export enum Role {
   DOCTOR = 'DOCTOR',
   RECEPTIONIST = 'RECEPTIONIST',
 }
-

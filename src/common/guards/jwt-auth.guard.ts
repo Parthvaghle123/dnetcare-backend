@@ -20,18 +20,20 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       const cleanPath = path.replace(/^\/api\/v1/, '').replace(/\/$/, '');
 
       // Check if the user's trial is expired
-      const isExpired = user.planStatus === 'EXPIRED' || !!(
-        (user.plan === 'Premium Growth' || user.plan === 'PRACTICE_GROWTH') &&
-        user.isTrial &&
-        user.planExpiresAt &&
-        (!isNaN(new Date(user.planExpiresAt).getTime())) &&
-        new Date() > new Date(user.planExpiresAt)
-      );
+      const isExpired =
+        user.planStatus === 'EXPIRED' ||
+        !!(
+          (user.plan === 'Premium Growth' || user.plan === 'PRACTICE_GROWTH') &&
+          user.isTrial &&
+          user.planExpiresAt &&
+          !isNaN(new Date(user.planExpiresAt).getTime()) &&
+          new Date() > new Date(user.planExpiresAt)
+        );
 
       if (isExpired) {
         // Expired trial users are in read-only mode: ALLOW GET, but BLOCK POST, PUT, PATCH, DELETE
         const isGet = method === 'GET';
-        const isAllowedPostRoute = 
+        const isAllowedPostRoute =
           cleanPath === '/auth/logout' ||
           cleanPath === '/subscription/checkout' ||
           cleanPath === '/subscription/verify';
@@ -40,7 +42,8 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
           throw new HttpException(
             {
               success: false,
-              message: 'Your trial plan has expired. Please upgrade your plan to modify data.',
+              message:
+                'Your trial plan has expired. Please upgrade your plan to modify data.',
             },
             StatusCode.FORBIDDEN,
           );
@@ -51,7 +54,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         return true;
       } else {
         // Non-MAIN_ADMIN users are BLOCKED from accessing admin-only routes:
-        const isAdminOnlyRoute = 
+        const isAdminOnlyRoute =
           cleanPath.startsWith('/admin/users') ||
           cleanPath.startsWith('/admin/plans') ||
           cleanPath.startsWith('/admin/dashboard') ||
@@ -82,4 +85,3 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return user;
   }
 }
-

@@ -481,7 +481,12 @@ export class AppointmentService {
         where: { organization_id: user.org_id },
         transaction,
       });
-      await this.subscriptionService.checkFeatureLimits(user.org_id, 'max_appointments', count, user.sub);
+      await this.subscriptionService.checkFeatureLimits(
+        user.org_id,
+        'max_appointments',
+        count,
+        user.sub,
+      );
 
       const branch = await this.branchModel.findOne({
         where: { id: dto.branch_id, organization_id: user.org_id },
@@ -1072,6 +1077,27 @@ export class AppointmentService {
         }
       }
 
+      if (dto.status === UpdateAppointmentStatusEnum.COMPLETED) {
+        const Consultation = this.sequelize.models.Consultation;
+        if (Consultation) {
+          await Consultation.update(
+            { is_completed: true },
+            { where: { appointment_id: appointment.id, is_completed: false } },
+          );
+
+          await Consultation.update(
+            { is_completed: true },
+            {
+              where: {
+                patient_id: appointment.patient_id,
+                doctor_id: appointment.doctor_id,
+                is_completed: false,
+              },
+            },
+          );
+        }
+      }
+
       let msg = 'Status updated.';
       if (dto.status === UpdateAppointmentStatusEnum.CONFIRMED)
         msg = 'Appointment confirmed.';
@@ -1354,13 +1380,13 @@ export class AppointmentService {
       // 2. Nullify appointment_id in TreatmentPlanPhases
       await this.phaseModel.update(
         { appointment_id: null },
-        { where: { appointment_id: id }, transaction }
+        { where: { appointment_id: id }, transaction },
       );
 
       // 3. Nullify appointment_id in Consultations
       await this.sequelize.models.Consultation.update(
         { appointment_id: null },
-        { where: { appointment_id: id }, transaction }
+        { where: { appointment_id: id }, transaction },
       );
 
       // 5. Delete the appointment itself

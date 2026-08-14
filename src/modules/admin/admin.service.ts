@@ -6,7 +6,10 @@ import { StatusCode } from '../../common/enums/status-code.enum';
 import { User, UserRole, UserStatus } from '../auth/entities/user.model';
 import { Organization } from '../organization/entities/organization.model';
 import { Branch } from '../organization/entities/branch.model';
-import { Appointment, AppointmentStatus } from '../appointment/entities/appointment.model';
+import {
+  Appointment,
+  AppointmentStatus,
+} from '../appointment/entities/appointment.model';
 import { Patient } from '../patient/entities/patient.model';
 import { Plan } from '../subscription/entities/plan.model';
 import { Invoice } from '../billing/entities/invoice.model';
@@ -30,7 +33,8 @@ export class AdminService {
     @InjectModel(Plan) private planModel: typeof Plan,
     @InjectModel(Invoice) private invoiceModel: typeof Invoice,
     @InjectModel(Consultation) private consultationModel: typeof Consultation,
-    @InjectModel(TreatmentPlan) private treatmentPlanModel: typeof TreatmentPlan,
+    @InjectModel(TreatmentPlan)
+    private treatmentPlanModel: typeof TreatmentPlan,
     @InjectModel(Payment) private paymentModel: typeof Payment,
     @InjectModel(Expense) private expenseModel: typeof Expense,
     @InjectModel(UserBranch) private userBranchModel: typeof UserBranch,
@@ -54,7 +58,10 @@ export class AdminService {
       return users;
     } catch (error) {
       this.logger.error('[getAllUsers] Error:', error);
-      throw new HttpException('Failed to fetch users.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Failed to fetch users.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -65,8 +72,14 @@ export class AdminService {
         throw new HttpException('User not found.', StatusCode.NOT_FOUND);
       }
 
-      if (user.role === ('MAIN_ADMIN' as any) || user.email === 'dentcare360.official@gmail.com') {
-        throw new HttpException('Cannot modify default MAIN_ADMIN account.', StatusCode.FORBIDDEN);
+      if (
+        user.role === ('MAIN_ADMIN' as any) ||
+        user.email === 'dentcare360.official@gmail.com'
+      ) {
+        throw new HttpException(
+          'Cannot modify default MAIN_ADMIN account.',
+          StatusCode.FORBIDDEN,
+        );
       }
 
       await user.update({
@@ -86,7 +99,10 @@ export class AdminService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error('[toggleUserStatus] Error:', error);
-      throw new HttpException('Failed to update user status.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Failed to update user status.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -101,7 +117,10 @@ export class AdminService {
       });
     } catch (error) {
       this.logger.error('[getPlans] Error:', error);
-      throw new HttpException('Failed to fetch plans.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Failed to fetch plans.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -110,7 +129,10 @@ export class AdminService {
       return await this.planModel.create(dto);
     } catch (error) {
       this.logger.error('[createPlan] Error:', error);
-      throw new HttpException('Failed to create plan.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Failed to create plan.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -125,7 +147,10 @@ export class AdminService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error('[updatePlan] Error:', error);
-      throw new HttpException('Failed to update plan.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Failed to update plan.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -148,13 +173,25 @@ export class AdminService {
   ) {
     try {
       if (userId) {
-        return await this.getUserSpecificStats(userId, appointmentPeriod, treatmentPeriod, financePeriod);
+        return await this.getUserSpecificStats(
+          userId,
+          appointmentPeriod,
+          treatmentPeriod,
+          financePeriod,
+        );
       } else {
-        return await this.getSystemWideStats(appointmentPeriod, treatmentPeriod, financePeriod);
+        return await this.getSystemWideStats(
+          appointmentPeriod,
+          treatmentPeriod,
+          financePeriod,
+        );
       }
     } catch (error) {
       this.logger.error('[getDashboardStats] Error:', error);
-      throw new HttpException('Failed to load dashboard data.', StatusCode.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        'Failed to load dashboard data.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 
@@ -170,7 +207,9 @@ export class AdminService {
     const endOfLastMonth = now.subtract(1, 'month').endOf('month').toDate();
 
     // 1. Total Metrics
-    const totalClinics = await this.branchModel.count({ where: { is_active: true } });
+    const totalClinics = await this.branchModel.count({
+      where: { is_active: true },
+    });
     const totalUsers = await this.userModel.count({
       where: { is_deleted: false, role: { [Op.ne]: 'MAIN_ADMIN' as any } },
     });
@@ -179,14 +218,37 @@ export class AdminService {
 
     // 2. Growth Rates calculation
     const growth = {
-      clinics: await this.calculateGrowth(this.branchModel, startOfCurrentMonth, startOfLastMonth, endOfLastMonth, { is_active: true }),
-      users: await this.calculateGrowth(this.userModel, startOfCurrentMonth, startOfLastMonth, endOfLastMonth, { is_deleted: false, role: { [Op.ne]: 'MAIN_ADMIN' as any } }),
-      appointments: await this.calculateGrowth(this.appointmentModel, startOfCurrentMonth, startOfLastMonth, endOfLastMonth),
-      patients: await this.calculateGrowth(this.patientModel, startOfCurrentMonth, startOfLastMonth, endOfLastMonth),
+      clinics: await this.calculateGrowth(
+        this.branchModel,
+        startOfCurrentMonth,
+        startOfLastMonth,
+        endOfLastMonth,
+        { is_active: true },
+      ),
+      users: await this.calculateGrowth(
+        this.userModel,
+        startOfCurrentMonth,
+        startOfLastMonth,
+        endOfLastMonth,
+        { is_deleted: false, role: { [Op.ne]: 'MAIN_ADMIN' as any } },
+      ),
+      appointments: await this.calculateGrowth(
+        this.appointmentModel,
+        startOfCurrentMonth,
+        startOfLastMonth,
+        endOfLastMonth,
+      ),
+      patients: await this.calculateGrowth(
+        this.patientModel,
+        startOfCurrentMonth,
+        startOfLastMonth,
+        endOfLastMonth,
+      ),
     };
 
     // 3. Appointment Overview (date range check)
-    const appointmentOverview = await this.getAppointmentOverviewData(appointmentPeriod);
+    const appointmentOverview =
+      await this.getAppointmentOverviewData(appointmentPeriod);
 
     // 4. Appointment Status Distribution
     const appointmentStatus = await this.getAppointmentStatusDistribution();
@@ -224,25 +286,45 @@ export class AdminService {
     }
 
     const orgId = user.organization_id;
-    const userBranches = await this.userBranchModel.findAll({ where: { user_id: userId } });
-    const branchIds = userBranches.map(b => b.branch_id);
+    const userBranches = await this.userBranchModel.findAll({
+      where: { user_id: userId },
+    });
+    const branchIds = userBranches.map((b) => b.branch_id);
 
     // 1. User Specific Metrics
     const totalClinics = branchIds.length;
-    const totalPatients = await this.patientModel.count({ where: { organization_id: orgId } });
-    const totalAppointments = await this.appointmentModel.count({ where: { doctor_id: userId } });
-    const totalInvoices = await this.invoiceModel.count({ where: { organization_id: orgId } });
-    const totalTreatments = await this.treatmentPlanModel.count({ where: { organization_id: orgId } });
-    const totalConsultations = await this.consultationModel.count({ where: { organization_id: orgId } });
+    const totalPatients = await this.patientModel.count({
+      where: { organization_id: orgId },
+    });
+    const totalAppointments = await this.appointmentModel.count({
+      where: { doctor_id: userId },
+    });
+    const totalInvoices = await this.invoiceModel.count({
+      where: { organization_id: orgId },
+    });
+    const totalTreatments = await this.treatmentPlanModel.count({
+      where: { organization_id: orgId },
+    });
+    const totalConsultations = await this.consultationModel.count({
+      where: { organization_id: orgId },
+    });
 
     // 2. User Specific Appointment Overview
-    const appointmentOverview = await this.getAppointmentOverviewData(appointmentPeriod, { doctor_id: userId });
+    const appointmentOverview = await this.getAppointmentOverviewData(
+      appointmentPeriod,
+      { doctor_id: userId },
+    );
 
     // 3. User Specific Appointment Status
-    const appointmentStatus = await this.getAppointmentStatusDistribution({ doctor_id: userId });
+    const appointmentStatus = await this.getAppointmentStatusDistribution({
+      doctor_id: userId,
+    });
 
     // 4. User Specific Profit & Loss (by their Organization)
-    const profitLoss = await this.getProfitLossTrend(financePeriod, orgId || undefined);
+    const profitLoss = await this.getProfitLossTrend(
+      financePeriod,
+      orgId || undefined,
+    );
 
     return {
       stats: {
@@ -289,13 +371,18 @@ export class AdminService {
         return currentMonthCount > 0 ? 100 : 0;
       }
 
-      return Math.round(((currentMonthCount - lastMonthCount) / lastMonthCount) * 100);
+      return Math.round(
+        ((currentMonthCount - lastMonthCount) / lastMonthCount) * 100,
+      );
     } catch (e) {
       return 0;
     }
   }
 
-  private async getAppointmentOverviewData(period: string, extraWhere: any = {}) {
+  private async getAppointmentOverviewData(
+    period: string,
+    extraWhere: any = {},
+  ) {
     let dateFrom = dayjs().subtract(7, 'day').startOf('day').toDate();
     let format = 'ddd'; // E.g., Mon, Tue
     let diffUnit: dayjs.ManipulateType = 'day';
@@ -329,16 +416,22 @@ export class AdminService {
     });
 
     const groups: { [key: string]: number } = {};
-    
+
     // Pre-populate keys to ensure the chart shows continuous points
     for (let i = 0; i < diffCount; i++) {
       let key = '';
       if (period === 'today') {
         key = dayjs().startOf('day').add(i, 'hour').format(format);
       } else if (period === 'last_month') {
-        key = dayjs().subtract(1, 'month').startOf('month').add(i, 'day').format(format);
+        key = dayjs()
+          .subtract(1, 'month')
+          .startOf('month')
+          .add(i, 'day')
+          .format(format);
       } else {
-        key = dayjs().subtract(diffCount - 1 - i, diffUnit).format(format);
+        key = dayjs()
+          .subtract(diffCount - 1 - i, diffUnit)
+          .format(format);
       }
       groups[key] = 0;
     }
@@ -350,7 +443,7 @@ export class AdminService {
       }
     });
 
-    return Object.keys(groups).map(key => ({
+    return Object.keys(groups).map((key) => ({
       day: key,
       count: groups[key],
     }));
@@ -373,13 +466,22 @@ export class AdminService {
 
     appts.forEach((appt) => {
       const s = appt.status;
-      if (s === AppointmentStatus.CONFIRMED || s === AppointmentStatus.RESCHEDULED) {
+      if (
+        s === AppointmentStatus.CONFIRMED ||
+        s === AppointmentStatus.RESCHEDULED
+      ) {
         stats.confirmed++;
-      } else if (s === AppointmentStatus.COMPLETED || s === AppointmentStatus.IN_PROGRESS) {
+      } else if (
+        s === AppointmentStatus.COMPLETED ||
+        s === AppointmentStatus.IN_PROGRESS
+      ) {
         stats.completed++;
       } else if (s === AppointmentStatus.SCHEDULED) {
         stats.pending++;
-      } else if (s === AppointmentStatus.CANCELLED || s === AppointmentStatus.NO_SHOW) {
+      } else if (
+        s === AppointmentStatus.CANCELLED ||
+        s === AppointmentStatus.NO_SHOW
+      ) {
         stats.cancelled++;
       }
     });
@@ -399,11 +501,20 @@ export class AdminService {
 
     return appts.map((appt) => {
       let statusStr = 'Pending';
-      if (appt.status === AppointmentStatus.CONFIRMED || appt.status === AppointmentStatus.RESCHEDULED) {
+      if (
+        appt.status === AppointmentStatus.CONFIRMED ||
+        appt.status === AppointmentStatus.RESCHEDULED
+      ) {
         statusStr = 'Confirmed';
-      } else if (appt.status === AppointmentStatus.COMPLETED || appt.status === AppointmentStatus.IN_PROGRESS) {
+      } else if (
+        appt.status === AppointmentStatus.COMPLETED ||
+        appt.status === AppointmentStatus.IN_PROGRESS
+      ) {
         statusStr = 'Completed';
-      } else if (appt.status === AppointmentStatus.CANCELLED || appt.status === AppointmentStatus.NO_SHOW) {
+      } else if (
+        appt.status === AppointmentStatus.CANCELLED ||
+        appt.status === AppointmentStatus.NO_SHOW
+      ) {
         statusStr = 'Cancelled';
       }
 
@@ -412,7 +523,20 @@ export class AdminService {
       const utcYear = scheduledDate.getUTCFullYear();
       const utcMonth = scheduledDate.getUTCMonth();
       const utcDay = scheduledDate.getUTCDate();
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       const dateStr = `${utcDay < 10 ? '0' + utcDay : utcDay} ${months[utcMonth]} ${utcYear}`;
 
       let utcHours = scheduledDate.getUTCHours();
@@ -424,8 +548,12 @@ export class AdminService {
 
       return {
         id: appt.id,
-        patientName: appt.patient ? `${appt.patient.first_name} ${appt.patient.last_name}` : 'Unknown Patient',
-        doctorName: appt.doctor ? `Dr. ${appt.doctor.first_name} ${appt.doctor.last_name}` : 'Unknown Doctor',
+        patientName: appt.patient
+          ? `${appt.patient.first_name} ${appt.patient.last_name}`
+          : 'Unknown Patient',
+        doctorName: appt.doctor
+          ? `Dr. ${appt.doctor.first_name} ${appt.doctor.last_name}`
+          : 'Unknown Doctor',
         date: dateStr,
         time: timeStr,
         status: statusStr,
@@ -473,17 +601,27 @@ export class AdminService {
       whereExpense.organization_id = organizationId;
     }
 
-    const payments = await this.paymentModel.findAll({ where: wherePayment, raw: true });
-    const expenses = await this.expenseModel.findAll({ where: whereExpense, raw: true });
+    const payments = await this.paymentModel.findAll({
+      where: wherePayment,
+      raw: true,
+    });
+    const expenses = await this.expenseModel.findAll({
+      where: whereExpense,
+      raw: true,
+    });
 
-    const trendMap: { [key: string]: { income: number; expenses: number; net_profit: number } } = {};
+    const trendMap: {
+      [key: string]: { income: number; expenses: number; net_profit: number };
+    } = {};
 
     for (let i = 0; i < diffCount; i++) {
       let key = '';
       if (period === 'today') {
         key = dayjs().startOf('day').add(i, 'hour').format(format);
       } else {
-        key = dayjs().subtract(diffCount - 1 - i, diffUnit).format(format);
+        key = dayjs()
+          .subtract(diffCount - 1 - i, diffUnit)
+          .format(format);
       }
       trendMap[key] = { income: 0, expenses: 0, net_profit: 0 };
     }
@@ -491,18 +629,18 @@ export class AdminService {
     payments.forEach((payment) => {
       const key = dayjs(payment.payment_date).format(format);
       if (trendMap[key]) {
-        trendMap[key].income += parseFloat(payment.amount as any || 0);
+        trendMap[key].income += parseFloat((payment.amount as any) || 0);
       }
     });
 
     expenses.forEach((expense) => {
       const key = dayjs(expense.expense_date).format(format);
       if (trendMap[key]) {
-        trendMap[key].expenses += parseFloat(expense.amount as any || 0);
+        trendMap[key].expenses += parseFloat((expense.amount as any) || 0);
       }
     });
 
-    return Object.keys(trendMap).map(key => {
+    return Object.keys(trendMap).map((key) => {
       const income = trendMap[key].income;
       const exp = trendMap[key].expenses;
       return {
