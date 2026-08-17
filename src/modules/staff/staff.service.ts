@@ -556,4 +556,53 @@ export class StaffService {
       );
     }
   }
+
+  async searchReferrals(reqUser: any, search: string) {
+    try {
+      const searchTerm = (search || '').trim();
+
+      // Search across ALL registered OWNER and DOCTOR users system-wide (not org-scoped)
+      const whereClause: any = {
+        is_deleted: false,
+        role: { [Op.in]: [Role.OWNER, Role.DOCTOR] },
+      };
+
+      // Apply name/phone search filter if provided
+      if (searchTerm.length > 0) {
+        whereClause[Op.and] = [
+          {
+            [Op.or]: [
+              { first_name: { [Op.iLike]: `%${searchTerm}%` } },
+              { last_name: { [Op.iLike]: `%${searchTerm}%` } },
+              { phone: { [Op.iLike]: `%${searchTerm}%` } },
+            ],
+          },
+        ];
+      }
+
+      const users = await this.userModel.findAll({
+        where: whereClause,
+        limit: 50,
+        order: [
+          ['first_name', 'ASC'],
+          ['last_name', 'ASC'],
+        ],
+        attributes: ['id', 'first_name', 'last_name', 'phone', 'role'],
+      });
+
+      return users.map((u) => ({
+        id: u.id,
+        name: `${u.first_name} ${u.last_name}`.trim(),
+        phone: u.phone || '',
+        role: u.role,
+      }));
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[searchReferrals] Error:`, error);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

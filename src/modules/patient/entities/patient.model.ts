@@ -10,6 +10,7 @@ import {
   ForeignKey,
   CreatedAt,
   UpdatedAt,
+  HasMany,
 } from 'sequelize-typescript';
 import { Organization } from '../../organization/entities/organization.model';
 import { Branch } from '../../organization/entities/branch.model';
@@ -99,6 +100,18 @@ export class Patient extends Model {
   @AllowNull(true)
   @Column(DataType.TEXT)
   notes: string;
+
+  @AllowNull(true)
+  @Column(DataType.STRING)
+  referred_by: string;
+
+  @ForeignKey(() => User)
+  @AllowNull(true)
+  @Column(DataType.UUID)
+  referred_by_id: string;
+
+  @BelongsTo(() => User, { foreignKey: 'referred_by_id', as: 'referredByUser' })
+  referred_by_user: User;
 
   @AllowNull(false)
   @Column(DataType.INTEGER)

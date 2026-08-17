@@ -54,6 +54,10 @@ export class UpdatePatientDto {
   @IsOptional()
   referred_by?: string;
 
+  @IsUUID()
+  @IsOptional()
+  referred_by_id?: string;
+
   @IsString()
   @IsOptional()
   notes?: string;

@@ -31,6 +31,16 @@ export class StaffController {
     private readonly authService: AuthService,
   ) {}
 
+  @Get('referral-search')
+  @UseGuards(JwtAuthGuard)
+  async searchReferrals(
+    @CurrentUser() user: any,
+    @Query('search') search?: string,
+  ) {
+    const data = await this.staffService.searchReferrals(user, search || '');
+    return { message: 'Referral suggestions fetched.', data };
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.OWNER, Role.BRANCH_ADMIN)

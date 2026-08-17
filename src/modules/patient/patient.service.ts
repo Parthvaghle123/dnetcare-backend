@@ -106,6 +106,8 @@ export class PatientService {
           gender: dto.gender,
           address: dto.address || null,
           city: dto.city || null,
+          referred_by: dto.referred_by || null,
+          referred_by_id: dto.referred_by_id || null,
           notes: dto.notes || null,
           total_phases: 0,
           is_active: true,
@@ -361,6 +363,8 @@ export class PatientService {
       if (dto.address !== undefined) updateData.address = dto.address;
       if (dto.city !== undefined) updateData.city = dto.city;
       if (dto.notes !== undefined) updateData.notes = dto.notes;
+      if (dto.referred_by !== undefined) updateData.referred_by = dto.referred_by;
+      if (dto.referred_by_id !== undefined) updateData.referred_by_id = dto.referred_by_id;
 
       if (dto.date_of_birth !== undefined) {
         updateData.date_of_birth = dto.date_of_birth;
