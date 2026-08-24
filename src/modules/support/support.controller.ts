@@ -3,6 +3,8 @@ import {
   Post,
   Get,
   Patch,
+  Put,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -41,5 +43,18 @@ export class SupportController {
   @Patch(':id/status')
   async updateStatus(@Param('id') id: string, @Body('status') status: string) {
     return this.supportService.updateTicketStatus(id, status);
+  }
+
+  @Put(':id')
+  async updateTicket(
+    @Param('id') id: string,
+    @Body() dto: CreateSupportTicketDto,
+  ) {
+    return this.supportService.updateTicket(id, dto);
+  }
+
+  @Delete(':id')
+  async deleteTicket(@Param('id') id: string) {
+    return this.supportService.deleteTicket(id);
   }
 }

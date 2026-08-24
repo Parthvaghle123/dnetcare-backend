@@ -182,4 +182,67 @@ export class SupportService {
       );
     }
   }
+
+  async updateTicket(id: string, dto: any) {
+    try {
+      const ticket = await this.supportTicketModel.findByPk(id);
+      if (!ticket) {
+        throw new HttpException(
+          'Support ticket not found.',
+          StatusCode.NOT_FOUND,
+        );
+      }
+
+      const { problem_name, description, image_url, video_url } = dto;
+
+      if (!problem_name || !description) {
+        throw new HttpException(
+          'Problem name and description are required.',
+          StatusCode.BAD_REQUEST,
+        );
+      }
+
+      await ticket.update({
+        problem_name,
+        description,
+        image_url: image_url || null,
+        video_url: video_url || null,
+      });
+
+      return { success: true, message: 'Support ticket updated successfully.', data: ticket };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error('[updateTicket] Error updating ticket:', error);
+      throw new HttpException(
+        'Failed to update support ticket.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async deleteTicket(id: string) {
+    try {
+      const ticket = await this.supportTicketModel.findByPk(id);
+      if (!ticket) {
+        throw new HttpException(
+          'Support ticket not found.',
+          StatusCode.NOT_FOUND,
+        );
+      }
+
+      await ticket.destroy();
+      return { success: true, message: 'Support ticket deleted successfully.' };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error('[deleteTicket] Error deleting ticket:', error);
+      throw new HttpException(
+        'Failed to delete support ticket.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }
