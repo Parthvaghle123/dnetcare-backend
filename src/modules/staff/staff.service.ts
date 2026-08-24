@@ -82,7 +82,11 @@ export class StaffService {
       } else if (filters.status) {
         whereClause.status = filters.status;
       } else {
-        whereClause.status = { [Op.ne]: UserStatus.PENDING };
+        if (filters.is_active === 'true') {
+          whereClause.status = { [Op.in]: [UserStatus.ACTIVE, UserStatus.PENDING] };
+        } else {
+          whereClause.status = { [Op.ne]: UserStatus.PENDING };
+        }
       }
 
       if (filters.is_deleted !== undefined) {
@@ -267,11 +271,35 @@ export class StaffService {
 
       await staff.update(dto);
 
+      const fullStaff = await this.userModel.findOne({
+        where: { id: staff.id },
+        include: [{ model: UserBranch, include: [Branch] }],
+      });
+
+      if (!fullStaff) {
+        throw new HttpException(
+          'Staff details could not be retrieved.',
+          StatusCode.INTERNAL_SERVER_ERROR,
+        );
+      }
+
       return {
-        id: staff.id,
-        first_name: staff.first_name,
-        last_name: staff.last_name,
-        phone: staff.phone,
+        id: fullStaff.id,
+        first_name: fullStaff.first_name,
+        last_name: fullStaff.last_name,
+        email: fullStaff.email,
+        phone: fullStaff.phone,
+        role: fullStaff.role === UserRole.OWNER ? Role.DOCTOR : fullStaff.role,
+        status: fullStaff.status,
+        is_active: fullStaff.is_active,
+        is_deleted: fullStaff.is_deleted,
+        branches:
+          fullStaff.user_branches?.map((ub: any) => ({
+            id: ub.branch.id,
+            name: ub.branch.name,
+            color_code: ub.branch.color_code,
+            is_primary: ub.is_primary,
+          })) || [],
       };
     } catch (error) {
       if (error instanceof HttpException) throw error;

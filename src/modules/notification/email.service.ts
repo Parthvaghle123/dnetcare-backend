@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
-  constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService) { }
 
   async sendOtpEmail(
     email: string,
@@ -40,6 +40,17 @@ export class EmailService {
 
     const accentColor = '#2563eb';
 
+    const otpBoxes = otp
+      .split('')
+      .map(
+        (digit) => `
+        <div style="display: inline-block; width: 44px; height: 54px; line-height: 54px; text-align: center; background-color: #ffffff; border: 1px solid #dbeafe; border-radius: 8px; font-size: 30px; font-weight: 700; color: #2563eb; margin: 0 3px; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.05); vertical-align: middle;">
+          ${digit}
+        </div>
+      `,
+      )
+      .join('');
+
     const html = `
     <!DOCTYPE html>
     <html lang="en">
@@ -57,47 +68,91 @@ export class EmailService {
       <div class="wrapper">
         <div class="container">
           <!-- Header -->
-          <div style="background: #2563eb; padding: 40px 20px; text-align: center; color: #ffffff;">
+          <div style="background: linear-gradient(135deg, #092c74 0%, #153c89 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
             <div style="display: inline-block; text-align: center;">
-              <div style="display: inline-block; vertical-align: middle; margin-right: 16px; background-color: #ffffff; width: 64px; height: 64px; border-radius: 50%; line-height: 64px; font-size: 32px;"><img src="https://res.cloudinary.com/dve9etzft/image/upload/v1784205052/dentcare360_logo.png" width="64" height="64" alt="DentCare360 Logo" style="display: block; border-radius: 50%;" /></div>
+              <img src="https://res.cloudinary.com/dve9etzft/image/upload/v1784205052/dentcare360_logo.png" width="100" height="100" alt="DentCare360 Logo" style="display: inline-block; vertical-align: middle; margin-right: 16px; border-radius: 50%;" />
               <div style="display: inline-block; vertical-align: middle; text-align: left;">
-                <h1 style="font-size: 28px; font-weight: 700; margin: 0; letter-spacing: -0.5px; color: #ffffff;">DentCare360</h1>
-                <p style="font-size: 14px; color: #bfdbfe; margin: 4px 0 0 0;">Smart Care. Better Dentistry.</p>
+                <h1 style="font-size: 30px; font-weight: 700; margin: 0; letter-spacing: -0.5px; color: #ffffff;">DentCare360</h1>
+                <p style="font-size: 14px; color: #bfdbfe; margin: 4px 0 0 0;">Smart Care. <span style="color: #2dd4bf; font-weight: 600;">Better Dentistry.</span></p>
               </div>
             </div>
           </div>
           
           <!-- Content -->
           <div style="padding: 40px; text-align: center;">
-            <div style="display: inline-block; background-color: #ecfdf5; color: #059669; padding: 6px 16px; border-radius: 9999px; font-size: 13px; font-weight: 600; margin-bottom: 24px;">
-              🔒 Secure Verification
+            <div style="display: inline-block; background-color: #e8f8f0; color: #10b981; padding: 6px 16px; border-radius: 9999px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 24px;">
+              ✔ Secure Verification
             </div>
             
             <h2 style="font-size: 32px; font-weight: 800; color: #0f172a; margin: 0 0 8px 0;">${title}</h2>
-            <p style="font-size: 18px; color: #64748b; margin: 0 0 32px 0;">${subTitle}</p>
+            <p style="font-size: 18px; color: #64748b; margin: 0 0 16px 0;">${subTitle}</p>
+
+            <div style="margin: 24px 0; text-align: center;">
+              <span style="display: inline-block; width: 50px; height: 2px; background: linear-gradient(to right, rgba(37,99,235,0), rgba(37,99,235,1)); vertical-align: middle;"></span>
+              <span style="display: inline-block; margin: 0 10px; color: #2563eb; font-size: 18px; vertical-align: middle; font-weight: bold;">🛡️</span>
+              <span style="display: inline-block; width: 50px; height: 2px; background: linear-gradient(to left, rgba(37,99,235,0), rgba(37,99,235,1)); vertical-align: middle;"></span>
+            </div>
             
             <p style="font-size: 16px; line-height: 1.6; color: #475569; margin: 0 auto 32px auto; max-width: 480px;">${mainMessage}</p>
             
-            <div style="background-color: #f8fafc; border: 2px dashed #93c5fd; border-radius: 12px; padding: 24px; margin-bottom: 32px; display: inline-block; min-width: 240px;">
-              <div style="font-size: 42px; font-weight: 800; letter-spacing: 12px; color: #2563eb; font-family: 'Courier New', Courier, monospace; margin-left: 12px;">${otp}</div>
-              <div style="font-size: 14px; color: #64748b; margin-top: 12px;">Valid for <b style="color: #ef4444;">10 minutes</b> only</div>
-            </div>
-            
-            <p style="font-size: 14px; color: #94a3b8; max-width: 400px; margin: 0 auto;">
-              Please do not share this code with anyone. Our support team will never ask for your verification code.
-            </p>
-          </div>
-          
-          <!-- Footer -->
-          <div style="padding: 32px 40px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
-            <div style="display: inline-block; text-align: left;">
-              <div style="display: inline-block; vertical-align: middle; margin-right: 16px; font-size: 32px;"><img src="https://res.cloudinary.com/dve9etzft/image/upload/v1784205052/dentcare360_logo.png" width="32" height="32" alt="DentCare360 Logo" style="display: block; border-radius: 50%;" /></div>
-              <div style="display: inline-block; vertical-align: middle; color: #64748b; font-size: 14px; line-height: 1.5; margin: 0;">
-                Thank you,<br>
-                <strong style="color: #0f172a; font-weight: 600; display: block;">DentCare360 Team</strong>
-                <a href="https://dentcare360.in" style="color: #2563eb; text-decoration: none; font-weight: 600;">dentcare360.in</a>
+            <!-- Code Box -->
+            <table cellpadding="0" cellspacing="0" border="0" style="width: 100%; background-color: #f5f8ff; border: 1px solid #e0e7ff; border-radius: 12px; padding: 24px; margin: 32px 0; box-sizing: border-box;">
+              <tr>
+                <td align="center" valign="middle" style="width: 100%;">
+                  <div style="font-size: 11px; font-weight: 700; color: #4f46e5; letter-spacing: 0.5px; margin-bottom: 16px; text-transform: uppercase;">YOUR VERIFICATION CODE</div>
+                  <div style="margin-bottom: 16px; white-space: nowrap;">
+                    ${otpBoxes}
+                  </div>
+                  <div style="font-size: 13px; color: #64748b; font-weight: 500;">
+                    <img src="https://img.icons8.com/ios/100/2563eb/time.png" width="16" height="16" alt="Time" style="vertical-align: middle; display: inline-block; margin-right: 6px;" />
+                    Valid for <b style="color: #ef4444; font-weight: 700;">10 minutes</b> only
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Warning Banner -->
+            <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; padding: 16px 20px; text-align: left; display: table; width: 100%; box-sizing: border-box; margin-top: 24px;">
+              <div style="display: table-cell; vertical-align: middle; width: 44px; padding-right: 12px;">
+                <div style="background-color: #f59e0b; width: 36px; height: 36px; border-radius: 50%; text-align: center; line-height: 36px;">
+                  <img src="https://img.icons8.com/ios-filled/100/ffffff/shield.png" width="18" height="18" alt="Shield" style="vertical-align: middle; display: inline-block;" />
+                </div>
+              </div>
+              <div style="display: table-cell; vertical-align: middle;">
+                <div style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">Please do not share this code with anyone.</div>
+                <div style="font-size: 13px; color: #64748b; margin: 0;">Our support team will never ask for your verification code.</div>
               </div>
             </div>
+            
+            <!-- Separator -->
+            <div style="border-top: 1px solid #f1f5f9; margin-top: 32px; margin-bottom: 24px;"></div>
+            
+            <!-- Sign-off -->
+            <div style="text-align: center; font-size: 14px; color: #64748b; line-height: 1.5;">
+              Thank you,<br>
+              <strong style="color: #0f172a; font-weight: 700; display: block; margin-top: 4px;">DentCare360 Team</strong>
+              <a href="https://dentcare360.in" style="color: #2563eb; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 4px;">dentcare360.in</a>
+            </div>
+          </div>
+          
+          <!-- Bottom Badges Bar -->
+          <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-radius: 0 0 12px 12px;">
+            <table cellpadding="0" cellspacing="0" border="0" style="width: 100%; padding: 16px 12px; text-align: center;">
+              <tr>
+                <td align="center" style="width: 33%; font-size: 12px; color: #475569; font-weight: 500; border-right: 1px solid #e2e8f0;">
+                  <img src="https://img.icons8.com/ios-filled/100/2563eb/shield.png" width="14" height="14" alt="Shield" style="vertical-align: middle; display: inline-block; margin-right: 6px;" />
+                  <span style="vertical-align: middle;">100% Secure</span>
+                </td>
+                <td align="center" style="width: 33%; font-size: 12px; color: #475569; font-weight: 500; border-right: 1px solid #e2e8f0;">
+                  <img src="https://img.icons8.com/ios-filled/100/2563eb/lock.png" width="14" height="14" alt="Lock" style="vertical-align: middle; display: inline-block; margin-right: 6px;" />
+                  <span style="vertical-align: middle;">Trusted & Reliable</span>
+                </td>
+                <td align="center" style="width: 33%; font-size: 12px; color: #475569; font-weight: 500;">
+                  <img src="https://img.icons8.com/ios-filled/100/2563eb/like.png" width="14" height="14" alt="Heart" style="vertical-align: middle; display: inline-block; margin-right: 6px;" />
+                  <span style="vertical-align: middle;">Care You Can Count On</span>
+                </td>
+              </tr>
+            </table>
           </div>
         </div>
       </div>
@@ -164,7 +219,7 @@ export class EmailService {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Clinic Invitation</title>
+      <title>${title}</title>
       <style>
         body { margin: 0; padding: 0; background-color: #f4f7f6; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
         .wrapper { width: 100%; background-color: #f4f7f6; padding: 40px 0; }
@@ -175,55 +230,94 @@ export class EmailService {
       <div class="wrapper">
         <div class="container">
           <!-- Header -->
-          <div style="background: #2563eb; padding: 40px 20px; text-align: center; color: #ffffff;">
+          <div style="background: linear-gradient(135deg, #092c74 0%, #153c89 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
             <div style="display: inline-block; text-align: center;">
-              <div style="display: inline-block; vertical-align: middle; margin-right: 16px; background-color: #ffffff; width: 64px; height: 64px; border-radius: 50%; line-height: 64px; font-size: 32px;"><img src="https://res.cloudinary.com/dve9etzft/image/upload/v1784205052/dentcare360_logo.png" width="64" height="64" alt="DentCare360 Logo" style="display: block; border-radius: 50%;" /></div>
+              <img src="https://res.cloudinary.com/dve9etzft/image/upload/v1784205052/dentcare360_logo.png" width="100" height="100" alt="DentCare360 Logo" style="display: inline-block; vertical-align: middle; margin-right: 16px; border-radius: 50%;" />
               <div style="display: inline-block; vertical-align: middle; text-align: left;">
-                <h1 style="font-size: 28px; font-weight: 700; margin: 0; letter-spacing: -0.5px; color: #ffffff;">DentCare360</h1>
-                <p style="font-size: 14px; color: #bfdbfe; margin: 4px 0 0 0;">Smart Care. Better Dentistry.</p>
+                <h1 style="font-size: 30px; font-weight: 700; margin: 0; letter-spacing: -0.5px; color: #ffffff;">DentCare360</h1>
+                <p style="font-size: 14px; color: #bfdbfe; margin: 4px 0 0 0;">Smart Care. <span style="color: #2dd4bf; font-weight: 600;">Better Dentistry.</span></p>
               </div>
             </div>
           </div>
           
           <!-- Content -->
           <div style="padding: 40px; text-align: center;">
-            <div style="display: inline-block; background-color: #ecfdf5; color: #059669; padding: 6px 16px; border-radius: 9999px; font-size: 13px; font-weight: 600; margin-bottom: 24px;">
-              🔒 Secure Invitation
+            <div style="display: inline-block; background-color: #e8f8f0; color: #10b981; padding: 6px 16px; border-radius: 9999px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 24px;">
+              ✔ Secure Invitation
             </div>
             
             <h2 style="font-size: 32px; font-weight: 800; color: #0f172a; margin: 0 0 8px 0;">${title}</h2>
-            <p style="font-size: 18px; color: #64748b; margin: 0 0 32px 0;">${subTitle}</p>
-            
-            <div style="margin: 32px 0; text-align: center;">
-              <span style="display: inline-block; width: 80px; border-top: 1px solid #e2e8f0; vertical-align: middle;"></span>
-              <span style="display: inline-block; background-color: #eff6ff; color: #2563eb; width: 32px; height: 32px; border-radius: 50%; border: 4px solid #ffffff; line-height: 32px; text-align: center; vertical-align: middle; font-size: 18px; font-weight: bold; margin: 0 12px;">+</span>
-              <span style="display: inline-block; width: 80px; border-top: 1px solid #e2e8f0; vertical-align: middle;"></span>
-            </div>
+            <p style="font-size: 18px; color: #64748b; margin: 0 0 16px 0;">${subTitle}</p>
 
+            <div style="margin: 24px 0; text-align: center;">
+              <span style="display: inline-block; width: 50px; height: 2px; background: linear-gradient(to right, rgba(37,99,235,0), rgba(37,99,235,1)); vertical-align: middle;"></span>
+              <span style="display: inline-block; margin: 0 10px; color: #2563eb; font-size: 18px; vertical-align: middle; font-weight: bold;">🛡️</span>
+              <span style="display: inline-block; width: 50px; height: 2px; background: linear-gradient(to left, rgba(37,99,235,0), rgba(37,99,235,1)); vertical-align: middle;"></span>
+            </div>
+            
             <p style="font-size: 16px; line-height: 1.6; color: #475569; margin: 0 auto 32px auto; max-width: 480px;">${mainMessage}</p>
             
-            <a href="${inviteLink}" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-size: 18px; font-weight: 600; text-decoration: none; padding: 16px 36px; border-radius: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
-              👤 Accept Invitation
-            </a>
-            
-            <div style="border-top: 1px dashed #cbd5e1; margin: 40px 0;"></div>
+            <!-- Button Card -->
+            <table cellpadding="0" cellspacing="0" border="0" style="width: 100%; background-color: #f5f8ff; border: 1px solid #e0e7ff; border-radius: 12px; padding: 24px; margin: 32px 0; box-sizing: border-box;">
+              <tr>
+                <td align="center" valign="middle" style="width: 100%;">
+                  <div style="font-size: 11px; font-weight: 700; color: #4f46e5; letter-spacing: 0.5px; margin-bottom: 16px; text-transform: uppercase;">CLINIC STAFF ACCESS</div>
+                  <div style="margin-bottom: 24px;">
+                    <a href="${inviteLink}" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-size: 16px; font-weight: 600; text-decoration: none; padding: 16px 36px; border-radius: 8px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);">
+                      👤 Accept Invitation
+                    </a>
+                  </div>
+                  <div style="border-top: 1px dashed #cbd5e1; margin: 20px 0;"></div>
+                  <p style="font-size: 13px; color: #64748b; margin: 0 0 12px 0;">Or copy and paste this URL into your browser:</p>
+                  <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; text-align: left; word-break: break-all;">
+                    <a href="${inviteLink}" style="color: #2563eb; font-size: 13px; text-decoration: none;">${inviteLink}</a>
+                  </div>
+                </td>
+              </tr>
+            </table>
 
-            <p style="font-size: 14px; color: #64748b; margin: 0 0 12px 0;">Or copy and paste this URL into your browser:</p>
-            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; text-align: left; word-break: break-all;">
-              <a href="${inviteLink}" style="color: #2563eb; font-size: 13px; text-decoration: none;">${inviteLink}</a>
+            <!-- Warning Banner -->
+            <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; padding: 16px 20px; text-align: left; display: table; width: 100%; box-sizing: border-box; margin-top: 24px;">
+              <div style="display: table-cell; vertical-align: middle; width: 44px; padding-right: 12px;">
+                <div style="background-color: #f59e0b; width: 36px; height: 36px; border-radius: 50%; text-align: center; line-height: 36px;">
+                  <img src="https://img.icons8.com/ios-filled/100/ffffff/shield.png" width="18" height="18" alt="Shield" style="vertical-align: middle; display: inline-block;" />
+                </div>
+              </div>
+              <div style="display: table-cell; vertical-align: middle;">
+                <div style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0 0 4px 0;">Please accept the invitation within 24 hours.</div>
+                <div style="font-size: 13px; color: #64748b; margin: 0;">If you did not expect this invitation, please contact your administrator.</div>
+              </div>
+            </div>
+            
+            <!-- Separator -->
+            <div style="border-top: 1px solid #f1f5f9; margin-top: 32px; margin-bottom: 24px;"></div>
+            
+            <!-- Sign-off -->
+            <div style="text-align: center; font-size: 14px; color: #64748b; line-height: 1.5;">
+              Thank you,<br>
+              <strong style="color: #0f172a; font-weight: 700; display: block; margin-top: 4px;">DentCare360 Team</strong>
+              <a href="https://dentcare360.in" style="color: #2563eb; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 4px;">dentcare360.in</a>
             </div>
           </div>
           
-          <!-- Footer -->
-          <div style="padding: 32px 40px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
-            <div style="display: inline-block; text-align: left;">
-              <div style="display: inline-block; vertical-align: middle; margin-right: 16px; font-size: 32px;"><img src="https://res.cloudinary.com/dve9etzft/image/upload/v1784205052/dentcare360_logo.png" width="32" height="32" alt="DentCare360 Logo" style="display: block; border-radius: 50%;" /></div>
-              <div style="display: inline-block; vertical-align: middle; color: #64748b; font-size: 14px; line-height: 1.5; margin: 0;">
-                Thank you,<br>
-                <strong style="color: #0f172a; font-weight: 600; display: block;">DentCare360 Team</strong>
-                <a href="https://dentcare360.in" style="color: #2563eb; text-decoration: none; font-weight: 600;">dentcare360.in</a>
-              </div>
-            </div>
+          <!-- Bottom Badges Bar -->
+          <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-radius: 0 0 12px 12px;">
+            <table cellpadding="0" cellspacing="0" border="0" style="width: 100%; padding: 16px 12px; text-align: center;">
+              <tr>
+                <td align="center" style="width: 33%; font-size: 12px; color: #475569; font-weight: 500; border-right: 1px solid #e2e8f0;">
+                  <img src="https://img.icons8.com/ios-filled/100/2563eb/shield.png" width="14" height="14" alt="Shield" style="vertical-align: middle; display: inline-block; margin-right: 6px;" />
+                  <span style="vertical-align: middle;">100% Secure</span>
+                </td>
+                <td align="center" style="width: 33%; font-size: 12px; color: #475569; font-weight: 500; border-right: 1px solid #e2e8f0;">
+                  <img src="https://img.icons8.com/ios-filled/100/2563eb/lock.png" width="14" height="14" alt="Lock" style="vertical-align: middle; display: inline-block; margin-right: 6px;" />
+                  <span style="vertical-align: middle;">Trusted & Reliable</span>
+                </td>
+                <td align="center" style="width: 33%; font-size: 12px; color: #475569; font-weight: 500;">
+                  <img src="https://img.icons8.com/ios-filled/100/2563eb/like.png" width="14" height="14" alt="Heart" style="vertical-align: middle; display: inline-block; margin-right: 6px;" />
+                  <span style="vertical-align: middle;">Care You Can Count On</span>
+                </td>
+              </tr>
+            </table>
           </div>
         </div>
       </div>

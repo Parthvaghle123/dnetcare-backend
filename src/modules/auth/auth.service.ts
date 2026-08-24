@@ -654,6 +654,37 @@ export class AuthService implements OnModuleInit {
     }
   }
 
+  private async getFormattedUser(userId: string) {
+    const user = await this.userModel.findOne({
+      where: { id: userId },
+      include: [
+        {
+          model: UserBranch,
+          include: [Branch],
+        },
+      ],
+    });
+    if (!user) return null;
+    return {
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role === UserRole.OWNER ? Role.DOCTOR : user.role,
+      status: user.status,
+      is_active: user.is_active,
+      is_deleted: user.is_deleted,
+      branches:
+        user.user_branches?.map((ub: any) => ({
+          id: ub.branch.id,
+          name: ub.branch.name,
+          color_code: ub.branch.color_code,
+          is_primary: ub.is_primary,
+        })) || [],
+    };
+  }
+
   async inviteStaff(dto: InviteStaffDto, reqUser: any) {
     try {
       const inviterOrgId = reqUser.org_id;
@@ -771,11 +802,7 @@ export class AuthService implements OnModuleInit {
             inviteLink,
           );
 
-          return {
-            email: existingUser.email,
-            role: Role.DOCTOR,
-            invite_token: inviteToken,
-          };
+          return await this.getFormattedUser(existingUser.id);
         }
 
         if (existingUser.status === UserStatus.ACTIVE) {
@@ -831,11 +858,7 @@ export class AuthService implements OnModuleInit {
 
       await this.emailService.sendInviteEmail(dto.email, inviteLink);
 
-      return {
-        email: dto.email,
-        role: dto.role,
-        invite_token: inviteToken,
-      };
+      return await this.getFormattedUser(targetUserId);
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[inviteStaff] Error:`, error);
