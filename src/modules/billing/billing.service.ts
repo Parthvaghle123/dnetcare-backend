@@ -841,17 +841,13 @@ export class BillingService {
         throw new NotFoundException('Invoice not found.');
       }
 
-      const paymentCount = await this.paymentModel.count({
-        where: { invoice_id: id },
-      });
-
-      if (paymentCount > 0) {
-        throw new BadRequestException(
-          'Cannot delete invoice with recorded payments. Reverse the payments first.',
-        );
-      }
-
       return await this.sequelize.transaction(async (t) => {
+        // Delete all payments associated with this invoice
+        await this.paymentModel.destroy({
+          where: { invoice_id: id },
+          transaction: t,
+        });
+
         await this.invoiceLineItemModel.destroy({
           where: { invoice_id: id },
           transaction: t,
