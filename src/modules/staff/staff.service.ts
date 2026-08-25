@@ -54,6 +54,10 @@ export class StaffService {
               organization_id: orgId,
             };
 
+      if (reqUser.role === Role.DOCTOR) {
+        whereClause.id = reqUser.id;
+      }
+
       const doctorProfiles = await this.doctorProfileModel.findAll({
         attributes: ['user_id'],
       });
@@ -118,7 +122,13 @@ export class StaffService {
         order: [['created_at', 'DESC']],
       };
 
-      if (reqUser.role === Role.OWNER && !filters.branch_id) {
+      if (
+        (reqUser.role === Role.OWNER ||
+          filters.role === Role.DOCTOR ||
+          !branchFilter ||
+          branchFilter.length === 0) &&
+        !filters.branch_id
+      ) {
         queryOptions.include = [{ model: UserBranch, include: [Branch] }];
       } else {
         queryOptions.include = [

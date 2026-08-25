@@ -43,7 +43,7 @@ export class StaffController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.OWNER, Role.BRANCH_ADMIN)
+  @Roles(Role.OWNER, Role.BRANCH_ADMIN, Role.DOCTOR, Role.RECEPTIONIST)
   async getStaffList(
     @CurrentUser() user: any,
     @Query('branch_id') branch_id?: string,

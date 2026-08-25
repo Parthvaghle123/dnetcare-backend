@@ -732,6 +732,40 @@ export class AuthService implements OnModuleInit {
         );
       }
 
+      const owner = await this.userModel.findOne({
+        where: {
+          organization_id: inviterOrgId,
+          role: UserRole.OWNER,
+        },
+      });
+
+      if (!owner) {
+        throw new HttpException(
+          {
+            message: 'Clinic owner not found.',
+            error: ErrorCode.ACCOUNT_NOT_FOUND,
+          },
+          StatusCode.NOT_FOUND,
+        );
+      }
+
+      const isPlanExpired =
+        !owner.plan ||
+        owner.planStatus !== 'ACTIVE' ||
+        (owner.planExpiresAt &&
+          !isNaN(new Date(owner.planExpiresAt).getTime()) &&
+          new Date() > new Date(owner.planExpiresAt));
+
+      if (isPlanExpired) {
+        throw new HttpException(
+          {
+            message: 'The clinic owner does not have an active subscription or the trial has expired. Please upgrade or activate a plan to invite staff.',
+            error: ErrorCode.FORBIDDEN,
+          },
+          StatusCode.FORBIDDEN,
+        );
+      }
+
       let primaryBranchId = dto.primary_branch_id;
       if (!primaryBranchId) {
         if (dto.branch_ids.length === 1) {
@@ -821,6 +855,11 @@ export class AuthService implements OnModuleInit {
           status: UserStatus.PENDING,
           is_active: true,
           invite_token: inviteToken,
+          plan: owner.plan,
+          planStatus: owner.planStatus,
+          planStartedAt: owner.planStartedAt,
+          planExpiresAt: owner.planExpiresAt,
+          isTrial: owner.isTrial,
         });
 
         await this.userBranchModel.destroy({
@@ -837,6 +876,11 @@ export class AuthService implements OnModuleInit {
           status: UserStatus.PENDING,
           invite_token: inviteToken,
           is_active: true,
+          plan: owner.plan,
+          planStatus: owner.planStatus,
+          planStartedAt: owner.planStartedAt,
+          planExpiresAt: owner.planExpiresAt,
+          isTrial: owner.isTrial,
         });
         targetUserId = createdUser.id;
       }
