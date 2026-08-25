@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
-  constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService) { }
 
   async sendOtpEmail(
     email: string,
@@ -344,7 +344,7 @@ export class EmailService {
             name: 'DentCare360',
             email:
               this.configService.get<string>('MAIL_FROM') ||
-              'noreply@dentcare360.in',
+              'dentcare360.official@gmail.com',
           },
           to: [{ email: email }],
           subject: `DentCare360 - You are invited to join the team`,
@@ -372,7 +372,8 @@ export class EmailService {
   async sendInternshipConfirmationEmail(email: string, name: string) {
     const title = 'Application Received';
     const subTitle = 'Internship Application';
-    const mainMessage = `Dear ${name},<br><br>Thank you for submitting your internship application to DentCare360. We have successfully received your details and will review your profile. If your qualifications match our requirements, we will get back to you shortly.<br><br><b>Important Note:</b> For your security, please be aware that your profile will be automatically disabled after 1 month. Should this happen, you can easily reactivate it at any time by returning to the application portal and entering your registered email address.`;
+    const mainMessage = `Dear ${name},<br><br>Thank you for submitting your internship application to Dental Clinic. We have successfully received your details and will review your profile. If your qualifications match our requirements, we will get back to you shortly.<br><br><b>Important Note:</b> For your security, please be aware that your profile will be automatically disabled after 1 month. Should this happen, you can easily reactivate it at any time by returning to the application portal and entering your registered email address.`;
+    const accentColor = '#2563eb';
 
     const html = `
     <!DOCTYPE html>
@@ -380,73 +381,41 @@ export class EmailService {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>\${title}</title>
+      <title>${title}</title>
       <style>
-        body { margin: 0; padding: 0; background-color: #f4f7f6; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
-        .wrapper { width: 100%; background-color: #f4f7f6; padding: 40px 0; }
-        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+        body { margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+        .wrapper { width: 100%; table-layout: fixed; background-color: #f8fafc; padding-bottom: 40px; padding-top: 40px; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden; }
+        .header { background-color: ${accentColor}; padding: 40px 20px; text-align: center; }
+        .logo { color: #ffffff; font-size: 32px; font-weight: 800; letter-spacing: -1px; text-decoration: none; }
+        .content { padding: 40px; text-align: center; }
+        .title { font-size: 24px; font-weight: 700; color: #1e293b; margin-bottom: 8px; }
+        .subtitle { font-size: 16px; font-weight: 500; color: #64748b; margin-bottom: 24px; }
+        .message { font-size: 16px; line-height: 24px; color: #475569; margin-bottom: 32px; text-align: left; }
+        .footer { padding: 32px 40px; background-color: #f1f5f9; text-align: center; font-size: 14px; color: #64748b; }
+        .footer p { margin: 4px 0; }
+        .security-badge { display: inline-flex; align-items: center; background-color: #ecfdf5; color: #059669; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; margin-bottom: 24px; }
       </style>
     </head>
     <body>
       <div class="wrapper">
         <div class="container">
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #092c74 0%, #153c89 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
-            <div style="display: inline-block; text-align: center;">
-              <img src="https://res.cloudinary.com/dve9etzft/image/upload/v1784205052/dentcare360_logo.png" width="100" height="100" alt="DentCare360 Logo" style="display: inline-block; vertical-align: middle; margin-right: 16px; border-radius: 50%;" />
-              <div style="display: inline-block; vertical-align: middle; text-align: left;">
-                <h1 style="font-size: 30px; font-weight: 700; margin: 0; letter-spacing: -0.5px; color: #ffffff;">DentCare360</h1>
-                <p style="font-size: 14px; color: #bfdbfe; margin: 4px 0 0 0;">Smart Care. <span style="color: #2dd4bf; font-weight: 600;">Better Dentistry.</span></p>
-              </div>
+          <div class="header"><div class="logo">Dental Clinic</div></div>
+          <div class="content">
+            <div class="security-badge">
+              <span style="margin-right: 4px;">✅</span> Application Successful
             </div>
+            <div class="title">${title}</div>
+            <div class="subtitle">${subTitle}</div>
+            <div class="message">${mainMessage}</div>
+            
+            <p style="font-size: 14px; color: #94a3b8; margin-top: 32px;">
+              Please do not reply to this email.
+            </p>
           </div>
-          
-          <!-- Content -->
-          <div style="padding: 40px; text-align: center;">
-            <div style="display: inline-block; background-color: #e8f8f0; color: #10b981; padding: 6px 16px; border-radius: 9999px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 24px;">
-              ✔ Application Successful
-            </div>
-            
-            <h2 style="font-size: 32px; font-weight: 800; color: #0f172a; margin: 0 0 8px 0;">\${title}</h2>
-            <p style="font-size: 18px; color: #64748b; margin: 0 0 16px 0;">\${subTitle}</p>
-
-            <div style="margin: 24px 0; text-align: center;">
-              <span style="display: inline-block; width: 50px; height: 2px; background: linear-gradient(to right, rgba(37,99,235,0), rgba(37,99,235,1)); vertical-align: middle;"></span>
-              <span style="display: inline-block; margin: 0 10px; color: #2563eb; font-size: 18px; vertical-align: middle; font-weight: bold;">🎓</span>
-              <span style="display: inline-block; width: 50px; height: 2px; background: linear-gradient(to left, rgba(37,99,235,0), rgba(37,99,235,1)); vertical-align: middle;"></span>
-            </div>
-            
-            <p style="font-size: 16px; line-height: 1.6; color: #475569; margin: 0 auto 32px auto; max-width: 480px; text-align: left;">\${mainMessage}</p>
-            
-            <!-- Separator -->
-            <div style="border-top: 1px solid #f1f5f9; margin-top: 32px; margin-bottom: 24px;"></div>
-            
-            <!-- Sign-off -->
-            <div style="text-align: center; font-size: 14px; color: #64748b; line-height: 1.5;">
-              Thank you,<br>
-              <strong style="color: #0f172a; font-weight: 700; display: block; margin-top: 4px;">DentCare360 Team</strong>
-              <a href="https://dentcare360.in" style="color: #2563eb; text-decoration: none; font-weight: 600; display: inline-block; margin-top: 4px;">dentcare360.in</a>
-            </div>
-          </div>
-          
-          <!-- Bottom Badges Bar -->
-          <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-radius: 0 0 12px 12px;">
-            <table cellpadding="0" cellspacing="0" border="0" style="width: 100%; padding: 16px 12px; text-align: center;">
-              <tr>
-                <td align="center" style="width: 33%; font-size: 12px; color: #475569; font-weight: 500; border-right: 1px solid #e2e8f0;">
-                  <img src="https://img.icons8.com/ios-filled/100/2563eb/shield.png" width="14" height="14" alt="Shield" style="vertical-align: middle; display: inline-block; margin-right: 6px;" />
-                  <span style="vertical-align: middle;">100% Secure</span>
-                </td>
-                <td align="center" style="width: 33%; font-size: 12px; color: #475569; font-weight: 500; border-right: 1px solid #e2e8f0;">
-                  <img src="https://img.icons8.com/ios-filled/100/2563eb/lock.png" width="14" height="14" alt="Lock" style="vertical-align: middle; display: inline-block; margin-right: 6px;" />
-                  <span style="vertical-align: middle;">Trusted & Reliable</span>
-                </td>
-                <td align="center" style="width: 33%; font-size: 12px; color: #475569; font-weight: 500;">
-                  <img src="https://img.icons8.com/ios-filled/100/2563eb/like.png" width="14" height="14" alt="Heart" style="vertical-align: middle; display: inline-block; margin-right: 6px;" />
-                  <span style="vertical-align: middle;">Care You Can Count On</span>
-                </td>
-              </tr>
-            </table>
+          <div class="footer">
+            <p><b>Dental Clinic Management System</b></p>
+            <p style="margin-top: 24px;">&copy; ${new Date().getFullYear()} Dental Clinic. All rights reserved.</p>
           </div>
         </div>
       </div>
@@ -473,7 +442,7 @@ export class EmailService {
             name: 'Dental Clinic',
             email:
               this.configService.get<string>('MAIL_FROM') ||
-              'noreply@dentalclinic.com',
+              'dentcare360.official@gmail.com',
           },
           to: [{ email: email, name: name }],
           subject: 'Dental Clinic - Internship Application Received',
@@ -510,16 +479,13 @@ export class EmailService {
       'dentcare360.official@gmail.com';
     const dateTimeStr = dayjs(submittedAt).format('DD MMMM YYYY, hh:mm A');
 
-    const title = 'New Pricing Inquiry';
-    const subTitle = 'Landing Page Lead';
-
     const html = `
     <!DOCTYPE html>
     <html lang="en">
     <head>
-      <meta charset="utf-8">
+      <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>\${title}</title>
+      <title>New Pricing Inquiry</title>
       <style>
         body { margin: 0; padding: 0; background-color: #f4f7f6; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
         .wrapper { width: 100%; background-color: #f4f7f6; padding: 40px 0; }
@@ -530,77 +496,57 @@ export class EmailService {
       <div class="wrapper">
         <div class="container">
           <!-- Header -->
-          <div style="background: linear-gradient(135deg, #092c74 0%, #153c89 100%); padding: 40px 20px; text-align: center; color: #ffffff;">
-            <div style="display: inline-block; text-align: center;">
-              <img src="https://res.cloudinary.com/dve9etzft/image/upload/v1784205052/dentcare360_logo.png" width="100" height="100" alt="DentCare360 Logo" style="display: inline-block; vertical-align: middle; margin-right: 16px; border-radius: 50%;" />
-              <div style="display: inline-block; vertical-align: middle; text-align: left;">
-                <h1 style="font-size: 30px; font-weight: 700; margin: 0; letter-spacing: -0.5px; color: #ffffff;">DentCare360</h1>
-                <p style="font-size: 14px; color: #bfdbfe; margin: 4px 0 0 0;">Smart Care. <span style="color: #2dd4bf; font-weight: 600;">Better Dentistry.</span></p>
-              </div>
-            </div>
+          <div style="background: #2563eb; padding: 40px 20px; text-align: center; color: #ffffff;">
+            <h2 style="font-size: 26px; font-weight: 800; margin: 0 0 8px 0; color: #ffffff;">New Pricing Inquiry Received</h2>
+            <p style="font-size: 15px; color: #bfdbfe; margin: 0; line-height: 1.5;">A user has shown interest in the DentCare360 subscription plans and pricing options from the landing page.</p>
           </div>
-          
-          <!-- Content -->
-          <div style="padding: 40px; text-align: center;">
-            <div style="display: inline-block; background-color: #eff6ff; color: #2563eb; padding: 6px 16px; border-radius: 9999px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 24px;">
-              🔔 New Lead
-            </div>
-            
-            <h2 style="font-size: 32px; font-weight: 800; color: #0f172a; margin: 0 0 8px 0;">\${title}</h2>
-            <p style="font-size: 18px; color: #64748b; margin: 0 0 16px 0;">\${subTitle}</p>
 
-            <div style="margin: 24px 0; text-align: center;">
-              <span style="display: inline-block; width: 50px; height: 2px; background: linear-gradient(to right, rgba(37,99,235,0), rgba(37,99,235,1)); vertical-align: middle;"></span>
-              <span style="display: inline-block; margin: 0 10px; color: #2563eb; font-size: 18px; vertical-align: middle; font-weight: bold;">📋</span>
-              <span style="display: inline-block; width: 50px; height: 2px; background: linear-gradient(to left, rgba(37,99,235,0), rgba(37,99,235,1)); vertical-align: middle;"></span>
-            </div>
-            
-            <div style="text-align: left; background-color: #f8fafc; border-radius: 12px; padding: 24px; margin-bottom: 32px;">
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 10px 0; color: #64748b; font-weight: 600; width: 150px; font-size: 14px; border-bottom: 1px solid #e2e8f0;">First Name</td>
-                  <td style="padding: 10px 0; color: #0f172a; font-size: 14px; font-weight: 500; border-bottom: 1px solid #e2e8f0;">\${firstName}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px; border-bottom: 1px solid #e2e8f0;">Last Name</td>
-                  <td style="padding: 10px 0; color: #0f172a; font-size: 14px; font-weight: 500; border-bottom: 1px solid #e2e8f0;">\${lastName}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px; border-bottom: 1px solid #e2e8f0;">Email</td>
-                  <td style="padding: 10px 0; font-size: 14px; font-weight: 500; border-bottom: 1px solid #e2e8f0;"><a href="mailto:\${email}" style="color: #2563eb; text-decoration: none;">\${email}</a></td>
-                </tr>
-                <tr>
-                  <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px; border-bottom: 1px solid #e2e8f0;">Phone</td>
-                  <td style="padding: 10px 0; color: #0f172a; font-size: 14px; font-weight: 500; border-bottom: 1px solid #e2e8f0;">\${phone}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px;">Submitted At</td>
-                  <td style="padding: 10px 0; color: #0f172a; font-size: 14px; font-weight: 500;">\${dateTimeStr}</td>
-                </tr>
-              </table>
-            </div>
-            
-            <p style="font-size: 15px; line-height: 1.6; color: #475569; margin: 0; text-align: left;">Please contact the user to provide information about the available subscription plans and pricing options.</p>
-            
-            <!-- Separator -->
-            <div style="border-top: 1px solid #f1f5f9; margin-top: 32px; margin-bottom: 24px;"></div>
-            
-            <!-- Sign-off -->
-            <div style="text-align: center; font-size: 14px; color: #64748b; line-height: 1.5;">
-              DentCare360 Internal Notification<br>
-              <strong style="color: #0f172a; font-weight: 700; display: block; margin-top: 4px;">Sales & Support Team</strong>
-            </div>
-          </div>
-          
-          <!-- Bottom Badges Bar -->
-          <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; border-radius: 0 0 12px 12px;">
-            <table cellpadding="0" cellspacing="0" border="0" style="width: 100%; padding: 16px 12px; text-align: center;">
+          <!-- Content -->
+          <div style="padding: 40px;">
+            <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">User Details</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 32px;">
               <tr>
-                <td align="center" style="width: 100%; font-size: 12px; color: #475569; font-weight: 500;">
-                  <span style="vertical-align: middle;">System Generated Email • Do Not Reply</span>
-                </td>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; width: 150px; font-size: 14px;">First Name:</td>
+                <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">${firstName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px;">Last Name:</td>
+                <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">${lastName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px;">Email Address:</td>
+                <td style="padding: 10px 0; color: #2563eb; font-size: 14px;"><a href="mailto:${email}" style="color: #2563eb; text-decoration: none; font-weight: 500;">${email}</a></td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px;">Phone Number:</td>
+                <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">${phone}</td>
               </tr>
             </table>
+
+            <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">Inquiry Details</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 32px;">
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; width: 150px; font-size: 14px;">Inquiry Type:</td>
+                <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">Pricing Inquiry</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px;">Source:</td>
+                <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">Landing Page &rarr; Pricing</td>
+              </tr>
+              <tr>
+                <td style="padding: 10px 0; color: #64748b; font-weight: 600; font-size: 14px;">Submitted At:</td>
+                <td style="padding: 10px 0; color: #0f172a; font-size: 14px;">${dateTimeStr}</td>
+              </tr>
+            </table>
+
+            <h3 style="font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0; border-bottom: 2px solid #f1f5f9; padding-bottom: 8px;">Action Required</h3>
+            <p style="font-size: 15px; line-height: 1.6; color: #475569; margin: 0;">Please contact the user to provide information about the available subscription plans and pricing options.</p>
+          </div>
+
+          <!-- Footer -->
+          <div style="padding: 32px 40px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+            <strong style="color: #0f172a; font-weight: 700; font-size: 15px; display: block;">DentCare360</strong>
+            <span style="color: #64748b; font-size: 13px; margin-top: 4px; display: block;">Pricing Inquiry Notification</span>
           </div>
         </div>
       </div>
@@ -629,7 +575,7 @@ export class EmailService {
             name: 'DentCare360',
             email:
               this.configService.get<string>('MAIL_FROM') ||
-              'noreply@dentcare360.in',
+              'dentcare360.official@gmail.com',
           },
           to: [{ email: adminEmail }],
           subject: 'New Pricing Inquiry – DentCare360',
@@ -661,8 +607,8 @@ export class EmailService {
 
   async sendPlanPurchaseEmail(email: string, planName: string, isFirstTime: boolean = false) {
     const title = isFirstTime ? 'Your First-Time Plan Has Been Assigned' : 'Subscription Confirmed';
-    const subTitle = isFirstTime 
-      ? '' 
+    const subTitle = isFirstTime
+      ? ''
       : 'Thank you for your purchase';
     const mainMessage = isFirstTime
       ? `Your free plan <strong>${planName}</strong> has been successfully assigned to your account. You can now start using the platform.`
@@ -802,7 +748,7 @@ export class EmailService {
             name: 'DentCare360',
             email:
               this.configService.get<string>('MAIL_FROM') ||
-              'noreply@dentcare360.in',
+              'dentcare360.official@gmail.com',
           },
           to: [{ email: email }],
           subject: emailSubject,
@@ -969,7 +915,7 @@ export class EmailService {
             name: 'DentCare360',
             email:
               this.configService.get<string>('MAIL_FROM') ||
-              'noreply@dentcare360.in',
+              'dentcare360.official@gmail.com',
           },
           to: [{ email: email }],
           subject: emailSubject,

@@ -588,8 +588,8 @@ export class StaffService {
         (staff.role as string) === Role.BRANCH_ADMIN
       ) {
         await this.doctorProfileModel.destroy({ where: { user_id: staffId } });
-        await this.doctorScheduleModel.destroy({ where: { user_id: staffId } });
-        await this.doctorLeaveModel.destroy({ where: { user_id: staffId } });
+        await this.doctorScheduleModel.destroy({ where: { doctor_id: staffId } });
+        await this.doctorLeaveModel.destroy({ where: { doctor_id: staffId } });
       }
 
       // Hard delete user branches and refresh tokens
