@@ -37,7 +37,7 @@ export class PatientService {
     private dentalChartEntryModel: typeof DentalChartEntry,
     @InjectConnection() private sequelize: Sequelize,
     private readonly subscriptionService: SubscriptionService,
-  ) { }
+  ) {}
 
   async createPatient(reqUser: any, dto: CreatePatientDto) {
     const transaction = await this.sequelize.transaction();
@@ -266,7 +266,9 @@ export class PatientService {
 
       const patientConditions = await this.patientConditionModel.findAll({
         where: { patient_id: id },
-        include: [{ model: MedicalConditionMaster, attributes: ['id', 'name'] }],
+        include: [
+          { model: MedicalConditionMaster, attributes: ['id', 'name'] },
+        ],
       });
 
       const medical_conditions = patientConditions.map((pc: any) => ({
@@ -363,8 +365,10 @@ export class PatientService {
       if (dto.address !== undefined) updateData.address = dto.address;
       if (dto.city !== undefined) updateData.city = dto.city;
       if (dto.notes !== undefined) updateData.notes = dto.notes;
-      if (dto.referred_by !== undefined) updateData.referred_by = dto.referred_by;
-      if (dto.referred_by_id !== undefined) updateData.referred_by_id = dto.referred_by_id;
+      if (dto.referred_by !== undefined)
+        updateData.referred_by = dto.referred_by;
+      if (dto.referred_by_id !== undefined)
+        updateData.referred_by_id = dto.referred_by_id;
 
       if (dto.date_of_birth !== undefined) {
         updateData.date_of_birth = dto.date_of_birth;
@@ -375,7 +379,10 @@ export class PatientService {
         updateData.age = dto.age;
       }
 
-      await this.patientModel.update(updateData, { where: { id }, transaction });
+      await this.patientModel.update(updateData, {
+        where: { id },
+        transaction,
+      });
 
       // Save medical conditions if provided in payload
       if (dto.medical_conditions !== undefined) {
@@ -486,10 +493,10 @@ export class PatientService {
         notes: pc.notes,
         recorded_by: pc.recorded_by_relation
           ? {
-            id: pc.recorded_by_relation.id,
-            first_name: pc.recorded_by_relation.first_name,
-            last_name: pc.recorded_by_relation.last_name,
-          }
+              id: pc.recorded_by_relation.id,
+              first_name: pc.recorded_by_relation.first_name,
+              last_name: pc.recorded_by_relation.last_name,
+            }
           : null,
         created_at: pc.created_at,
       }));
@@ -909,16 +916,16 @@ export class PatientService {
         notes: entry.notes,
         consultation: entry.consultation
           ? {
-            id: entry.consultation.id,
-            consultation_date: entry.consultation.consultation_date,
-            doctor: entry.consultation.doctor
-              ? {
-                id: entry.consultation.doctor.id,
-                first_name: entry.consultation.doctor.first_name,
-                last_name: entry.consultation.doctor.last_name,
-              }
-              : null,
-          }
+              id: entry.consultation.id,
+              consultation_date: entry.consultation.consultation_date,
+              doctor: entry.consultation.doctor
+                ? {
+                    id: entry.consultation.doctor.id,
+                    first_name: entry.consultation.doctor.first_name,
+                    last_name: entry.consultation.doctor.last_name,
+                  }
+                : null,
+            }
           : null,
         created_at: entry.created_at,
         updated_at: entry.updated_at,

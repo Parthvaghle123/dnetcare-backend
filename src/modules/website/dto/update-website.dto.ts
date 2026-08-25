@@ -1,9 +1,4 @@
-import {
-  IsOptional,
-  IsString,
-  IsBoolean,
-  IsObject,
-} from 'class-validator';
+import { IsOptional, IsString, IsBoolean, IsObject } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 const parseJsonIfNeeded = ({ value }: { value: any }) => {

@@ -13,7 +13,7 @@ export const corsOptions = {
       'http://localhost:3000',
       'http://localhost:3001',
       'https://dental-frontend.vercel.app',
-      'https://dental-frontend-iota.vercel.app'
+      'https://dental-frontend-iota.vercel.app',
     ];
 
     const envFrontendUrl = process.env.FRONTEND_URL;

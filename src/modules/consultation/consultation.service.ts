@@ -1,4 +1,5 @@
 import { Op } from 'sequelize';
+import { Sequelize } from 'sequelize-typescript';
 import { Injectable, HttpException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { StatusCode } from '../../common/enums/status-code.enum';
@@ -18,8 +19,14 @@ import { BulkDentalChartDto } from './dto/dental-chart.dto';
 import { BulkConsultationDocumentDto } from './dto/consultation-document.dto';
 import { UploadService } from '../upload/upload.service';
 import { TreatmentPlan } from '../treatment/entities/treatment-plan.model';
+import { TreatmentPlanPhase } from '../treatment/entities/treatment-plan-phase.model';
 import { Invoice } from '../billing/entities/invoice.model';
+import { InvoiceLineItem } from '../billing/entities/invoice-line-item.model';
+import { Payment } from '../billing/entities/payment.model';
+import { Appointment } from '../appointment/entities/appointment.model';
+import { AppointmentStatusHistory } from '../appointment/entities/appointment-status-history.model';
 import { Prescription } from '../prescription/entities/prescription.model';
+import { PrescriptionMedicine } from '../prescription/entities/prescription-medicine.model';
 
 @Injectable()
 export class ConsultationService {
@@ -35,6 +42,7 @@ export class ConsultationService {
     @InjectModel(Branch) private branchModel: typeof Branch,
     @InjectModel(User) private userModel: typeof User,
     private uploadService: UploadService,
+    private sequelize: Sequelize,
   ) {}
 
   async createConsultation(user: any, dto: CreateConsultationDto) {
@@ -93,7 +101,9 @@ export class ConsultationService {
               activeApt = await Appointment.findOne({
                 where: {
                   patient_id: dto.patient_id,
-                  status: { [Op.in]: ['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS'] },
+                  status: {
+                    [Op.in]: ['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS'],
+                  },
                 },
                 order: [['scheduled_at', 'ASC']],
               });
@@ -745,9 +755,11 @@ export class ConsultationService {
   }
 
   async deleteConsultation(user: any, id: string) {
+    const transaction = await this.sequelize.transaction();
     try {
       const consultation = await this.consultationModel.findOne({
         where: { id, organization_id: user.org_id },
+        transaction,
       });
 
       if (!consultation) {
@@ -760,6 +772,7 @@ export class ConsultationService {
       // 1. Find and delete all attached documents from Cloudinary & DB
       const documents = await this.consultationDocModel.findAll({
         where: { consultation_id: id },
+        transaction,
       });
 
       for (const doc of documents) {
@@ -773,35 +786,146 @@ export class ConsultationService {
             );
           }
         }
-        await doc.destroy();
+        await doc.destroy({ transaction });
       }
 
       // 2. Delete all dental chart entries
       await this.dentalChartEntryModel.destroy({
         where: { consultation_id: id },
+        transaction,
       });
 
-      // 3. Nullify consultation_id in TreatmentPlans, Invoices, Prescriptions
-      await TreatmentPlan.update(
-        { consultation_id: null },
-        { where: { consultation_id: id, organization_id: user.org_id } },
-      );
+      // 3. Find all Treatment Plans associated with this consultation
+      const treatmentPlans = await TreatmentPlan.findAll({
+        where: { consultation_id: id, organization_id: user.org_id },
+        transaction,
+      });
+      const planIds = treatmentPlans.map((p) => p.id);
 
-      await Invoice.update(
-        { consultation_id: null },
-        { where: { consultation_id: id, organization_id: user.org_id } },
-      );
+      // 4. Retrieve phase IDs for these treatment plans
+      let phaseIds: string[] = [];
+      if (planIds.length > 0) {
+        const phases = await TreatmentPlanPhase.findAll({
+          where: { treatment_plan_id: { [Op.in]: planIds } },
+          transaction,
+        });
+        phaseIds = phases.map((p) => p.id);
+      }
 
-      await Prescription.update(
-        { consultation_id: null },
-        { where: { consultation_id: id } },
-      );
+      // 5. Delete related Appointments
+      let appointmentIds: string[] = [];
+      if (planIds.length > 0) {
+        const appointments = await Appointment.findAll({
+          where: {
+            [Op.or]: [
+              { treatment_plan_id: { [Op.in]: planIds } },
+              ...(phaseIds.length > 0 ? [{ plan_phase_id: { [Op.in]: phaseIds } }] : []),
+            ],
+          },
+          transaction,
+        });
+        appointmentIds = appointments.map((app) => app.id);
+      }
 
-      // 4. Delete the consultation itself
-      await consultation.destroy();
+      if (appointmentIds.length > 0) {
+        // Delete associated AppointmentStatusHistory
+        await AppointmentStatusHistory.destroy({
+          where: { appointment_id: { [Op.in]: appointmentIds } },
+          transaction,
+        });
 
+        // Nullify appointment_id in Consultations (for safety, though they'll be deleted or updated)
+        await Consultation.update(
+          { appointment_id: null },
+          { where: { appointment_id: { [Op.in]: appointmentIds } }, transaction },
+        );
+
+        // Delete the appointments themselves
+        await Appointment.destroy({
+          where: { id: { [Op.in]: appointmentIds } },
+          transaction,
+        });
+      }
+
+      // 6. Delete related Invoices
+      const invoices = await Invoice.findAll({
+        where: {
+          [Op.or]: [
+            { consultation_id: id, organization_id: user.org_id },
+            ...(planIds.length > 0 ? [{ treatment_plan_id: { [Op.in]: planIds }, organization_id: user.org_id }] : []),
+          ],
+        },
+        transaction,
+      });
+      const invoiceIds = invoices.map((inv) => inv.id);
+
+      if (invoiceIds.length > 0) {
+        // Delete associated Payments
+        await Payment.destroy({
+          where: { invoice_id: { [Op.in]: invoiceIds } },
+          transaction,
+        });
+
+        // Delete associated InvoiceLineItems
+        await InvoiceLineItem.destroy({
+          where: { invoice_id: { [Op.in]: invoiceIds } },
+          transaction,
+        });
+
+        // Delete the invoices themselves
+        await Invoice.destroy({
+          where: { id: { [Op.in]: invoiceIds } },
+          transaction,
+        });
+      }
+
+      // 7. Delete related Prescriptions
+      const prescriptions = await Prescription.findAll({
+        where: {
+          [Op.or]: [
+            { consultation_id: id },
+            ...(phaseIds.length > 0 ? [{ treatment_plan_phase_id: { [Op.in]: phaseIds } }] : []),
+          ],
+        },
+        transaction,
+      });
+      const prescriptionIds = prescriptions.map((p) => p.id);
+
+      if (prescriptionIds.length > 0) {
+        // Delete associated PrescriptionMedicines
+        await PrescriptionMedicine.destroy({
+          where: { prescription_id: { [Op.in]: prescriptionIds } },
+          transaction,
+        });
+
+        // Delete the prescriptions themselves
+        await Prescription.destroy({
+          where: { id: { [Op.in]: prescriptionIds } },
+          transaction,
+        });
+      }
+
+      // 8. Delete Treatment Plan Phases
+      if (planIds.length > 0) {
+        await TreatmentPlanPhase.destroy({
+          where: { treatment_plan_id: { [Op.in]: planIds } },
+          transaction,
+        });
+
+        // 9. Delete Treatment Plans themselves
+        await TreatmentPlan.destroy({
+          where: { id: { [Op.in]: planIds } },
+          transaction,
+        });
+      }
+
+      // 10. Delete the consultation itself
+      await consultation.destroy({ transaction });
+
+      await transaction.commit();
       return { message: 'Consultation permanently deleted.' };
     } catch (error) {
+      await transaction.rollback();
       if (error instanceof HttpException) throw error;
       this.logger.error(`[deleteConsultation] Error:`, error);
       throw new HttpException(

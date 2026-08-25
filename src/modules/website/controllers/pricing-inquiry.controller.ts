@@ -1,4 +1,10 @@
-import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { EmailService } from '../../notification/email.service';
 import { CreatePricingInquiryDto } from '../dto/create-pricing-inquiry.dto';
 

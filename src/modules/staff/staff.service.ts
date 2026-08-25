@@ -83,7 +83,9 @@ export class StaffService {
         whereClause.status = filters.status;
       } else {
         if (filters.is_active === 'true') {
-          whereClause.status = { [Op.in]: [UserStatus.ACTIVE, UserStatus.PENDING] };
+          whereClause.status = {
+            [Op.in]: [UserStatus.ACTIVE, UserStatus.PENDING],
+          };
         } else {
           whereClause.status = { [Op.ne]: UserStatus.PENDING };
         }

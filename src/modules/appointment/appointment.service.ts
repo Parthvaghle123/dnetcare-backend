@@ -1061,6 +1061,16 @@ export class AppointmentService {
             appointment.treatment_plan_id,
           );
           if (plan) {
+            if (plan.status === 'COMPLETED' && plan.consultation_id) {
+              const Consultation = this.sequelize.models.Consultation;
+              if (Consultation) {
+                await Consultation.update(
+                  { is_completed: true },
+                  { where: { id: plan.consultation_id } },
+                );
+              }
+            }
+
             const Invoice = this.sequelize.models.Invoice;
             if (Invoice) {
               await Invoice.update(
@@ -1077,26 +1087,7 @@ export class AppointmentService {
         }
       }
 
-      if (dto.status === UpdateAppointmentStatusEnum.COMPLETED) {
-        const Consultation = this.sequelize.models.Consultation;
-        if (Consultation) {
-          await Consultation.update(
-            { is_completed: true },
-            { where: { appointment_id: appointment.id, is_completed: false } },
-          );
 
-          await Consultation.update(
-            { is_completed: true },
-            {
-              where: {
-                patient_id: appointment.patient_id,
-                doctor_id: appointment.doctor_id,
-                is_completed: false,
-              },
-            },
-          );
-        }
-      }
 
       let msg = 'Status updated.';
       if (dto.status === UpdateAppointmentStatusEnum.CONFIRMED)

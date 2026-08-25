@@ -209,7 +209,11 @@ export class SupportService {
         video_url: video_url || null,
       });
 
-      return { success: true, message: 'Support ticket updated successfully.', data: ticket };
+      return {
+        success: true,
+        message: 'Support ticket updated successfully.',
+        data: ticket,
+      };
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;

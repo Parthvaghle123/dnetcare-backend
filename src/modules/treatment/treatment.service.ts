@@ -19,9 +19,12 @@ import { ProcedureCatalog } from '../catalog/entities/procedure-catalog.model';
 import { User } from '../auth/entities/user.model';
 import { Invoice, InvoiceStatus } from '../billing/entities/invoice.model';
 import { InvoiceLineItem } from '../billing/entities/invoice-line-item.model';
+import { Payment } from '../billing/entities/payment.model';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
 import { Appointment } from '../appointment/entities/appointment.model';
+import { AppointmentStatusHistory } from '../appointment/entities/appointment-status-history.model';
 import { Prescription } from '../prescription/entities/prescription.model';
+import { PrescriptionMedicine } from '../prescription/entities/prescription-medicine.model';
 import { Op } from 'sequelize';
 
 import { CreateTreatmentPlanDto } from './dto/create-treatment-plan.dto';
@@ -558,6 +561,12 @@ export class TreatmentService {
 
       if (allDone) {
         await plan.update({ status: TreatmentPlanStatus.COMPLETED });
+        if (plan.consultation_id) {
+          await this.consultationModel.update(
+            { is_completed: true },
+            { where: { id: plan.consultation_id } },
+          );
+        }
       }
 
       const completedUser = await this.userModel.findOne({
@@ -874,6 +883,13 @@ export class TreatmentService {
 
       await plan.update({ status: dto.status });
 
+      if (dto.status === TreatmentPlanStatus.COMPLETED && plan.consultation_id) {
+        await this.consultationModel.update(
+          { is_completed: true },
+          { where: { id: plan.consultation_id } },
+        );
+      }
+
       return {
         id: plan.id,
         status: plan.status,
@@ -1161,27 +1177,65 @@ export class TreatmentService {
 
       const phaseIds = phases.map((p) => p.id);
 
-      if (phaseIds.length > 0) {
-        // Nullify plan_phase_id in InvoiceLineItems
-        await this.invoiceLineItemModel.update(
-          { plan_phase_id: null },
-          { where: { plan_phase_id: { [Op.in]: phaseIds } }, transaction },
-        );
+      // Find all appointments associated with this treatment plan (either by plan ID or phase IDs)
+      const appointments = await Appointment.findAll({
+        where: {
+          [Op.or]: [
+            { treatment_plan_id: id },
+            ...(phaseIds.length > 0
+              ? [{ plan_phase_id: { [Op.in]: phaseIds } }]
+              : []),
+          ],
+        },
+        transaction,
+      });
 
-        // Nullify plan_phase_id in Appointments
-        await Appointment.update(
-          { plan_phase_id: null },
-          { where: { plan_phase_id: { [Op.in]: phaseIds } }, transaction },
-        );
+      const appointmentIds = appointments.map((app) => app.id);
 
-        // Nullify treatment_plan_phase_id in Prescriptions
-        await Prescription.update(
-          { treatment_plan_phase_id: null },
+      if (appointmentIds.length > 0) {
+        // 1. Delete associated AppointmentStatusHistory
+        await AppointmentStatusHistory.destroy({
+          where: { appointment_id: { [Op.in]: appointmentIds } },
+          transaction,
+        });
+
+        // 2. Nullify appointment_id in Consultations
+        await this.sequelize.models.Consultation.update(
+          { appointment_id: null },
           {
-            where: { treatment_plan_phase_id: { [Op.in]: phaseIds } },
+            where: { appointment_id: { [Op.in]: appointmentIds } },
             transaction,
           },
         );
+
+        // 3. Delete the appointments themselves
+        await Appointment.destroy({
+          where: { id: { [Op.in]: appointmentIds } },
+          transaction,
+        });
+      }
+
+      if (phaseIds.length > 0) {
+        // Find all prescriptions associated with these phases
+        const prescriptions = await Prescription.findAll({
+          where: { treatment_plan_phase_id: { [Op.in]: phaseIds } },
+          transaction,
+        });
+        const prescriptionIds = prescriptions.map((p) => p.id);
+
+        if (prescriptionIds.length > 0) {
+          // Delete all prescription medicines
+          await PrescriptionMedicine.destroy({
+            where: { prescription_id: { [Op.in]: prescriptionIds } },
+            transaction,
+          });
+
+          // Delete the prescriptions themselves
+          await Prescription.destroy({
+            where: { id: { [Op.in]: prescriptionIds } },
+            transaction,
+          });
+        }
 
         // Delete all phases
         await this.phaseModel.destroy({
@@ -1190,20 +1244,33 @@ export class TreatmentService {
         });
       }
 
-      // Nullify treatment_plan_id in Invoices
-      await this.invoiceModel.update(
-        { treatment_plan_id: null },
-        {
-          where: { treatment_plan_id: id, organization_id: user.org_id },
-          transaction,
-        },
-      );
+      // Find all invoices associated with this treatment plan
+      const invoices = await this.invoiceModel.findAll({
+        where: { treatment_plan_id: id, organization_id: user.org_id },
+        transaction,
+      });
 
-      // Nullify treatment_plan_id in Appointments
-      await Appointment.update(
-        { treatment_plan_id: null },
-        { where: { treatment_plan_id: id }, transaction },
-      );
+      const invoiceIds = invoices.map((inv) => inv.id);
+
+      if (invoiceIds.length > 0) {
+        // 1. Delete associated Payments
+        await Payment.destroy({
+          where: { invoice_id: { [Op.in]: invoiceIds } },
+          transaction,
+        });
+
+        // 2. Delete associated InvoiceLineItems
+        await this.invoiceLineItemModel.destroy({
+          where: { invoice_id: { [Op.in]: invoiceIds } },
+          transaction,
+        });
+
+        // 3. Delete the invoices themselves
+        await this.invoiceModel.destroy({
+          where: { id: { [Op.in]: invoiceIds } },
+          transaction,
+        });
+      }
 
       // Delete the treatment plan itself
       await plan.destroy({ transaction });

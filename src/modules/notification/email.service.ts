@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
-  constructor(private configService: ConfigService) { }
+  constructor(private configService: ConfigService) {}
 
   async sendOtpEmail(
     email: string,
