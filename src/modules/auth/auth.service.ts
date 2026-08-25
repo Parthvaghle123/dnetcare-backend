@@ -462,6 +462,12 @@ export class AuthService implements OnModuleInit {
           });
         }
         await user.reload();
+
+        try {
+          await this.emailService.sendPlanPurchaseEmail(user.email, user.plan, true);
+        } catch (e) {
+          this.logger.error('Failed to send initial plan assignment email', e);
+        }
       }
 
       const userBranches = await this.userBranchModel.findAll({

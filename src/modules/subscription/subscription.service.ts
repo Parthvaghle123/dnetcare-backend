@@ -6,6 +6,8 @@ import {
   ForbiddenException,
   OnModuleInit,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { Op } from 'sequelize';
 import { InjectModel } from '@nestjs/sequelize';
 import { Plan } from './entities/plan.model';
 import {
@@ -19,6 +21,7 @@ import {
 import { User } from '../auth/entities/user.model';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import { EmailService } from '../notification/email.service';
 
 @Injectable()
 export class SubscriptionService implements OnModuleInit {
@@ -32,6 +35,7 @@ export class SubscriptionService implements OnModuleInit {
     @InjectModel(SubscriptionPayment)
     private readonly paymentModel: typeof SubscriptionPayment,
     @InjectModel(User) private readonly userModel: typeof User,
+    private readonly emailService: EmailService,
   ) {
     if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
       this.razorpay = new Razorpay({
@@ -417,6 +421,18 @@ export class SubscriptionService implements OnModuleInit {
             where: { organization_id: subscription.organization_id },
           },
         );
+
+        const adminUser = await this.userModel.findOne({
+          where: { organization_id: subscription.organization_id, role: 'OWNER' },
+        });
+
+        if (adminUser && adminUser.email) {
+          try {
+            await this.emailService.sendPlanPurchaseEmail(adminUser.email, plan.name);
+          } catch (e) {
+            this.logger.error('Failed to send plan purchase email to admin', e);
+          }
+        }
       }
     }
 
@@ -509,5 +525,43 @@ export class SubscriptionService implements OnModuleInit {
       );
     }
     return true;
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async checkExpiringSubscriptions() {
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
+
+    const startOfDay = new Date(threeDaysFromNow.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(threeDaysFromNow.setHours(23, 59, 59, 999));
+
+    try {
+      const expiringOwners = await this.userModel.findAll({
+        where: {
+          role: 'OWNER',
+          planStatus: 'ACTIVE',
+          planExpiresAt: {
+            [Op.between]: [startOfDay, endOfDay],
+          },
+        },
+      });
+
+      for (const owner of expiringOwners) {
+        if (owner.email && owner.plan && owner.planExpiresAt) {
+          try {
+            await this.emailService.sendPlanExpiryReminderEmail(
+              owner.email,
+              owner.plan,
+              3,
+              owner.planExpiresAt,
+            );
+          } catch (e) {
+            this.logger.error(`Failed to send expiry reminder to ${owner.email}`, e);
+          }
+        }
+      }
+    } catch (err) {
+      this.logger.error('Error checking for expiring subscriptions', err);
+    }
   }
 }

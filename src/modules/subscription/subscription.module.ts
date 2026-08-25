@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { NotificationModule } from '../notification/notification.module';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { Plan } from './entities/plan.model';
 import { Subscription } from './entities/subscription.model';
@@ -10,6 +11,7 @@ import { User } from '../auth/entities/user.model';
 @Module({
   imports: [
     SequelizeModule.forFeature([Plan, Subscription, SubscriptionPayment, User]),
+    NotificationModule,
   ],
   controllers: [SubscriptionController],
   providers: [SubscriptionService],
