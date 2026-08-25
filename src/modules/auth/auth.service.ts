@@ -265,15 +265,13 @@ export class AuthService implements OnModuleInit {
         'Allergies',
       ];
 
-      const conditionRecords = defaultConditions.map((name) => ({
-        organization_id: createdOrg.id,
-        name: name,
-        is_active: true,
-      }));
-
-      await this.medicalConditionMasterModel.bulkCreate(conditionRecords, {
-        transaction,
-      });
+      for (const name of defaultConditions) {
+        await this.medicalConditionMasterModel.findOrCreate({
+          where: { organization_id: createdOrg.id, name },
+          defaults: { organization_id: createdOrg.id, name, is_active: true },
+          transaction,
+        });
+      }
 
       await this.emailService.sendOtpEmail(dto.email, otp, 'register');
 

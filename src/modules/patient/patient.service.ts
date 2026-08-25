@@ -670,10 +670,7 @@ export class PatientService {
       const conditions = await this.conditionMasterModel.findAll({
         where: {
           is_active: true,
-          [Op.or]: [
-            { organization_id: null },
-            { organization_id: reqUser.org_id },
-          ],
+          organization_id: reqUser.org_id,
         },
         order: [['name', 'ASC']],
       });

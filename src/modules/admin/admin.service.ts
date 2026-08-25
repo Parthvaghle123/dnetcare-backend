@@ -2,6 +2,7 @@ import { Injectable, HttpException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { Op } from 'sequelize';
 import dayjs from 'dayjs';
+import { Sequelize } from 'sequelize-typescript';
 import { StatusCode } from '../../common/enums/status-code.enum';
 import { User, UserRole, UserStatus } from '../auth/entities/user.model';
 import { Organization } from '../organization/entities/organization.model';
@@ -20,11 +21,35 @@ import { Expense } from '../finance/entities/expense.model';
 import { UserBranch } from '../auth/entities/user-branch.model';
 import { RefreshToken } from '../auth/entities/refresh-token.model';
 
+// Additional imports for cascade deletion
+import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
+import { DoctorLeave } from '../doctor/entities/doctor-leave.model';
+import { DoctorSchedule } from '../doctor/entities/doctor-schedule.model';
+import { AppointmentStatusHistory } from '../appointment/entities/appointment-status-history.model';
+import { Prescription } from '../prescription/entities/prescription.model';
+import { PrescriptionMedicine } from '../prescription/entities/prescription-medicine.model';
+import { ConsultationDocument } from '../consultation/entities/consultation-document.model';
+import { DentalChartEntry } from '../consultation/entities/dental-chart-entry.model';
+import { TreatmentPlanPhase } from '../treatment/entities/treatment-plan-phase.model';
+import { InvoiceLineItem } from '../billing/entities/invoice-line-item.model';
+import { PatientMedicalCondition } from '../patient/entities/patient-medical-condition.model';
+import { SupportTicket } from '../support/entities/support.model';
+import { Subscription } from '../subscription/entities/subscription.model';
+import { SubscriptionPayment } from '../subscription/entities/subscription-payment.model';
+import { WebsiteConfig } from '../website/entities/website-config.model';
+import { InternshipInquiry } from '../internship/entities/internship-inquiry.model';
+import { InternshipExperience } from '../internship/entities/internship-experience.model';
+import { NotificationLog } from '../notification/entities/notification-log.model';
+import { ExpenseCategory } from '../finance/entities/expense-category.model';
+import { ProcedureCatalog } from '../catalog/entities/procedure-catalog.model';
+import { MedicalConditionMaster } from '../patient/entities/medical-condition-master.model';
+
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
   constructor(
+    private sequelize: Sequelize,
     @InjectModel(User) private userModel: typeof User,
     @InjectModel(Organization) private orgModel: typeof Organization,
     @InjectModel(Branch) private branchModel: typeof Branch,
@@ -101,6 +126,505 @@ export class AdminService {
       this.logger.error('[toggleUserStatus] Error:', error);
       throw new HttpException(
         'Failed to update user status.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async deleteUser(userId: string) {
+    try {
+      const user = await this.userModel.findByPk(userId);
+      if (!user) {
+        throw new HttpException('User not found.', StatusCode.NOT_FOUND);
+      }
+
+      if (
+        user.email === 'dentcare360.official@gmail.com' ||
+        user.role === ('MAIN_ADMIN' as any)
+      ) {
+        throw new HttpException(
+          'Deletion of default MAIN_ADMIN user is not allowed.',
+          StatusCode.FORBIDDEN,
+        );
+      }
+
+
+      const existingTables = await this.sequelize.getQueryInterface().showAllTables();
+      const safeDestroy = async (model: any, options: any) => {
+        // tableName can be on the class itself or on the prototype/instance
+        const tableName = model.tableName ?? model.getTableName?.() ?? null;
+        if (!tableName) {
+          this.logger.warn(`safeDestroy: could not resolve tableName for model`);
+          return;
+        }
+        if (existingTables.includes(tableName)) {
+          await model.destroy(options);
+        } else {
+          this.logger.warn(`Skipping destroy for missing table: ${tableName}`);
+        }
+      };
+
+      // Execute everything inside a transaction
+      await this.sequelize.transaction(async (transaction) => {
+        if (user.role === UserRole.OWNER && user.organization_id) {
+          const orgId = user.organization_id;
+
+          // 1. Get branches for subscription/doctor leaves schedules deletion
+          const branches = await this.branchModel.findAll({
+            where: { organization_id: orgId },
+            transaction,
+          });
+          const branchIds = branches.map((b) => b.id);
+
+          // 2. Get users in organization
+          const orgUsers = await this.userModel.findAll({
+            where: { organization_id: orgId },
+            transaction,
+          });
+          const orgUserIds = orgUsers.map((u) => u.id);
+
+          // 3. Get patients in organization
+          const patients = await this.patientModel.findAll({
+            where: { organization_id: orgId },
+            transaction,
+          });
+          const patientIds = patients.map((p) => p.id);
+
+          // 4. Get consultations
+          const consultations = await this.consultationModel.findAll({
+            where: { organization_id: orgId },
+            transaction,
+          });
+          const consultationIds = consultations.map((c) => c.id);
+
+          // 5. Get treatment plans
+          const treatmentPlans = await this.treatmentPlanModel.findAll({
+            where: { organization_id: orgId },
+            transaction,
+          });
+          const treatmentPlanIds = treatmentPlans.map((tp) => tp.id);
+
+          // 6. Get invoices
+          const invoices = await this.invoiceModel.findAll({
+            where: { organization_id: orgId },
+            transaction,
+          });
+          const invoiceIds = invoices.map((inv) => inv.id);
+
+          // 7. Get prescriptions (by patient)
+          const prescriptions = patientIds.length > 0 ? await Prescription.findAll({
+            where: { patient_id: { [Op.in]: patientIds } },
+            transaction,
+          }) : [];
+          const prescriptionIds = prescriptions.map((pr) => pr.id);
+
+          // 8. Get appointments
+          const appointments = await this.appointmentModel.findAll({
+            where: { organization_id: orgId },
+            transaction,
+          });
+          const appointmentIds = appointments.map((app) => app.id);
+
+          // 9. Get subscriptions
+          const subscriptions = await Subscription.findAll({
+            where: { organization_id: orgId },
+            transaction,
+          });
+          const subscriptionIds = subscriptions.map((s) => s.id);
+
+          // 10. Get internship inquiries
+          const inquiries = await InternshipInquiry.findAll({
+            where: { organization_id: orgId },
+            transaction,
+          });
+          const inquiryIds = inquiries.map((inq) => inq.id);
+
+          // Delete dependent tables in order to resolve foreign keys:
+          
+          // - Subscription payments
+          if (subscriptionIds.length > 0) {
+            await safeDestroy(SubscriptionPayment, {
+              where: { subscription_id: { [Op.in]: subscriptionIds } },
+              transaction,
+            });
+          }
+          // - Subscriptions
+          await safeDestroy(Subscription, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+
+          // - Website configs
+          await safeDestroy(WebsiteConfig, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+
+          // - Internship experience
+          if (inquiryIds.length > 0) {
+            await safeDestroy(InternshipExperience, {
+              where: { inquiry_id: { [Op.in]: inquiryIds } },
+              transaction,
+            });
+          }
+          // - Internship inquiries
+          await safeDestroy(InternshipInquiry, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+
+          // - Procedure catalogs
+          await safeDestroy(ProcedureCatalog, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+
+          // - Payments
+          await safeDestroy(this.paymentModel, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+
+          // - Invoice line items
+          if (invoiceIds.length > 0) {
+            await safeDestroy(InvoiceLineItem, {
+              where: { invoice_id: { [Op.in]: invoiceIds } },
+              transaction,
+            });
+          }
+          // - Invoices
+          await safeDestroy(this.invoiceModel, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+
+          // - Prescription medicines
+          if (prescriptionIds.length > 0) {
+            await safeDestroy(PrescriptionMedicine, {
+              where: { prescription_id: { [Op.in]: prescriptionIds } },
+              transaction,
+            });
+          }
+          // - Prescriptions
+          if (patientIds.length > 0) {
+            await safeDestroy(Prescription, {
+              where: { patient_id: { [Op.in]: patientIds } },
+              transaction,
+            });
+          }
+
+          // - Dental chart entries
+          if (consultationIds.length > 0) {
+            await safeDestroy(DentalChartEntry, {
+              where: { consultation_id: { [Op.in]: consultationIds } },
+              transaction,
+            });
+          }
+          // - Consultation documents
+          await safeDestroy(ConsultationDocument, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+          // - Consultations
+          await safeDestroy(this.consultationModel, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+
+          // - Treatment plan phases
+          if (treatmentPlanIds.length > 0) {
+            await safeDestroy(TreatmentPlanPhase, {
+              where: { treatment_plan_id: { [Op.in]: treatmentPlanIds } },
+              transaction,
+            });
+          }
+          // - Treatment plans
+          await safeDestroy(this.treatmentPlanModel, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+
+          // - Appointment status history
+          if (appointmentIds.length > 0) {
+            await safeDestroy(AppointmentStatusHistory, {
+              where: { appointment_id: { [Op.in]: appointmentIds } },
+              transaction,
+            });
+          }
+          // - Appointments
+          await safeDestroy(this.appointmentModel, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+
+          // - Patient medical conditions
+          if (patientIds.length > 0) {
+            await safeDestroy(PatientMedicalCondition, {
+              where: { patient_id: { [Op.in]: patientIds } },
+              transaction,
+            });
+          }
+          // - Notification logs
+          const hasNotificationLogs = await this.sequelize.getQueryInterface().tableExists('notification_logs');
+          if (hasNotificationLogs) {
+            await safeDestroy(NotificationLog, {
+              where: { organization_id: orgId },
+              transaction,
+            });
+          }
+          // - Patients
+          await safeDestroy(this.patientModel, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+
+          // - Expenses
+          await safeDestroy(this.expenseModel, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+          // - Expense categories (only organization-specific categories)
+          await safeDestroy(ExpenseCategory, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+          
+          // - Medical Condition Masters
+          await safeDestroy(MedicalConditionMaster, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+
+          // - Doctor leaves and schedules
+          if (branchIds.length > 0) {
+            await safeDestroy(DoctorLeave, {
+              where: { branch_id: { [Op.in]: branchIds } },
+              transaction,
+            });
+            await safeDestroy(DoctorSchedule, {
+              where: { branch_id: { [Op.in]: branchIds } },
+              transaction,
+            });
+          }
+
+          // - Doctor profiles, refresh tokens, user branches
+          if (orgUserIds.length > 0) {
+            await safeDestroy(DoctorProfile, {
+              where: { user_id: { [Op.in]: orgUserIds } },
+              transaction,
+            });
+            await safeDestroy(this.refreshTokenModel, {
+              where: { user_id: { [Op.in]: orgUserIds } },
+              transaction,
+            });
+            await safeDestroy(this.userBranchModel, {
+              where: { user_id: { [Op.in]: orgUserIds } },
+              transaction,
+            });
+          }
+
+          // - Support tickets
+          const supportWhere: any = { organization_id: orgId };
+          if (orgUserIds.length > 0) {
+            supportWhere[Op.or] = [
+              { organization_id: orgId },
+              { user_id: { [Op.in]: orgUserIds } },
+            ];
+            delete supportWhere.organization_id;
+          }
+          await safeDestroy(SupportTicket, {
+            where: supportWhere,
+            transaction,
+          });
+
+          // - Branches
+          await safeDestroy(this.branchModel, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+
+          // - Users (all clinic users)
+          await safeDestroy(this.userModel, {
+            where: { organization_id: orgId },
+            transaction,
+          });
+
+          // - Organization
+          await safeDestroy(this.orgModel, {
+            where: { id: orgId },
+            transaction,
+          });
+
+        } else {
+          // If not an OWNER, delete only records belonging to this specific user:
+          const userId = user.id;
+
+          // 1. Support tickets
+          await safeDestroy(SupportTicket, {
+            where: { user_id: userId },
+            transaction,
+          });
+          
+          // 2. Refresh tokens & User branches
+          await safeDestroy(this.refreshTokenModel, {
+            where: { user_id: userId },
+            transaction,
+          });
+          await safeDestroy(this.userBranchModel, {
+            where: { user_id: userId },
+            transaction,
+          });
+
+          // 3. Doctor profiles, leaves, schedules
+          await safeDestroy(DoctorProfile, {
+            where: { user_id: userId },
+            transaction,
+          });
+          await safeDestroy(DoctorLeave, {
+            where: { [Op.or]: [{ doctor_id: userId }, { created_by: userId }] },
+            transaction,
+          });
+          await safeDestroy(DoctorSchedule, {
+            where: { doctor_id: userId },
+            transaction,
+          });
+
+          // 4. Appointments & History
+          const userAppointments = await this.appointmentModel.findAll({
+            where: { [Op.or]: [{ doctor_id: userId }, { created_by: userId }] },
+            transaction,
+          });
+          const userAppointmentIds = userAppointments.map((app) => app.id);
+          if (userAppointmentIds.length > 0) {
+            await safeDestroy(AppointmentStatusHistory, {
+              where: { appointment_id: { [Op.in]: userAppointmentIds } },
+              transaction,
+            });
+            await safeDestroy(this.appointmentModel, {
+              where: { id: { [Op.in]: userAppointmentIds } },
+              transaction,
+            });
+          }
+          // Set status history changed_by = null
+          await AppointmentStatusHistory.update(
+            { changed_by: null },
+            { where: { changed_by: userId }, transaction },
+          );
+
+          // 5. Prescriptions
+          const userPrescriptions = await Prescription.findAll({
+            where: { doctor_id: userId },
+            transaction,
+          });
+          const userPrescriptionIds = userPrescriptions.map((pr) => pr.id);
+          if (userPrescriptionIds.length > 0) {
+            await safeDestroy(PrescriptionMedicine, {
+              where: { prescription_id: { [Op.in]: userPrescriptionIds } },
+              transaction,
+            });
+            await safeDestroy(Prescription, {
+              where: { id: { [Op.in]: userPrescriptionIds } },
+              transaction,
+            });
+          }
+
+          // 6. Consultations & Documents & Dental Chart
+          const userConsultations = await this.consultationModel.findAll({
+            where: { doctor_id: userId },
+            transaction,
+          });
+          const userConsultationIds = userConsultations.map((c) => c.id);
+          if (userConsultationIds.length > 0) {
+            await safeDestroy(DentalChartEntry, {
+              where: { consultation_id: { [Op.in]: userConsultationIds } },
+              transaction,
+            });
+            await safeDestroy(this.consultationModel, {
+              where: { id: { [Op.in]: userConsultationIds } },
+              transaction,
+            });
+          }
+          await ConsultationDocument.update(
+            { uploaded_by: null },
+            { where: { uploaded_by: userId }, transaction },
+          );
+
+          // 7. Treatment plans
+          const userTreatmentPlans = await this.treatmentPlanModel.findAll({
+            where: { created_by: userId },
+            transaction,
+          });
+          const userTreatmentPlanIds = userTreatmentPlans.map((tp) => tp.id);
+          if (userTreatmentPlanIds.length > 0) {
+            await safeDestroy(TreatmentPlanPhase, {
+              where: { treatment_plan_id: { [Op.in]: userTreatmentPlanIds } },
+              transaction,
+            });
+            await safeDestroy(this.treatmentPlanModel, {
+              where: { id: { [Op.in]: userTreatmentPlanIds } },
+              transaction,
+            });
+          }
+          await TreatmentPlanPhase.update(
+            { completed_by: null },
+            { where: { completed_by: userId }, transaction },
+          );
+
+          // 8. Invoices, Payments, Expenses
+          const userInvoices = await this.invoiceModel.findAll({
+            where: { created_by: userId },
+            transaction,
+          });
+          const userInvoiceIds = userInvoices.map((inv) => inv.id);
+          if (userInvoiceIds.length > 0) {
+            await safeDestroy(InvoiceLineItem, {
+              where: { invoice_id: { [Op.in]: userInvoiceIds } },
+              transaction,
+            });
+            await safeDestroy(this.invoiceModel, {
+              where: { id: { [Op.in]: userInvoiceIds } },
+              transaction,
+            });
+          }
+          await this.paymentModel.update(
+            { received_by: null },
+            { where: { received_by: userId }, transaction },
+          );
+          await safeDestroy(this.expenseModel, {
+            where: { created_by: userId },
+            transaction,
+          });
+
+          // 9. PatientMedicalCondition
+          await PatientMedicalCondition.update(
+            { recorded_by: null },
+            { where: { recorded_by: userId }, transaction },
+          );
+
+          // 10. Patients created/referred
+          await Patient.update(
+            { created_by: null },
+            { where: { created_by: userId }, transaction },
+          );
+          await Patient.update(
+            { referred_by_id: null },
+            { where: { referred_by_id: userId }, transaction },
+          );
+
+          // 11. Delete the user
+          // Destroy the user instance directly (not via safeDestroy which needs a class)
+          await user.destroy({ transaction });
+        }
+      });
+
+      return { success: true, message: 'User permanently deleted.' };
+    } catch (error) {
+      this.logger.error('[deleteUser] Error:', error);
+      if (error instanceof HttpException) throw error;
+      // Expose the real DB error message so the frontend toast is informative
+      const detail = error?.parent?.message || error?.original?.message || error?.message;
+      throw new HttpException(
+        { message: detail || 'Failed to delete user and associated records.', error: 'DELETE_FAILED' },
         StatusCode.INTERNAL_SERVER_ERROR,
       );
     }

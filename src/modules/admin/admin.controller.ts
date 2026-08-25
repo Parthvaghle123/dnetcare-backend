@@ -40,6 +40,12 @@ export class AdminController {
     return { success: true, data };
   }
 
+  @Delete('users/:id')
+  async deleteUser(@Param('id') userId: string) {
+    const data = await this.adminService.deleteUser(userId);
+    return { success: true, data };
+  }
+
   // ==========================================
   // PLAN MANAGEMENT
   // ==========================================
