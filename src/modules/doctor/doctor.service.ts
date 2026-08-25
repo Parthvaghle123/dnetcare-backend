@@ -32,7 +32,7 @@ export class DoctorService {
       where: {
         id: doctorId,
         organization_id: reqUser.org_id,
-        role: { [Op.in]: [Role.DOCTOR, Role.OWNER] },
+        role: { [Op.in]: [Role.DOCTOR, Role.OWNER, Role.BRANCH_ADMIN] },
       },
       include: [{ model: UserBranch }],
     });
@@ -65,7 +65,7 @@ export class DoctorService {
         where: {
           id: doctorId,
           organization_id: user.org_id,
-          role: { [Op.in]: [Role.DOCTOR, Role.OWNER] },
+          role: { [Op.in]: [Role.DOCTOR, Role.OWNER, Role.BRANCH_ADMIN] },
         },
       });
 

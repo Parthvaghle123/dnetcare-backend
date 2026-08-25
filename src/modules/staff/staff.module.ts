@@ -6,11 +6,13 @@ import { User } from '../auth/entities/user.model';
 import { UserBranch } from '../auth/entities/user-branch.model';
 import { RefreshToken } from '../auth/entities/refresh-token.model';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
+import { DoctorSchedule } from '../doctor/entities/doctor-schedule.model';
+import { DoctorLeave } from '../doctor/entities/doctor-leave.model';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([User, UserBranch, RefreshToken, DoctorProfile]),
+    SequelizeModule.forFeature([User, UserBranch, RefreshToken, DoctorProfile, DoctorSchedule, DoctorLeave]),
     AuthModule,
   ],
   controllers: [StaffController],

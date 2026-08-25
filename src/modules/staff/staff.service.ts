@@ -8,6 +8,8 @@ import { Branch } from '../organization/entities/branch.model';
 import { RefreshToken } from '../auth/entities/refresh-token.model';
 import { Role } from '../../common/enums/role.enum';
 import { DoctorProfile } from '../doctor/entities/doctor-profile.model';
+import { DoctorSchedule } from '../doctor/entities/doctor-schedule.model';
+import { DoctorLeave } from '../doctor/entities/doctor-leave.model';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 import { UpdateStaffStatusDto } from './dto/update-staff-status.dto';
 
@@ -21,6 +23,10 @@ export class StaffService {
     @InjectModel(RefreshToken) private refreshTokenModel: typeof RefreshToken,
     @InjectModel(DoctorProfile)
     private doctorProfileModel: typeof DoctorProfile,
+    @InjectModel(DoctorSchedule)
+    private doctorScheduleModel: typeof DoctorSchedule,
+    @InjectModel(DoctorLeave)
+    private doctorLeaveModel: typeof DoctorLeave,
   ) {}
 
   async getStaffList(
@@ -66,7 +72,10 @@ export class StaffService {
       if (filters.role === Role.DOCTOR) {
         whereClause[Op.and] = whereClause[Op.and] || [];
         whereClause[Op.and].push({
-          [Op.or]: [{ role: Role.DOCTOR }, { id: { [Op.in]: doctorUserIds } }],
+          [Op.or]: [
+            { role: { [Op.in]: [Role.DOCTOR, Role.BRANCH_ADMIN] } },
+            { id: { [Op.in]: doctorUserIds } }
+          ],
         });
       } else if (filters.role && filters.role !== Role.OWNER) {
         whereClause.role = filters.role;
@@ -573,18 +582,22 @@ export class StaffService {
         );
       }
 
-      // Soft delete user via is_deleted
-      await staff.update({
-        is_deleted: true,
-        is_active: false,
-        status: UserStatus.INACTIVE,
-      });
+      // Remove doctor profile, schedules, and leaves
+      if (
+        (staff.role as string) === Role.DOCTOR ||
+        (staff.role as string) === Role.BRANCH_ADMIN
+      ) {
+        await this.doctorProfileModel.destroy({ where: { user_id: staffId } });
+        await this.doctorScheduleModel.destroy({ where: { user_id: staffId } });
+        await this.doctorLeaveModel.destroy({ where: { user_id: staffId } });
+      }
 
-      // Revoke all active sessions
-      await this.refreshTokenModel.update(
-        { is_revoked: true },
-        { where: { user_id: staffId, is_revoked: false } },
-      );
+      // Hard delete user branches and refresh tokens
+      await this.userBranchModel.destroy({ where: { user_id: staffId } });
+      await this.refreshTokenModel.destroy({ where: { user_id: staffId } });
+
+      // Hard delete user
+      await staff.destroy();
 
       return true;
     } catch (error) {

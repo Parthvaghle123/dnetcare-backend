@@ -101,7 +101,7 @@ export class AppointmentService {
         where: {
           id: doctor_id,
           organization_id: user.org_id,
-          role: { [Op.in]: [Role.DOCTOR, Role.OWNER] },
+          role: { [Op.in]: [Role.DOCTOR, Role.OWNER, Role.BRANCH_ADMIN] },
         },
       });
       if (!doctor)
