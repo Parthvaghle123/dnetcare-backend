@@ -50,7 +50,7 @@ export class AdminService {
       const users = await this.userModel.findAll({
         where: {
           is_deleted: false,
-          role: { [Op.ne]: 'MAIN_ADMIN' as any },
+          role: UserRole.OWNER,
         },
         include: [{ model: Organization, attributes: ['name'] }],
         order: [['created_at', 'DESC']],
