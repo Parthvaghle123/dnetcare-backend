@@ -278,7 +278,7 @@ export class TreatmentService {
 
       const created_by = await this.userModel.findOne({
         where: { id: plan.created_by },
-        attributes: ['id', 'first_name', 'last_name'],
+        attributes: ['id', 'first_name', 'last_name', 'role'],
       });
 
       const phasesData = await this.phaseModel.findAll({

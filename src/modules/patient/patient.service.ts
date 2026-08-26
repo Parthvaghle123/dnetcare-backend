@@ -213,6 +213,17 @@ export class PatientService {
         limit,
         offset,
         order: [['created_at', 'DESC']],
+        include: [
+          {
+            model: this.branchModel,
+            attributes: ['id', 'name', 'color_code'],
+          },
+          {
+            model: this.userModel,
+            attributes: ['id', 'first_name', 'last_name', 'role'],
+            as: 'created_by_relation',
+          }
+        ]
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -227,6 +238,9 @@ export class PatientService {
         age: patient.age,
         city: patient.city,
         is_active: patient.is_active,
+        notes: patient.notes,
+        registration_branch: patient.branch || null,
+        created_by: patient.created_by_relation || null,
         created_at: patient.created_at,
       }));
 
@@ -302,6 +316,7 @@ export class PatientService {
               id: user.id,
               first_name: user.first_name,
               last_name: user.last_name,
+              role: user.role,
             }
           : null,
         medical_conditions,

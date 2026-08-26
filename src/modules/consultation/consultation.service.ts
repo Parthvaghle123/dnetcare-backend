@@ -173,7 +173,7 @@ export class ConsultationService {
 
       const doctor = await this.userModel.findOne({
         where: { id: consultation.doctor_id },
-        attributes: ['id', 'first_name', 'last_name'],
+        attributes: ['id', 'first_name', 'last_name', 'role'],
       });
 
       const branch = await this.branchModel.findOne({
@@ -214,6 +214,7 @@ export class ConsultationService {
         is_completed: consultation.is_completed,
         patient,
         doctor,
+        created_by: doctor,
         branch,
         dental_chart,
         documents,

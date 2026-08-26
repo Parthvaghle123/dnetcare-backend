@@ -473,7 +473,7 @@ export class BillingService {
           {
             model: User,
             as: 'created_by_relation',
-            attributes: ['id', 'first_name', 'last_name'],
+            attributes: ['id', 'first_name', 'last_name', 'role'],
           },
         ],
         transaction,

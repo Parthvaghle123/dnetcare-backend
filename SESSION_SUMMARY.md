@@ -1,3 +1,5 @@
+CHANGED: src/modules/{consultation,treatment,appointment,billing}/*.service.ts → Updated record detail lookup APIs to include creator's user role and return created_by object.
+CHANGED: app/dashboard/patients/[id]/page.jsx → Added Action Menu "Info" option, fetching handler, details modal popup, and fixed dropdown menu clipping by adding overflow-visible on desktop.
 CHANGED: dental-bruno/Auth/✅ Verify OTP.yml, ✅ Refresh Token.yml → Added Bruno post-response scripts to automatically extract and set access_token, refresh_token, and user_id environment variables.
 CHANGED: src/modules/patient/medical-condition.controller.ts, patient.service.ts → Added update, status change, and delete routes for medical condition master.
 CHANGED: src/modules/patient/patient.controller.ts, patient.service.ts → Added update route for patient medical condition notes.

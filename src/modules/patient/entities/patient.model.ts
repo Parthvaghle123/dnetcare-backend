@@ -126,7 +126,7 @@ export class Patient extends Model {
   @Column(DataType.UUID)
   created_by: string;
 
-  @BelongsTo(() => User)
+  @BelongsTo(() => User, 'created_by')
   created_by_relation: User;
 
   @CreatedAt

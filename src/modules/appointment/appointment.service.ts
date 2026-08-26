@@ -412,6 +412,11 @@ export class AppointmentService {
             as: 'plan_phase',
             attributes: ['id', 'title', 'doctor_notes'],
           },
+          {
+            model: this.userModel,
+            as: 'created_by_relation',
+            attributes: ['id', 'first_name', 'last_name', 'role'],
+          },
         ],
         order: [['scheduled_at', 'ASC']],
       });
@@ -445,6 +450,7 @@ export class AppointmentService {
           patient: apt.patient,
           branch: apt.branch,
           treatment_phase: apt.plan_phase || null,
+          created_by: apt.created_by_relation || null,
         });
       }
 
@@ -825,6 +831,11 @@ export class AppointmentService {
           { model: this.branchModel, attributes: ['id', 'name', 'color_code'] },
           { model: this.treatmentPlanModel, attributes: ['id', 'title'] },
           { model: this.phaseModel, attributes: ['id', 'title'] },
+          {
+            model: this.userModel,
+            as: 'created_by_relation',
+            attributes: ['id', 'first_name', 'last_name', 'role'],
+          },
         ],
       });
 
@@ -842,6 +853,7 @@ export class AppointmentService {
         treatment_plan_phase_id: r.plan_phase_id,
         treatment_plan: r.treatment_plan,
         treatment_phase: r.plan_phase,
+        created_by: r.created_by_relation || null,
         created_at: r.created_at,
       }));
 
@@ -922,6 +934,14 @@ export class AppointmentService {
         });
       }
 
+      let created_by: any = null;
+      if (appointment.created_by) {
+        created_by = await this.userModel.findOne({
+          where: { id: appointment.created_by },
+          attributes: ['id', 'first_name', 'last_name', 'role'],
+        });
+      }
+
       return {
         id: appointment.id,
         scheduled_at: appointment.scheduled_at,
@@ -936,6 +956,7 @@ export class AppointmentService {
         treatment_plan: plan,
         treatment_phase: phase,
         rescheduled_from,
+        created_by,
         created_at: appointment.created_at,
         updated_at: appointment.updated_at,
       };
