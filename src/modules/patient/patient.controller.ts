@@ -141,6 +141,16 @@ export class PatientController {
     return { message: 'Patient profile fetched.', data };
   }
 
+  @Post(':id/branches')
+  async associateBranch(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('branch_id', ParseUUIDPipe) branchId: string,
+    @CurrentUser() user: any,
+  ) {
+    const data = await this.patientService.associateBranch(user, id, branchId);
+    return { message: 'Patient branch association saved successfully.', data };
+  }
+
   @Put(':id')
   async updatePatient(
     @Param('id', ParseUUIDPipe) id: string,

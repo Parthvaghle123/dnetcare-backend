@@ -15,6 +15,7 @@ import {
 import { Organization } from '../../organization/entities/organization.model';
 import { Branch } from '../../organization/entities/branch.model';
 import { User } from '../../auth/entities/user.model';
+import { PatientBranch } from './patient-branch.model';
 
 export enum Gender {
   MALE = 'MALE',
@@ -44,6 +45,9 @@ export class Patient extends Model {
 
   @BelongsTo(() => Branch)
   branch: Branch;
+
+  @HasMany(() => PatientBranch)
+  patient_branches: PatientBranch[];
 
   @AllowNull(false)
   @Column(DataType.STRING)

@@ -18,6 +18,7 @@ import { Subscription } from '../modules/subscription/entities/subscription.mode
 import { SubscriptionPayment } from '../modules/subscription/entities/subscription-payment.model';
 import { WebsiteConfig } from '../modules/website/entities/website-config.model';
 import { SupportTicket } from '../modules/support/entities/support.model';
+import { PatientBranch } from '../modules/patient/entities/patient-branch.model';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { SupportTicket } from '../modules/support/entities/support.model';
       SubscriptionPayment,
       WebsiteConfig,
       SupportTicket,
+      PatientBranch,
     ]),
   ],
   exports: [SequelizeModule],

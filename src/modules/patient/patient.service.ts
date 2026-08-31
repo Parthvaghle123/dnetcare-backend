@@ -7,6 +7,7 @@ import { Branch } from '../organization/entities/branch.model';
 import { User } from '../auth/entities/user.model';
 import { MedicalConditionMaster } from './entities/medical-condition-master.model';
 import { PatientMedicalCondition } from './entities/patient-medical-condition.model';
+import { PatientBranch } from './entities/patient-branch.model';
 import { Consultation } from '../consultation/entities/consultation.model';
 import { DentalChartEntry } from '../consultation/entities/dental-chart-entry.model';
 import { CreatePatientDto } from './dto/create-patient.dto';
@@ -35,6 +36,8 @@ export class PatientService {
     @InjectModel(Consultation) private consultationModel: typeof Consultation,
     @InjectModel(DentalChartEntry)
     private dentalChartEntryModel: typeof DentalChartEntry,
+    @InjectModel(PatientBranch)
+    private patientBranchModel: typeof PatientBranch,
     @InjectConnection() private sequelize: Sequelize,
     private readonly subscriptionService: SubscriptionService,
   ) {}
@@ -143,6 +146,15 @@ export class PatientService {
         }
       }
 
+      // Associate patient with their primary branch in patient_branches
+      await this.patientBranchModel.create(
+        {
+          patient_id: patient.id,
+          branch_id: dto.registration_branch_id,
+        },
+        { transaction },
+      );
+
       await transaction.commit();
 
       return {
@@ -184,7 +196,7 @@ export class PatientService {
   ) {
     try {
       const page = parseInt(filters.page || '1', 10);
-      const limit = parseInt(filters.limit || '10', 10);
+      const limit = filters.limit ? parseInt(filters.limit, 10) : 10000;
       const offset = (page - 1) * limit;
 
       const whereClause: any = { organization_id: reqUser.org_id };
@@ -195,8 +207,11 @@ export class PatientService {
         whereClause.is_active = true;
       }
 
-      if (filters.branch_id) {
-        whereClause.branch_id = filters.branch_id;
+      if (filters.branch_id && !filters.search) {
+        whereClause[Op.or] = [
+          { branch_id: filters.branch_id },
+          { id: { [Op.in]: this.sequelize.literal(`(SELECT patient_id FROM patient_branches WHERE branch_id = '${filters.branch_id}')`) } }
+        ];
       }
 
       if (filters.search) {
@@ -222,6 +237,15 @@ export class PatientService {
             model: this.userModel,
             attributes: ['id', 'first_name', 'last_name', 'role'],
             as: 'created_by_relation',
+          },
+          {
+            model: this.patientBranchModel,
+            include: [
+              {
+                model: this.branchModel,
+                attributes: ['id', 'name', 'color_code'],
+              }
+            ]
           }
         ]
       });
@@ -240,6 +264,7 @@ export class PatientService {
         is_active: patient.is_active,
         notes: patient.notes,
         registration_branch: patient.branch || null,
+        branches: patient.patient_branches?.map((pb: any) => pb.branch).filter(Boolean) || [],
         created_by: patient.created_by_relation || null,
         created_at: patient.created_at,
       }));
@@ -269,6 +294,17 @@ export class PatientService {
     try {
       const patient = await this.patientModel.findOne({
         where: { id, organization_id: reqUser.org_id },
+        include: [
+          {
+            model: this.patientBranchModel,
+            include: [
+              {
+                model: this.branchModel,
+                attributes: ['id', 'name', 'city', 'color_code'],
+              }
+            ]
+          }
+        ]
       });
 
       if (!patient) {
@@ -311,6 +347,7 @@ export class PatientService {
               color_code: branch.color_code,
             }
           : null,
+        branches: patient.patient_branches?.map((pb: any) => pb.branch).filter(Boolean) || [],
         created_by: user
           ? {
               id: user.id,
@@ -375,8 +412,14 @@ export class PatientService {
       if (dto.last_name !== undefined) updateData.last_name = dto.last_name;
       if (dto.mobile !== undefined) updateData.mobile = dto.mobile;
       if (dto.gender !== undefined) updateData.gender = dto.gender;
-      if (dto.registration_branch_id !== undefined)
+      if (dto.registration_branch_id !== undefined) {
         updateData.branch_id = dto.registration_branch_id;
+        // Make sure it is also in patient_branches
+        await this.patientBranchModel.findOrCreate({
+          where: { patient_id: id, branch_id: dto.registration_branch_id },
+          transaction,
+        });
+      }
       if (dto.address !== undefined) updateData.address = dto.address;
       if (dto.city !== undefined) updateData.city = dto.city;
       if (dto.notes !== undefined) updateData.notes = dto.notes;
@@ -945,6 +988,42 @@ export class PatientService {
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getToothHistory] Error:`, error);
+      throw new HttpException(
+        'Something went wrong. Please try again.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async associateBranch(reqUser: any, patientId: string, branchId: string) {
+    try {
+      const patient = await this.patientModel.findOne({
+        where: { id: patientId, organization_id: reqUser.org_id },
+      });
+      if (!patient) {
+        throw new HttpException('Patient not found.', StatusCode.NOT_FOUND);
+      }
+
+      const branch = await this.branchModel.findOne({
+        where: { id: branchId, organization_id: reqUser.org_id },
+      });
+      if (!branch) {
+        throw new HttpException('Branch not found.', StatusCode.NOT_FOUND);
+      }
+
+      const [assoc, created] = await this.patientBranchModel.findOrCreate({
+        where: { patient_id: patientId, branch_id: branchId },
+      });
+
+      return {
+        id: branch.id,
+        name: branch.name,
+        color_code: branch.color_code,
+        created,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error(`[associateBranch] Error:`, error);
       throw new HttpException(
         'Something went wrong. Please try again.',
         StatusCode.INTERNAL_SERVER_ERROR,

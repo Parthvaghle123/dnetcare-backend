@@ -577,7 +577,7 @@ export class BillingService {
         const payment = await this.paymentModel.create(
           {
             organization_id: user.org_id,
-            branch_id: invoice.branch_id,
+            branch_id: dto.branch_id || invoice.branch_id,
             patient_id: invoice.patient_id,
             invoice_id: invoice.id,
             amount: dto.amount,

@@ -12,6 +12,7 @@ import { BillingModule } from '../billing/billing.module';
 import { Consultation } from '../consultation/entities/consultation.model';
 import { DentalChartEntry } from '../consultation/entities/dental-chart-entry.model';
 import { SubscriptionModule } from '../subscription/subscription.module';
+import { PatientBranch } from './entities/patient-branch.model';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { SubscriptionModule } from '../subscription/subscription.module';
       PatientMedicalCondition,
       Consultation,
       DentalChartEntry,
+      PatientBranch,
     ]),
     BillingModule,
     SubscriptionModule,

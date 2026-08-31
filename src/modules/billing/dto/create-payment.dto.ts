@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   Min,
+  IsUUID,
 } from 'class-validator';
 import { PaymentMode } from '../entities/payment.model';
 
@@ -23,4 +24,8 @@ export class CreatePaymentDto {
   @IsOptional()
   @IsString()
   payment_reference?: string;
+
+  @IsOptional()
+  @IsUUID()
+  branch_id?: string;
 }
