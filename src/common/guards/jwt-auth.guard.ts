@@ -19,19 +19,17 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       // Clean path to remove leading/trailing slashes and global prefix
       const cleanPath = path.replace(/^\/api\/v1/, '').replace(/\/$/, '');
 
-      // Check if the user's trial is expired
+      // Check if the user's plan is expired
       const isExpired =
         user.planStatus === 'EXPIRED' ||
         !!(
-          (user.plan === 'Premium Growth' || user.plan === 'PRACTICE_GROWTH') &&
-          user.isTrial &&
           user.planExpiresAt &&
           !isNaN(new Date(user.planExpiresAt).getTime()) &&
           new Date() > new Date(user.planExpiresAt)
         );
 
       if (isExpired) {
-        // Expired trial users are in read-only mode: ALLOW GET, but BLOCK POST, PUT, PATCH, DELETE
+        // Expired users are in read-only mode: ALLOW GET, but BLOCK POST, PUT, PATCH, DELETE
         const isGet = method === 'GET';
         const isAllowedPostRoute =
           cleanPath === '/auth/logout' ||
@@ -43,7 +41,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
             {
               success: false,
               message:
-                'Your trial plan has expired. Please upgrade your plan to modify data.',
+                'Your subscription plan has expired. Please upgrade or renew your plan to modify data.',
             },
             StatusCode.FORBIDDEN,
           );

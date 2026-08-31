@@ -48,11 +48,21 @@ export class SubscriptionService implements OnModuleInit {
   async onModuleInit() {
     try {
       await this.planModel.sequelize?.query(
+        `DROP TRIGGER IF EXISTS prevent_plans_delete_trigger ON plans;`,
+      );
+    } catch (err) {
+      this.logger.warn('Could not temporarily drop prevent_plans_delete_trigger: ' + err.message);
+    }
+
+    try {
+      await this.planModel.sequelize?.query(
         `ALTER TABLE plans ADD COLUMN IF NOT EXISTS allowed_features JSONB;`,
       );
     } catch (err) {
       this.logger.warn('Could not add allowed_features column: ' + err.message);
     }
+
+    await this.seedPlans();
 
     try {
       // 1. Prevent DELETE or TRUNCATE on the plans table entirely
@@ -113,18 +123,9 @@ export class SubscriptionService implements OnModuleInit {
     } catch (err) {
       this.logger.warn('Could not create protection triggers: ' + err.message);
     }
-
-    await this.seedPlans();
   }
 
   private async seedPlans() {
-    try {
-      await this.planModel.destroy({ where: { name: 'Practice Growth' } });
-    } catch (err) {
-      this.logger.warn(
-        'Could not delete old Practice Growth plan: ' + err.message,
-      );
-    }
 
     const defaultPlans = [
       {
@@ -284,15 +285,30 @@ export class SubscriptionService implements OnModuleInit {
       },
     ];
 
-    for (const planData of defaultPlans) {
-      const existingPlan = await this.planModel.findOne({
-        where: { name: planData.name },
+    try {
+      const allowedIds = defaultPlans.map((p) => p.id);
+      await this.planModel.destroy({
+        where: {
+          id: {
+            [Op.notIn]: allowedIds,
+          },
+        },
+        force: true,
       });
+    } catch (err) {
+      this.logger.warn(
+        'Could not delete old non-matching plans: ' + err.message,
+      );
+    }
+
+    for (const planData of defaultPlans) {
+      const existingPlan = await this.planModel.findByPk(planData.id);
       if (!existingPlan) {
         await this.planModel.create(planData as any);
         this.logger.log(`Seeded plan: ${planData.name}`);
       } else {
         await existingPlan.update(planData);
+        this.logger.log(`Updated plan: ${planData.name}`);
       }
     }
   }
@@ -405,6 +421,18 @@ export class SubscriptionService implements OnModuleInit {
       subscription.end_date = endDate;
       await subscription.save();
 
+      // Deactivate all other active subscriptions for this organization
+      await this.subscriptionModel.update(
+        { status: SubscriptionStatus.EXPIRED },
+        {
+          where: {
+            organization_id: subscription.organization_id,
+            status: SubscriptionStatus.ACTIVE,
+            id: { [Op.ne]: subscription.id },
+          },
+        },
+      );
+
       // Find the plan to update the users
       const plan = await this.planModel.findByPk(subscription.plan_id);
       if (plan) {
@@ -463,7 +491,7 @@ export class SubscriptionService implements OnModuleInit {
           organization_id: organizationId,
           plan_id: practiceGrowthPlan
             ? practiceGrowthPlan.id
-            : 'practice_growth_id',
+            : 'premium_growth_id',
           status: isExpired
             ? SubscriptionStatus.EXPIRED
             : SubscriptionStatus.ACTIVE,
@@ -472,7 +500,7 @@ export class SubscriptionService implements OnModuleInit {
           is_active: !isExpired,
           isTrial: true,
           plan: practiceGrowthPlan || {
-            id: 'practice_growth_id',
+            id: 'premium_growth_id',
             name: 'Premium Growth',
             price_monthly: 9999,
             type: 'BUNDLE',
@@ -481,7 +509,7 @@ export class SubscriptionService implements OnModuleInit {
             max_appointments: null,
             is_active: true,
           },
-          plan_key: 'practice_growth',
+          plan_key: 'premium_growth',
         };
       }
     }

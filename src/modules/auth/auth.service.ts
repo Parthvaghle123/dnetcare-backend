@@ -60,7 +60,7 @@ export class AuthService implements OnModuleInit {
     private jwtService: JwtService,
     private emailService: EmailService,
     @InjectConnection() private sequelize: Sequelize,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     try {
@@ -72,7 +72,7 @@ export class AuthService implements OnModuleInit {
         .catch((err) => {
           this.logger.warn(
             'Could not alter enum type (it might not exist yet or error): ' +
-              err.message,
+            err.message,
           );
         });
 
@@ -82,7 +82,7 @@ export class AuthService implements OnModuleInit {
         .catch((err) => {
           this.logger.warn(
             'Could not drop NOT NULL constraint on users.organization_id: ' +
-              err.message,
+            err.message,
           );
         });
 
@@ -485,16 +485,15 @@ export class AuthService implements OnModuleInit {
       const isExpired =
         user.planStatus === 'EXPIRED' ||
         !!(
-          (user.plan === 'Premium Growth' || user.plan === 'PRACTICE_GROWTH') &&
-          user.isTrial &&
           user.planExpiresAt &&
+          !isNaN(new Date(user.planExpiresAt).getTime()) &&
           new Date() > new Date(user.planExpiresAt)
         );
 
       let allowedFeatures: string[] = [];
       if (user.plan) {
         let queryName = user.plan;
-        if (user.plan === 'PRACTICE_GROWTH') queryName = 'Premium Growth';
+        if (user.plan === 'PRACTICE_GROWTH' || user.plan === 'PREMIUM_GROWTH') queryName = 'Premium Growth';
 
         const planData = await this.planModel.findOne({
           where: { name: queryName },
@@ -1105,9 +1104,8 @@ export class AuthService implements OnModuleInit {
       const isExpired =
         user.planStatus === 'EXPIRED' ||
         !!(
-          (user.plan === 'Premium Growth' || user.plan === 'PRACTICE_GROWTH') &&
-          user.isTrial &&
           user.planExpiresAt &&
+          !isNaN(new Date(user.planExpiresAt).getTime()) &&
           new Date() > new Date(user.planExpiresAt)
         );
 
@@ -1115,7 +1113,7 @@ export class AuthService implements OnModuleInit {
       if (user.plan) {
         // user.plan is typically the name of the plan (e.g., 'Pro Plan', 'Growth Plan', 'ULTRA_PRO')
         let queryName = user.plan;
-        if (user.plan === 'PRACTICE_GROWTH') queryName = 'Premium Growth'; // Fix for trial practice growth naming mismatch if any
+        if (user.plan === 'PRACTICE_GROWTH' || user.plan === 'PREMIUM_GROWTH') queryName = 'Premium Growth'; // Fix for trial practice growth naming mismatch if any
 
         const planData = await this.planModel.findOne({
           where: { name: queryName },

@@ -3,12 +3,11 @@ const { Client } = require('pg');
 const DATABASE_URL = "postgresql://postgres.xohkfxvvullwvnhskigr:%27%23UW4Fw6%27Ba*%2Bjq@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres";
 
 const plans = [
-  { name: 'Pro Plan', type: 'SOFTWARE', price_monthly: 1999, max_branches: 1, max_patients: null, max_appointments: null },
+  { name: 'Pro Plan', type: 'SOFTWARE', price_monthly: 1999, max_branches: 1, max_patients: 100, max_appointments: 300 },
   { name: 'Ultra Pro Plan', type: 'SOFTWARE', price_monthly: 3999, max_branches: 3, max_patients: null, max_appointments: null },
-  { name: 'Digital Presence', type: 'MARKETING', price_monthly: 1999, max_branches: 1, max_patients: null, max_appointments: null },
-  { name: 'Growth Plan', type: 'MARKETING', price_monthly: 4999, max_branches: 1, max_patients: null, max_appointments: null },
-  { name: 'Premium Growth', type: 'BUNDLE', price_monthly: 9999, max_branches: 1, max_patients: null, max_appointments: null },
-
+  { name: 'Digital Presence', type: 'MARKETING', price_monthly: 1999, max_branches: null, max_patients: null, max_appointments: null },
+  { name: 'Growth Plan', type: 'MARKETING', price_monthly: 4999, max_branches: null, max_patients: null, max_appointments: null },
+  { name: 'Premium Growth', type: 'BUNDLE', price_monthly: 9999, max_branches: null, max_patients: null, max_appointments: null },
 ];
 
 async function seed() {

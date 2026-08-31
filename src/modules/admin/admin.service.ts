@@ -783,6 +783,25 @@ export class AdminService {
     // 6. Profit & Loss Overview
     const profitLoss = await this.getProfitLossTrend(financePeriod);
 
+    // 7. Plan Statistics
+    const plans = await this.planModel.findAll({
+      include: [
+        {
+          model: Subscription,
+          as: 'subscriptions',
+          where: { status: 'ACTIVE' },
+          required: false,
+        },
+      ],
+      order: [['price_monthly', 'ASC']],
+    });
+
+    const planStats = plans.map((plan) => ({
+      id: plan.id,
+      name: plan.name,
+      activeCount: plan.subscriptions ? plan.subscriptions.length : 0,
+    }));
+
     return {
       stats: {
         totalClinics,
@@ -790,6 +809,7 @@ export class AdminService {
         totalAppointments,
         totalPatients,
       },
+      planStats,
       growth,
       appointmentOverview,
       appointmentStatus,
@@ -859,6 +879,7 @@ export class AdminService {
         totalTreatments,
         totalConsultations,
       },
+      planStats: [],
       appointmentOverview,
       appointmentStatus,
       profitLoss,
