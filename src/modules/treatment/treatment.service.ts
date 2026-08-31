@@ -281,6 +281,23 @@ export class TreatmentService {
         attributes: ['id', 'first_name', 'last_name', 'role'],
       });
 
+      let consultation_doctor: any = null;
+      if (plan.consultation_id) {
+        const consultation = await this.consultationModel.findOne({
+          where: { id: plan.consultation_id },
+          include: [
+            {
+              model: this.userModel,
+              as: 'doctor',
+              attributes: ['id', 'first_name', 'last_name', 'role'],
+            }
+          ]
+        });
+        if (consultation && consultation.doctor) {
+          consultation_doctor = consultation.doctor;
+        }
+      }
+
       const phasesData = await this.phaseModel.findAll({
         where: { treatment_plan_id: id },
         order: [['phase_number', 'ASC']],
@@ -358,6 +375,7 @@ export class TreatmentService {
         patient,
         branch,
         created_by,
+        consultation_doctor,
         phases,
         created_at: plan.created_at,
         updated_at: plan.updated_at,

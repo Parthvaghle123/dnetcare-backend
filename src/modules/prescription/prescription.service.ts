@@ -71,11 +71,35 @@ export class PrescriptionService {
     const patient = await this.patientModel.findByPk(prescription.patient_id, {
       transaction,
     });
-    const doctor = await this.userModel.findByPk(prescription.doctor_id, {
+    let displayDoctorId = prescription.doctor_id;
+    if (prescription.consultation_id && consultation) {
+      displayDoctorId = consultation.doctor_id;
+    } else if (prescription.treatment_plan_phase_id) {
+      const TPPhase = this.sequelize.models.TreatmentPlanPhase;
+      const TP = this.sequelize.models.TreatmentPlan;
+      const phase: any = await TPPhase.findByPk(
+        prescription.treatment_plan_phase_id,
+        {
+          include: [{ model: TP, as: 'treatment_plan' }],
+          transaction,
+        },
+      );
+      if (phase?.treatment_plan?.consultation_id) {
+        const tpCons = await this.consultationModel.findByPk(
+          phase.treatment_plan.consultation_id,
+          { transaction }
+        );
+        if (tpCons) {
+          displayDoctorId = tpCons.doctor_id;
+        }
+      }
+    }
+
+    const doctor = await this.userModel.findByPk(displayDoctorId, {
       transaction,
     });
     const doctorProfile = await this.doctorProfileModel.findOne({
-      where: { user_id: prescription.doctor_id },
+      where: { user_id: displayDoctorId },
       transaction,
     });
     const branch = await this.branchModel.findByPk(branchId, { transaction });
