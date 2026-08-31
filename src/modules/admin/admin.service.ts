@@ -148,13 +148,16 @@ export class AdminService {
         );
       }
 
-
-      const existingTables = await this.sequelize.getQueryInterface().showAllTables();
+      const existingTables = await this.sequelize
+        .getQueryInterface()
+        .showAllTables();
       const safeDestroy = async (model: any, options: any) => {
         // tableName can be on the class itself or on the prototype/instance
         const tableName = model.tableName ?? model.getTableName?.() ?? null;
         if (!tableName) {
-          this.logger.warn(`safeDestroy: could not resolve tableName for model`);
+          this.logger.warn(
+            `safeDestroy: could not resolve tableName for model`,
+          );
           return;
         }
         if (existingTables.includes(tableName)) {
@@ -212,10 +215,13 @@ export class AdminService {
           const invoiceIds = invoices.map((inv) => inv.id);
 
           // 7. Get prescriptions (by patient)
-          const prescriptions = patientIds.length > 0 ? await Prescription.findAll({
-            where: { patient_id: { [Op.in]: patientIds } },
-            transaction,
-          }) : [];
+          const prescriptions =
+            patientIds.length > 0
+              ? await Prescription.findAll({
+                  where: { patient_id: { [Op.in]: patientIds } },
+                  transaction,
+                })
+              : [];
           const prescriptionIds = prescriptions.map((pr) => pr.id);
 
           // 8. Get appointments
@@ -240,7 +246,7 @@ export class AdminService {
           const inquiryIds = inquiries.map((inq) => inq.id);
 
           // Delete dependent tables in order to resolve foreign keys:
-          
+
           // - Subscription payments
           if (subscriptionIds.length > 0) {
             await safeDestroy(SubscriptionPayment, {
@@ -365,7 +371,9 @@ export class AdminService {
             });
           }
           // - Notification logs
-          const hasNotificationLogs = await this.sequelize.getQueryInterface().tableExists('notification_logs');
+          const hasNotificationLogs = await this.sequelize
+            .getQueryInterface()
+            .tableExists('notification_logs');
           if (hasNotificationLogs) {
             await safeDestroy(NotificationLog, {
               where: { organization_id: orgId },
@@ -388,7 +396,7 @@ export class AdminService {
             where: { organization_id: orgId },
             transaction,
           });
-          
+
           // - Medical Condition Masters
           await safeDestroy(MedicalConditionMaster, {
             where: { organization_id: orgId },
@@ -454,7 +462,6 @@ export class AdminService {
             where: { id: orgId },
             transaction,
           });
-
         } else {
           // If not an OWNER, delete only records belonging to this specific user:
           const userId = user.id;
@@ -464,7 +471,7 @@ export class AdminService {
             where: { user_id: userId },
             transaction,
           });
-          
+
           // 2. Refresh tokens & User branches
           await safeDestroy(this.refreshTokenModel, {
             where: { user_id: userId },
@@ -622,9 +629,13 @@ export class AdminService {
       this.logger.error('[deleteUser] Error:', error);
       if (error instanceof HttpException) throw error;
       // Expose the real DB error message so the frontend toast is informative
-      const detail = error?.parent?.message || error?.original?.message || error?.message;
+      const detail =
+        error?.parent?.message || error?.original?.message || error?.message;
       throw new HttpException(
-        { message: detail || 'Failed to delete user and associated records.', error: 'DELETE_FAILED' },
+        {
+          message: detail || 'Failed to delete user and associated records.',
+          error: 'DELETE_FAILED',
+        },
         StatusCode.INTERNAL_SERVER_ERROR,
       );
     }

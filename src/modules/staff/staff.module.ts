@@ -12,7 +12,14 @@ import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    SequelizeModule.forFeature([User, UserBranch, RefreshToken, DoctorProfile, DoctorSchedule, DoctorLeave]),
+    SequelizeModule.forFeature([
+      User,
+      UserBranch,
+      RefreshToken,
+      DoctorProfile,
+      DoctorSchedule,
+      DoctorLeave,
+    ]),
     AuthModule,
   ],
   controllers: [StaffController],

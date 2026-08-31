@@ -51,7 +51,10 @@ export class SubscriptionService implements OnModuleInit {
         `DROP TRIGGER IF EXISTS prevent_plans_delete_trigger ON plans;`,
       );
     } catch (err) {
-      this.logger.warn('Could not temporarily drop prevent_plans_delete_trigger: ' + err.message);
+      this.logger.warn(
+        'Could not temporarily drop prevent_plans_delete_trigger: ' +
+          err.message,
+      );
     }
 
     try {
@@ -126,7 +129,6 @@ export class SubscriptionService implements OnModuleInit {
   }
 
   private async seedPlans() {
-
     const defaultPlans = [
       {
         id: '4c1a55fb-fad8-4535-b683-14b853bae58a',
@@ -451,12 +453,18 @@ export class SubscriptionService implements OnModuleInit {
         );
 
         const adminUser = await this.userModel.findOne({
-          where: { organization_id: subscription.organization_id, role: 'OWNER' },
+          where: {
+            organization_id: subscription.organization_id,
+            role: 'OWNER',
+          },
         });
 
         if (adminUser && adminUser.email) {
           try {
-            await this.emailService.sendPlanPurchaseEmail(adminUser.email, plan.name);
+            await this.emailService.sendPlanPurchaseEmail(
+              adminUser.email,
+              plan.name,
+            );
           } catch (e) {
             this.logger.error('Failed to send plan purchase email to admin', e);
           }
@@ -584,7 +592,10 @@ export class SubscriptionService implements OnModuleInit {
               owner.planExpiresAt,
             );
           } catch (e) {
-            this.logger.error(`Failed to send expiry reminder to ${owner.email}`, e);
+            this.logger.error(
+              `Failed to send expiry reminder to ${owner.email}`,
+              e,
+            );
           }
         }
       }

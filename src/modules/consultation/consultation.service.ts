@@ -820,7 +820,9 @@ export class ConsultationService {
           where: {
             [Op.or]: [
               { treatment_plan_id: { [Op.in]: planIds } },
-              ...(phaseIds.length > 0 ? [{ plan_phase_id: { [Op.in]: phaseIds } }] : []),
+              ...(phaseIds.length > 0
+                ? [{ plan_phase_id: { [Op.in]: phaseIds } }]
+                : []),
             ],
           },
           transaction,
@@ -838,7 +840,10 @@ export class ConsultationService {
         // Nullify appointment_id in Consultations (for safety, though they'll be deleted or updated)
         await Consultation.update(
           { appointment_id: null },
-          { where: { appointment_id: { [Op.in]: appointmentIds } }, transaction },
+          {
+            where: { appointment_id: { [Op.in]: appointmentIds } },
+            transaction,
+          },
         );
 
         // Delete the appointments themselves
@@ -853,7 +858,14 @@ export class ConsultationService {
         where: {
           [Op.or]: [
             { consultation_id: id, organization_id: user.org_id },
-            ...(planIds.length > 0 ? [{ treatment_plan_id: { [Op.in]: planIds }, organization_id: user.org_id }] : []),
+            ...(planIds.length > 0
+              ? [
+                  {
+                    treatment_plan_id: { [Op.in]: planIds },
+                    organization_id: user.org_id,
+                  },
+                ]
+              : []),
           ],
         },
         transaction,
@@ -885,7 +897,9 @@ export class ConsultationService {
         where: {
           [Op.or]: [
             { consultation_id: id },
-            ...(phaseIds.length > 0 ? [{ treatment_plan_phase_id: { [Op.in]: phaseIds } }] : []),
+            ...(phaseIds.length > 0
+              ? [{ treatment_plan_phase_id: { [Op.in]: phaseIds } }]
+              : []),
           ],
         },
         transaction,

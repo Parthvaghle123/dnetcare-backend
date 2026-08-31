@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
-  constructor(private configService: ConfigService) { }
+  constructor(private configService: ConfigService) {}
 
   async sendOtpEmail(
     email: string,
@@ -605,18 +605,24 @@ export class EmailService {
     }
   }
 
-  async sendPlanPurchaseEmail(email: string, planName: string, isFirstTime: boolean = false) {
-    const title = isFirstTime ? 'Your First-Time Plan Has Been Assigned' : 'Subscription Confirmed';
-    const subTitle = isFirstTime
-      ? ''
-      : 'Thank you for your purchase';
+  async sendPlanPurchaseEmail(
+    email: string,
+    planName: string,
+    isFirstTime: boolean = false,
+  ) {
+    const title = isFirstTime
+      ? 'Your First-Time Plan Has Been Assigned'
+      : 'Subscription Confirmed';
+    const subTitle = isFirstTime ? '' : 'Thank you for your purchase';
     const mainMessage = isFirstTime
       ? `Your free plan <strong>${planName}</strong> has been successfully assigned to your account. You can now start using the platform.`
       : `Your subscription to the <strong>${planName}</strong> plan has been successfully activated. We're excited to support your clinic's growth.`;
     const emailSubject = isFirstTime
       ? `DentCare360 - Your First-Time Plan Has Been Assigned`
       : `DentCare360 - Subscription Confirmed: ${planName}`;
-    const badgeText = isFirstTime ? '✔ Free Plan Assigned' : '✔ Purchase Successful';
+    const badgeText = isFirstTime
+      ? '✔ Free Plan Assigned'
+      : '✔ Purchase Successful';
 
     const html = `
     <!DOCTYPE html>
@@ -768,12 +774,20 @@ export class EmailService {
       );
       return data;
     } catch (error: any) {
-      this.logger.error(`Failed to send Plan Purchase email to ${email}`, error);
+      this.logger.error(
+        `Failed to send Plan Purchase email to ${email}`,
+        error,
+      );
       throw error;
     }
   }
 
-  async sendPlanExpiryReminderEmail(email: string, planName: string, daysLeft: number, expiryDate: Date) {
+  async sendPlanExpiryReminderEmail(
+    email: string,
+    planName: string,
+    daysLeft: number,
+    expiryDate: Date,
+  ) {
     const title = 'Action Required: Plan Expiring Soon';
     const subTitle = `Your ${planName} plan will expire in ${daysLeft} days.`;
     const formattedDate = new Date(expiryDate).toLocaleDateString('en-US', {
@@ -935,7 +949,10 @@ export class EmailService {
       );
       return data;
     } catch (error: any) {
-      this.logger.error(`Failed to send Plan Expiry Reminder email to ${email}`, error);
+      this.logger.error(
+        `Failed to send Plan Expiry Reminder email to ${email}`,
+        error,
+      );
       throw error;
     }
   }

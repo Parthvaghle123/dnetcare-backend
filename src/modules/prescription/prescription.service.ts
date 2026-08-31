@@ -87,7 +87,7 @@ export class PrescriptionService {
       if (phase?.treatment_plan?.consultation_id) {
         const tpCons = await this.consultationModel.findByPk(
           phase.treatment_plan.consultation_id,
-          { transaction }
+          { transaction },
         );
         if (tpCons) {
           displayDoctorId = tpCons.doctor_id;

@@ -74,7 +74,7 @@ export class StaffService {
         whereClause[Op.and].push({
           [Op.or]: [
             { role: { [Op.in]: [Role.DOCTOR, Role.BRANCH_ADMIN] } },
-            { id: { [Op.in]: doctorUserIds } }
+            { id: { [Op.in]: doctorUserIds } },
           ],
         });
       } else if (filters.role && filters.role !== Role.OWNER) {
@@ -588,7 +588,9 @@ export class StaffService {
         (staff.role as string) === Role.BRANCH_ADMIN
       ) {
         await this.doctorProfileModel.destroy({ where: { user_id: staffId } });
-        await this.doctorScheduleModel.destroy({ where: { doctor_id: staffId } });
+        await this.doctorScheduleModel.destroy({
+          where: { doctor_id: staffId },
+        });
         await this.doctorLeaveModel.destroy({ where: { doctor_id: staffId } });
       }
 

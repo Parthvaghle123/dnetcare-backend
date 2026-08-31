@@ -290,8 +290,8 @@ export class TreatmentService {
               model: this.userModel,
               as: 'doctor',
               attributes: ['id', 'first_name', 'last_name', 'role'],
-            }
-          ]
+            },
+          ],
         });
         if (consultation && consultation.doctor) {
           consultation_doctor = consultation.doctor;
@@ -901,7 +901,10 @@ export class TreatmentService {
 
       await plan.update({ status: dto.status });
 
-      if (dto.status === TreatmentPlanStatus.COMPLETED && plan.consultation_id) {
+      if (
+        dto.status === TreatmentPlanStatus.COMPLETED &&
+        plan.consultation_id
+      ) {
         await this.consultationModel.update(
           { is_completed: true },
           { where: { id: plan.consultation_id } },

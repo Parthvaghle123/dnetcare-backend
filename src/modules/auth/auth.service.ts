@@ -60,7 +60,7 @@ export class AuthService implements OnModuleInit {
     private jwtService: JwtService,
     private emailService: EmailService,
     @InjectConnection() private sequelize: Sequelize,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     try {
@@ -72,7 +72,7 @@ export class AuthService implements OnModuleInit {
         .catch((err) => {
           this.logger.warn(
             'Could not alter enum type (it might not exist yet or error): ' +
-            err.message,
+              err.message,
           );
         });
 
@@ -82,7 +82,7 @@ export class AuthService implements OnModuleInit {
         .catch((err) => {
           this.logger.warn(
             'Could not drop NOT NULL constraint on users.organization_id: ' +
-            err.message,
+              err.message,
           );
         });
 
@@ -464,7 +464,11 @@ export class AuthService implements OnModuleInit {
         await user.reload();
 
         try {
-          await this.emailService.sendPlanPurchaseEmail(user.email, user.plan, true);
+          await this.emailService.sendPlanPurchaseEmail(
+            user.email,
+            user.plan,
+            true,
+          );
         } catch (e) {
           this.logger.error('Failed to send initial plan assignment email', e);
         }
@@ -493,7 +497,8 @@ export class AuthService implements OnModuleInit {
       let allowedFeatures: string[] = [];
       if (user.plan) {
         let queryName = user.plan;
-        if (user.plan === 'PRACTICE_GROWTH' || user.plan === 'PREMIUM_GROWTH') queryName = 'Premium Growth';
+        if (user.plan === 'PRACTICE_GROWTH' || user.plan === 'PREMIUM_GROWTH')
+          queryName = 'Premium Growth';
 
         const planData = await this.planModel.findOne({
           where: { name: queryName },
@@ -764,7 +769,8 @@ export class AuthService implements OnModuleInit {
       if (isPlanExpired) {
         throw new HttpException(
           {
-            message: 'The clinic owner does not have an active subscription or the trial has expired. Please upgrade or activate a plan to invite staff.',
+            message:
+              'The clinic owner does not have an active subscription or the trial has expired. Please upgrade or activate a plan to invite staff.',
             error: ErrorCode.FORBIDDEN,
           },
           StatusCode.FORBIDDEN,
@@ -1113,7 +1119,8 @@ export class AuthService implements OnModuleInit {
       if (user.plan) {
         // user.plan is typically the name of the plan (e.g., 'Pro Plan', 'Growth Plan', 'ULTRA_PRO')
         let queryName = user.plan;
-        if (user.plan === 'PRACTICE_GROWTH' || user.plan === 'PREMIUM_GROWTH') queryName = 'Premium Growth'; // Fix for trial practice growth naming mismatch if any
+        if (user.plan === 'PRACTICE_GROWTH' || user.plan === 'PREMIUM_GROWTH')
+          queryName = 'Premium Growth'; // Fix for trial practice growth naming mismatch if any
 
         const planData = await this.planModel.findOne({
           where: { name: queryName },

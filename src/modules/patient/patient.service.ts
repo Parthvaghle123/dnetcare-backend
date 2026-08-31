@@ -210,7 +210,13 @@ export class PatientService {
       if (filters.branch_id && !filters.search) {
         whereClause[Op.or] = [
           { branch_id: filters.branch_id },
-          { id: { [Op.in]: this.sequelize.literal(`(SELECT patient_id FROM patient_branches WHERE branch_id = '${filters.branch_id}')`) } }
+          {
+            id: {
+              [Op.in]: this.sequelize.literal(
+                `(SELECT patient_id FROM patient_branches WHERE branch_id = '${filters.branch_id}')`,
+              ),
+            },
+          },
         ];
       }
 
@@ -244,10 +250,10 @@ export class PatientService {
               {
                 model: this.branchModel,
                 attributes: ['id', 'name', 'color_code'],
-              }
-            ]
-          }
-        ]
+              },
+            ],
+          },
+        ],
       });
 
       const totalPages = Math.ceil(count / limit);
@@ -264,7 +270,10 @@ export class PatientService {
         is_active: patient.is_active,
         notes: patient.notes,
         registration_branch: patient.branch || null,
-        branches: patient.patient_branches?.map((pb: any) => pb.branch).filter(Boolean) || [],
+        branches:
+          patient.patient_branches
+            ?.map((pb: any) => pb.branch)
+            .filter(Boolean) || [],
         created_by: patient.created_by_relation || null,
         created_at: patient.created_at,
       }));
@@ -301,10 +310,10 @@ export class PatientService {
               {
                 model: this.branchModel,
                 attributes: ['id', 'name', 'city', 'color_code'],
-              }
-            ]
-          }
-        ]
+              },
+            ],
+          },
+        ],
       });
 
       if (!patient) {
@@ -347,7 +356,10 @@ export class PatientService {
               color_code: branch.color_code,
             }
           : null,
-        branches: patient.patient_branches?.map((pb: any) => pb.branch).filter(Boolean) || [],
+        branches:
+          patient.patient_branches
+            ?.map((pb: any) => pb.branch)
+            .filter(Boolean) || [],
         created_by: user
           ? {
               id: user.id,

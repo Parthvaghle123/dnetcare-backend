@@ -159,7 +159,11 @@ export class OrganizationService {
         ];
       }
 
-      if (reqUser.role === Role.DOCTOR || reqUser.role === Role.RECEPTIONIST || reqUser.role === Role.BRANCH_ADMIN) {
+      if (
+        reqUser.role === Role.DOCTOR ||
+        reqUser.role === Role.RECEPTIONIST ||
+        reqUser.role === Role.BRANCH_ADMIN
+      ) {
         whereClause.id = { [Op.in]: reqUser.branch_ids };
       }
 
@@ -305,7 +309,11 @@ export class OrganizationService {
         throw new HttpException('Branch not found.', StatusCode.NOT_FOUND);
       }
 
-      if (reqUser.role === Role.DOCTOR || reqUser.role === Role.RECEPTIONIST || reqUser.role === Role.BRANCH_ADMIN) {
+      if (
+        reqUser.role === Role.DOCTOR ||
+        reqUser.role === Role.RECEPTIONIST ||
+        reqUser.role === Role.BRANCH_ADMIN
+      ) {
         if (!reqUser.branch_ids.includes(id)) {
           throw new HttpException(
             'You do not have access to this branch.',

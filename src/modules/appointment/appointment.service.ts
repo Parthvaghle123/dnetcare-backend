@@ -1111,8 +1111,6 @@ export class AppointmentService {
         }
       }
 
-
-
       let msg = 'Status updated.';
       if (dto.status === UpdateAppointmentStatusEnum.CONFIRMED)
         msg = 'Appointment confirmed.';
@@ -1316,6 +1314,40 @@ export class AppointmentService {
           StatusCode.CONFLICT,
         );
 
+      if (appointment.rescheduled_from_id) {
+        await appointment.update(
+          {
+            scheduled_at: newScheduledAt,
+            duration_minutes:
+              dto.duration_minutes || appointment.duration_minutes,
+            notes_for_doctor:
+              dto.notes_for_doctor || appointment.notes_for_doctor,
+            status: AppointmentStatus.SCHEDULED,
+          },
+          { transaction },
+        );
+
+        if (appointment.plan_phase_id) {
+          await this.phaseModel.update(
+            { appointment_id: appointment.id, status: 'SCHEDULED' },
+            { where: { id: appointment.plan_phase_id }, transaction },
+          );
+        }
+
+        await transaction.commit();
+
+        return {
+          old_appointment_id: appointment.rescheduled_from_id,
+          old_status: 'RESCHEDULED',
+          new_appointment: {
+            id: appointment.id,
+            scheduled_at: newScheduledAt,
+            status: 'SCHEDULED',
+            rescheduled_from_id: appointment.rescheduled_from_id,
+          },
+        };
+      }
+
       await appointment.update(
         { status: AppointmentStatus.RESCHEDULED },
         { transaction },
@@ -1433,7 +1465,10 @@ export class AppointmentService {
         }
       }
 
-      let finalDuration = dto.duration_minutes !== undefined ? dto.duration_minutes : appointment.duration_minutes;
+      let finalDuration =
+        dto.duration_minutes !== undefined
+          ? dto.duration_minutes
+          : appointment.duration_minutes;
 
       // Handle treatment plan phase linking
       let planId = appointment.treatment_plan_id;
@@ -1493,7 +1528,12 @@ export class AppointmentService {
       }
 
       // Check doctor schedule and leaves if date or doctor or branch changed
-      if (dto.scheduled_at || dto.doctor_id || dto.branch_id || dto.duration_minutes !== undefined) {
+      if (
+        dto.scheduled_at ||
+        dto.doctor_id ||
+        dto.branch_id ||
+        dto.duration_minutes !== undefined
+      ) {
         const dateStr = scheduledAt.toISOString().split('T')[0];
         const timeStr = scheduledAt.toISOString().split('T')[1].slice(0, 5);
         const dayNames = [
@@ -1525,7 +1565,8 @@ export class AppointmentService {
             if (s_h * 60 + s_m >= 720) {
               throw new HttpException(
                 {
-                  message: 'Doctor is on half-day leave (evening) on this date.',
+                  message:
+                    'Doctor is on half-day leave (evening) on this date.',
                   error: ErrorCode.BAD_REQUEST,
                 },
                 StatusCode.BAD_REQUEST,
@@ -1632,7 +1673,8 @@ export class AppointmentService {
           if (newStartMin < aptEndMin && newEndMin > aptStartMin) {
             throw new HttpException(
               {
-                message: 'This time slot overlaps with an existing appointment.',
+                message:
+                  'This time slot overlaps with an existing appointment.',
                 error: ErrorCode.CONFLICT,
               },
               StatusCode.CONFLICT,
@@ -1649,7 +1691,10 @@ export class AppointmentService {
           duration_minutes: finalDuration,
           treatment_plan_id: planId,
           plan_phase_id: phaseId,
-          notes_for_doctor: dto.notes_for_doctor !== undefined ? dto.notes_for_doctor : appointment.notes_for_doctor,
+          notes_for_doctor:
+            dto.notes_for_doctor !== undefined
+              ? dto.notes_for_doctor
+              : appointment.notes_for_doctor,
         },
         { transaction },
       );
@@ -1669,7 +1714,7 @@ export class AppointmentService {
           branch_id: appointment.branch_id,
           treatment_plan_id: appointment.treatment_plan_id,
           treatment_plan_phase_id: appointment.plan_phase_id,
-        }
+        },
       };
     } catch (error) {
       await transaction.rollback();
