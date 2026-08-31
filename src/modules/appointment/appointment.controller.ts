@@ -18,6 +18,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentStatusDto } from './dto/update-appointment-status.dto';
 import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto';
+import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 
 @Controller('appointments')
 @UseGuards(JwtAuthGuard)
@@ -86,6 +87,15 @@ export class AppointmentController {
       dto,
     );
     return { message: 'Appointment rescheduled successfully.', data };
+  }
+
+  @Put(':id')
+  async updateAppointment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateAppointmentDto,
+    @CurrentUser() user: any,
+  ) {
+    return this.appointmentService.updateAppointment(user, id, dto);
   }
 
   @Delete(':id')

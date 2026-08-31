@@ -24,6 +24,7 @@ import {
   UpdateAppointmentStatusEnum,
 } from './dto/update-appointment-status.dto';
 import { RescheduleAppointmentDto } from './dto/reschedule-appointment.dto';
+import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 
 @Injectable()
 export class AppointmentService {
@@ -1361,6 +1362,317 @@ export class AppointmentService {
       await transaction.rollback();
       if (error instanceof HttpException) throw error;
       this.logger.error('[rescheduleAppointment] Error:', error);
+      throw new HttpException(
+        'Something went wrong.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async updateAppointment(user: any, id: string, dto: UpdateAppointmentDto) {
+    const transaction = await this.sequelize.transaction();
+    try {
+      const appointment = await this.appointmentModel.findOne({
+        where: { id, organization_id: user.org_id },
+        transaction,
+      });
+
+      if (!appointment) {
+        throw new HttpException(
+          { message: 'Appointment not found.', error: ErrorCode.NOT_FOUND },
+          StatusCode.NOT_FOUND,
+        );
+      }
+
+      // Check if branch_id is changing
+      let branchId = appointment.branch_id;
+      if (dto.branch_id && dto.branch_id !== appointment.branch_id) {
+        const branch = await this.branchModel.findOne({
+          where: { id: dto.branch_id, organization_id: user.org_id },
+          transaction,
+        });
+        if (!branch) {
+          throw new HttpException(
+            { message: 'Invalid branch.', error: ErrorCode.BAD_REQUEST },
+            StatusCode.BAD_REQUEST,
+          );
+        }
+        branchId = dto.branch_id;
+      }
+
+      // Check if doctor_id is changing
+      let doctorId = appointment.doctor_id;
+      if (dto.doctor_id && dto.doctor_id !== appointment.doctor_id) {
+        const doctor = await this.userModel.findOne({
+          where: { id: dto.doctor_id, organization_id: user.org_id },
+          transaction,
+        });
+        if (!doctor) {
+          throw new HttpException(
+            { message: 'Invalid doctor.', error: ErrorCode.BAD_REQUEST },
+            StatusCode.BAD_REQUEST,
+          );
+        }
+        doctorId = dto.doctor_id;
+      }
+
+      // Validate scheduled_at
+      let scheduledAt = appointment.scheduled_at;
+      if (dto.scheduled_at) {
+        scheduledAt = new Date(dto.scheduled_at);
+        if (isNaN(scheduledAt.getTime())) {
+          throw new HttpException(
+            {
+              message: 'Invalid scheduled_at datetime.',
+              error: ErrorCode.BAD_REQUEST,
+            },
+            StatusCode.BAD_REQUEST,
+          );
+        }
+      }
+
+      let finalDuration = dto.duration_minutes !== undefined ? dto.duration_minutes : appointment.duration_minutes;
+
+      // Handle treatment plan phase linking
+      let planId = appointment.treatment_plan_id;
+      let phaseId = appointment.plan_phase_id;
+
+      if (dto.treatment_plan_id !== undefined) {
+        planId = dto.treatment_plan_id;
+      }
+      if (dto.treatment_plan_phase_id !== undefined) {
+        phaseId = dto.treatment_plan_phase_id;
+      }
+
+      // If phase is changing, unlink old phase and link new phase
+      if (phaseId !== appointment.plan_phase_id) {
+        // Unlink old phase
+        if (appointment.plan_phase_id) {
+          await this.phaseModel.update(
+            { status: 'ACTIVE', appointment_id: null },
+            { where: { id: appointment.plan_phase_id }, transaction },
+          );
+        }
+
+        // Link new phase
+        if (phaseId) {
+          const phase = await this.phaseModel.findOne({
+            where: {
+              id: phaseId,
+              treatment_plan_id: planId,
+            },
+            transaction,
+          });
+          if (!phase) {
+            throw new HttpException(
+              {
+                message: 'Invalid treatment plan phase.',
+                error: ErrorCode.BAD_REQUEST,
+              },
+              StatusCode.BAD_REQUEST,
+            );
+          }
+          await this.phaseModel.update(
+            { status: 'SCHEDULED', appointment_id: id },
+            { where: { id: phaseId }, transaction },
+          );
+
+          if (!dto.duration_minutes && phase.procedure_id) {
+            const procedure =
+              (await this.sequelize.models.ProcedureCatalog.findOne({
+                where: { id: phase.procedure_id },
+                transaction,
+              })) as any;
+            if (procedure && procedure.duration_minutes) {
+              finalDuration = procedure.duration_minutes;
+            }
+          }
+        }
+      }
+
+      // Check doctor schedule and leaves if date or doctor or branch changed
+      if (dto.scheduled_at || dto.doctor_id || dto.branch_id || dto.duration_minutes !== undefined) {
+        const dateStr = scheduledAt.toISOString().split('T')[0];
+        const timeStr = scheduledAt.toISOString().split('T')[1].slice(0, 5);
+        const dayNames = [
+          'SUNDAY',
+          'MONDAY',
+          'TUESDAY',
+          'WEDNESDAY',
+          'THURSDAY',
+          'FRIDAY',
+          'SATURDAY',
+        ];
+        const dayOfWeek = dayNames[scheduledAt.getUTCDay()];
+
+        const leave = await this.doctorLeaveModel.findOne({
+          where: {
+            doctor_id: doctorId,
+            start_date: { [Op.lte]: dateStr },
+            end_date: { [Op.gte]: dateStr },
+          },
+          transaction,
+        });
+
+        if (leave) {
+          if (
+            leave.is_half_day &&
+            this.getFormatDate(leave.start_date) === dateStr
+          ) {
+            const [s_h, s_m] = timeStr.split(':').map(Number);
+            if (s_h * 60 + s_m >= 720) {
+              throw new HttpException(
+                {
+                  message: 'Doctor is on half-day leave (evening) on this date.',
+                  error: ErrorCode.BAD_REQUEST,
+                },
+                StatusCode.BAD_REQUEST,
+              );
+            }
+          } else {
+            throw new HttpException(
+              {
+                message: 'Doctor is on leave on this date.',
+                error: ErrorCode.BAD_REQUEST,
+              },
+              StatusCode.BAD_REQUEST,
+            );
+          }
+        }
+
+        const schedules = await this.doctorScheduleModel.findAll({
+          where: {
+            doctor_id: doctorId,
+            branch_id: branchId,
+            day_of_week: dayOfWeek,
+            is_available: true,
+          },
+          transaction,
+        });
+        if (!schedules || schedules.length === 0) {
+          throw new HttpException(
+            {
+              message: 'Doctor has no schedule on this day at this branch.',
+              error: ErrorCode.BAD_REQUEST,
+            },
+            StatusCode.BAD_REQUEST,
+          );
+        }
+
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const slotMinutes = hours * 60 + minutes;
+
+        let isWithinSchedule = false;
+        for (const schedule of schedules) {
+          let [startH, startM] = schedule.start_time.split(':').map(Number);
+          let [endH, endM] = schedule.end_time.split(':').map(Number);
+
+          if (schedule.shift === 'EVENING') {
+            if (startH < 12) startH += 12;
+            if (endH < 12) endH += 12;
+          }
+
+          const startMinutes = startH * 60 + startM;
+          const endMinutes = endH * 60 + endM;
+
+          if (
+            slotMinutes >= startMinutes &&
+            slotMinutes + finalDuration <= endMinutes
+          ) {
+            isWithinSchedule = true;
+            break;
+          }
+        }
+
+        if (!isWithinSchedule) {
+          throw new HttpException(
+            {
+              message:
+                'Selected time and duration exceeds doctor schedule hours.',
+              error: ErrorCode.BAD_REQUEST,
+            },
+            StatusCode.BAD_REQUEST,
+          );
+        }
+
+        // Overlap Check (excluding current appointment id)
+        const dayStart = new Date(scheduledAt);
+        dayStart.setUTCHours(0, 0, 0, 0);
+        const dayEnd = new Date(scheduledAt);
+        dayEnd.setUTCHours(23, 59, 59, 999);
+
+        const existingAppointments = await this.appointmentModel.findAll({
+          where: {
+            id: { [Op.ne]: id },
+            doctor_id: doctorId,
+            scheduled_at: { [Op.between]: [dayStart, dayEnd] },
+            status: {
+              [Op.notIn]: [
+                AppointmentStatus.CANCELLED,
+                AppointmentStatus.RESCHEDULED,
+                AppointmentStatus.NO_SHOW,
+              ],
+            },
+          },
+          transaction,
+        });
+
+        const newStartMin =
+          scheduledAt.getUTCHours() * 60 + scheduledAt.getUTCMinutes();
+        const newEndMin = newStartMin + finalDuration;
+
+        for (const apt of existingAppointments) {
+          const aptDate = new Date(apt.scheduled_at);
+          const aptStartMin =
+            aptDate.getUTCHours() * 60 + aptDate.getUTCMinutes();
+          const aptEndMin = aptStartMin + (apt.duration_minutes || 15);
+
+          if (newStartMin < aptEndMin && newEndMin > aptStartMin) {
+            throw new HttpException(
+              {
+                message: 'This time slot overlaps with an existing appointment.',
+                error: ErrorCode.CONFLICT,
+              },
+              StatusCode.CONFLICT,
+            );
+          }
+        }
+      }
+
+      await appointment.update(
+        {
+          branch_id: branchId,
+          doctor_id: doctorId,
+          scheduled_at: scheduledAt,
+          duration_minutes: finalDuration,
+          treatment_plan_id: planId,
+          plan_phase_id: phaseId,
+          notes_for_doctor: dto.notes_for_doctor !== undefined ? dto.notes_for_doctor : appointment.notes_for_doctor,
+        },
+        { transaction },
+      );
+
+      await transaction.commit();
+
+      return {
+        message: 'Appointment updated successfully.',
+        data: {
+          id: appointment.id,
+          scheduled_at: appointment.scheduled_at,
+          duration_minutes: appointment.duration_minutes,
+          status: appointment.status,
+          notes_for_doctor: appointment.notes_for_doctor,
+          patient_id: appointment.patient_id,
+          doctor_id: appointment.doctor_id,
+          branch_id: appointment.branch_id,
+          treatment_plan_id: appointment.treatment_plan_id,
+          treatment_plan_phase_id: appointment.plan_phase_id,
+        }
+      };
+    } catch (error) {
+      await transaction.rollback();
+      if (error instanceof HttpException) throw error;
+      this.logger.error('[updateAppointment] Error:', error);
       throw new HttpException(
         'Something went wrong.',
         StatusCode.INTERNAL_SERVER_ERROR,
