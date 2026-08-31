@@ -636,6 +636,8 @@ export class AppointmentService {
             finalDuration = procedure.duration_minutes;
           }
         }
+      } else {
+        finalDuration = 30;
       }
 
       const [hours, minutes] = timeStr.split(':').map(Number);
