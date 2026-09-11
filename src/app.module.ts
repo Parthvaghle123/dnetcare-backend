@@ -27,6 +27,7 @@ import { SubscriptionModule } from './modules/subscription/subscription.module';
 import { WebsiteModule } from './modules/website/website.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { SupportModule } from './modules/support/support.module';
+import { HolidayModule } from './modules/holiday/holiday.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { SupportModule } from './modules/support/support.module';
     SubscriptionModule,
     WebsiteModule,
     SupportModule,
+    HolidayModule,
   ],
   controllers: [AppController],
   providers: [
@@ -69,4 +71,4 @@ import { SupportModule } from './modules/support/support.module';
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }

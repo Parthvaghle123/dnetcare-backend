@@ -19,6 +19,7 @@ import { SubscriptionPayment } from '../modules/subscription/entities/subscripti
 import { WebsiteConfig } from '../modules/website/entities/website-config.model';
 import { SupportTicket } from '../modules/support/entities/support.model';
 import { PatientBranch } from '../modules/patient/entities/patient-branch.model';
+import { Holiday } from '../modules/holiday/entities/holiday.model';
 
 @Module({
   imports: [
@@ -42,8 +43,9 @@ import { PatientBranch } from '../modules/patient/entities/patient-branch.model'
       WebsiteConfig,
       SupportTicket,
       PatientBranch,
+      Holiday,
     ]),
   ],
   exports: [SequelizeModule],
 })
-export class EntitiesModule {}
+export class EntitiesModule { }

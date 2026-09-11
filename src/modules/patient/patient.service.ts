@@ -1,4 +1,4 @@
-import { Injectable, HttpException, Logger } from '@nestjs/common';
+import { Injectable, HttpException, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectModel, InjectConnection } from '@nestjs/sequelize';
 import { Sequelize } from 'sequelize-typescript';
 import { StatusCode } from '../../common/enums/status-code.enum';
@@ -22,7 +22,7 @@ import { Op } from 'sequelize';
 import { SubscriptionService } from '../subscription/subscription.service';
 
 @Injectable()
-export class PatientService {
+export class PatientService implements OnModuleInit {
   private readonly logger = new Logger(PatientService.name);
 
   constructor(
@@ -41,6 +41,70 @@ export class PatientService {
     @InjectConnection() private sequelize: Sequelize,
     private readonly subscriptionService: SubscriptionService,
   ) {}
+
+  async onModuleInit() {
+    try {
+      this.logger.log('Checking and deduplicating medical_condition_masters table...');
+      await this.cleanupDuplicateConditions();
+    } catch (err) {
+      this.logger.error('Failed to cleanup duplicate medical conditions on init:', err);
+    }
+  }
+
+  /**
+   * Remove duplicate records in medical_condition_masters, re-linking any patient references
+   */
+  async cleanupDuplicateConditions() {
+    try {
+      const allConditions = await this.conditionMasterModel.findAll({
+        order: [
+          [this.sequelize.literal('CASE WHEN organization_id IS NOT NULL THEN 0 ELSE 1 END'), 'ASC'],
+          ['created_at', 'ASC'],
+        ],
+      });
+
+      const primaryMap = new Map<string, MedicalConditionMaster>();
+      const duplicateIds: string[] = [];
+      const reassignPairs: { fromId: string; toId: string }[] = [];
+
+      for (const cond of allConditions) {
+        const orgKey = cond.organization_id ? cond.organization_id : 'SYSTEM';
+        const normName = (cond.name || '').trim().toLowerCase();
+        const key = `${orgKey}::${normName}`;
+
+        if (!primaryMap.has(key)) {
+          primaryMap.set(key, cond);
+        } else {
+          // This record is a duplicate within the same organization / system
+          const keepRecord = primaryMap.get(key)!;
+          duplicateIds.push(cond.id);
+          reassignPairs.push({ fromId: cond.id, toId: keepRecord.id });
+        }
+      }
+
+      // Reassign foreign keys in patient_medical_conditions before removing duplicate master rows
+      for (const pair of reassignPairs) {
+        await this.patientConditionModel.update(
+          { condition_id: pair.toId },
+          { where: { condition_id: pair.fromId } },
+        );
+      }
+
+      if (duplicateIds.length > 0) {
+        const uniqueDeleteIds = [...new Set(duplicateIds)];
+        await this.conditionMasterModel.destroy({
+          where: { id: uniqueDeleteIds },
+        });
+        this.logger.log(
+          `[cleanupDuplicateConditions] Successfully removed ${uniqueDeleteIds.length} duplicate medical condition records.`,
+        );
+      } else {
+        this.logger.log('[cleanupDuplicateConditions] No duplicate medical condition master records found.');
+      }
+    } catch (error) {
+      this.logger.error('[cleanupDuplicateConditions] Error:', error);
+    }
+  }
 
   async createPatient(reqUser: any, dto: CreatePatientDto) {
     const transaction = await this.sequelize.transaction();
@@ -742,15 +806,31 @@ export class PatientService {
           is_active: true,
           organization_id: reqUser.org_id,
         },
-        order: [['name', 'ASC']],
+        order: [
+          ['name', 'ASC'],
+          [this.sequelize.literal('CASE WHEN organization_id IS NOT NULL THEN 0 ELSE 1 END'), 'ASC'],
+          ['created_at', 'ASC'],
+        ],
       });
 
-      return conditions.map((c) => ({
-        id: c.id,
-        name: c.name,
-        is_system: c.organization_id === null,
-        is_active: c.is_active,
-      }));
+      // Deduplicate by normalized name (case-insensitive & trimmed)
+      const seenNames = new Set<string>();
+      const uniqueConditions: any[] = [];
+
+      for (const c of conditions) {
+        const normalized = (c.name || '').trim().toLowerCase();
+        if (!seenNames.has(normalized)) {
+          seenNames.add(normalized);
+          uniqueConditions.push({
+            id: c.id,
+            name: c.name,
+            is_system: c.organization_id === null,
+            is_active: c.is_active,
+          });
+        }
+      }
+
+      return uniqueConditions;
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.logger.error(`[getMedicalConditions] Error:`, error);

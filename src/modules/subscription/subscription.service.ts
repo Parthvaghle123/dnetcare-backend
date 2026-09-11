@@ -53,7 +53,7 @@ export class SubscriptionService implements OnModuleInit {
     } catch (err) {
       this.logger.warn(
         'Could not temporarily drop prevent_plans_delete_trigger: ' +
-          err.message,
+        err.message,
       );
     }
 
@@ -561,6 +561,55 @@ export class SubscriptionService implements OnModuleInit {
       );
     }
     return true;
+  }
+
+  async assignPlanToOrganization(organizationId: string, planId: string) {
+    const plan = await this.planModel.findByPk(planId);
+    if (!plan) throw new NotFoundException('Plan not found');
+
+    // Expire current active subscription if any
+    const currentSubscription = await this.subscriptionModel.findOne({
+      where: {
+        organization_id: organizationId,
+        status: SubscriptionStatus.ACTIVE,
+      },
+    });
+
+    if (currentSubscription) {
+      currentSubscription.status = SubscriptionStatus.EXPIRED;
+      await currentSubscription.save();
+    }
+
+    const subscription = await this.subscriptionModel.create({
+      organization_id: organizationId,
+      plan_id: planId,
+      status: SubscriptionStatus.ACTIVE,
+      start_date: new Date(),
+    });
+
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + 1);
+    subscription.end_date = endDate;
+    await subscription.save();
+
+    await this.userModel.update(
+      {
+        plan: plan.name,
+        planStatus: 'ACTIVE',
+        planStartedAt: subscription.start_date,
+        planExpiresAt: subscription.end_date,
+        isTrial: false,
+      },
+      {
+        where: { organization_id: subscription.organization_id },
+      },
+    );
+
+    return {
+      success: true,
+      message: 'Plan assigned successfully.',
+      subscription,
+    };
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)

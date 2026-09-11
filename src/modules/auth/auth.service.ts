@@ -60,7 +60,7 @@ export class AuthService implements OnModuleInit {
     private jwtService: JwtService,
     private emailService: EmailService,
     @InjectConnection() private sequelize: Sequelize,
-  ) {}
+  ) { }
 
   async onModuleInit() {
     try {
@@ -72,7 +72,7 @@ export class AuthService implements OnModuleInit {
         .catch((err) => {
           this.logger.warn(
             'Could not alter enum type (it might not exist yet or error): ' +
-              err.message,
+            err.message,
           );
         });
 
@@ -82,7 +82,7 @@ export class AuthService implements OnModuleInit {
         .catch((err) => {
           this.logger.warn(
             'Could not drop NOT NULL constraint on users.organization_id: ' +
-              err.message,
+            err.message,
           );
         });
 
@@ -265,10 +265,17 @@ export class AuthService implements OnModuleInit {
         'Allergies',
       ];
 
-      for (const name of defaultConditions) {
+      for (const condName of defaultConditions) {
         await this.medicalConditionMasterModel.findOrCreate({
-          where: { organization_id: createdOrg.id, name },
-          defaults: { organization_id: createdOrg.id, name, is_active: true },
+          where: {
+            organization_id: createdOrg.id,
+            name: condName,
+          },
+          defaults: {
+            organization_id: createdOrg.id,
+            name: condName,
+            is_active: true,
+          },
           transaction,
         });
       }

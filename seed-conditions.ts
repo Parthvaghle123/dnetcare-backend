@@ -21,9 +21,13 @@ async function seed() {
   ];
 
   for (const condition of defaults) {
-    const [results]: any = await sequelize.query(`SELECT id FROM medical_condition_masters WHERE name = '${condition.name}' AND organization_id IS NULL`);
+    const [results]: any = await sequelize.query(
+      `SELECT id FROM medical_condition_masters WHERE LOWER(TRIM(name)) = LOWER(TRIM('${condition.name}')) LIMIT 1`,
+    );
     if (results.length === 0) {
-      await sequelize.query(`INSERT INTO medical_condition_masters (id, name, is_active, organization_id, created_at, updated_at) VALUES (gen_random_uuid(), '${condition.name}', true, NULL, NOW(), NOW())`);
+      await sequelize.query(
+        `INSERT INTO medical_condition_masters (id, name, is_active, organization_id, created_at, updated_at) VALUES (gen_random_uuid(), '${condition.name}', true, NULL, NOW(), NOW())`,
+      );
       console.log('Created:', condition.name);
     }
   }

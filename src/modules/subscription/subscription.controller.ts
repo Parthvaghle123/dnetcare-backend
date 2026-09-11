@@ -5,7 +5,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @Controller('subscription')
 export class SubscriptionController {
-  constructor(private readonly subscriptionService: SubscriptionService) {}
+  constructor(private readonly subscriptionService: SubscriptionService) { }
 
   @Get('plans')
   async getPlans() {
