@@ -74,16 +74,32 @@ export class HolidayController {
     };
   }
 
+  @Post('toggle-cancel')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.OWNER, Role.BRANCH_ADMIN, Role.DOCTOR, Role.RECEPTIONIST, Role.MAIN_ADMIN)
+  async toggleCancelHoliday(
+    @Body() dto: { id?: string; date?: string; branch_id?: string; is_cancelled?: boolean; name?: string; icon?: string },
+    @CurrentUser() user: any,
+  ) {
+    const orgId = user?.org_id || user?.organization_id;
+    const result = await this.holidayService.toggleCancelHoliday(dto, orgId);
+    return {
+      message: dto.is_cancelled === false ? 'Holiday re-enabled successfully' : 'Holiday cancelled — clinic is now open on this date',
+      data: result,
+    };
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.OWNER, Role.BRANCH_ADMIN, Role.DOCTOR, Role.RECEPTIONIST, Role.MAIN_ADMIN)
   async deleteHoliday(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @CurrentUser() user: any,
   ) {
-    await this.holidayService.remove(id, user?.organization_id);
+    const orgId = user?.org_id || user?.organization_id;
+    await this.holidayService.remove(id, orgId);
     return {
-      message: 'Holiday removed successfully',
+      message: 'Holiday removed or cancelled successfully',
     };
   }
 

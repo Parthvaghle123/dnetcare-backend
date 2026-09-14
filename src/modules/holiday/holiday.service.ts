@@ -150,24 +150,12 @@ export class HolidayService implements OnModuleInit {
 
   async onModuleInit() {
     try {
-      this.logger.log('📦 Ensuring holidays table schema exists in PostgreSQL...');
-      await this.holidayModel.sync({ alter: true });
-      this.logger.log('🧹 Purging outdated pre-2026 universal holidays...');
-      const purged = await this.holidayModel.destroy({
-        where: {
-          organization_id: null,
-          year: { [Op.lt]: 2026 },
-        },
-      });
-      if (purged > 0) {
-        this.logger.log(`🗑️ Removed ${purged} old universal holidays (years prior to 2026).`);
-      }
-      this.logger.log('🌱 Verifying and seeding 5-year Indian Government holidays (2026–2030)...');
-      const inserted = await this.seed5Years();
-      const count = await this.holidayModel.count();
-      this.logger.log(`✅ Holidays table ready with ${count} total holidays (${inserted} newly inserted).`);
-    } catch (error) {
-      this.logger.error('Failed to auto-sync or seed holidays table:', error);
+      // Ensure is_cancelled column exists silently without any logs or re-seeding
+      await this.holidayModel.sequelize?.query(
+        'ALTER TABLE holidays ADD COLUMN IF NOT EXISTS is_cancelled BOOLEAN NOT NULL DEFAULT false;',
+      );
+    } catch (e) {
+      // ignore
     }
   }
 
@@ -187,6 +175,7 @@ export class HolidayService implements OnModuleInit {
           ...h,
           organization_id: null,
           branch_id: null,
+          is_cancelled: false,
         },
       });
       if (created) inserted++;
@@ -253,16 +242,114 @@ export class HolidayService implements OnModuleInit {
       icon: dto.icon || '🏥',
       is_gazetted: dto.is_gazetted ?? false,
       organization_id: organizationId || null,
+      is_cancelled: false,
     } as any);
   }
 
   /**
-   * Delete a custom clinic holiday
+   * Cancel or re-enable a holiday (so clinic can be open on that holiday)
+   */
+  async toggleCancelHoliday(
+    dto: { id?: string; date?: string; branch_id?: string; is_cancelled?: boolean; name?: string; icon?: string },
+    organizationId?: string,
+  ): Promise<any> {
+    const isCancelled = dto.is_cancelled ?? true;
+    const date = dto.date ? dto.date.split('T')[0] : null;
+
+    // 1. If an actual DB ID is provided and is not a seed alias
+    if (dto.id && !dto.id.startsWith('seed_')) {
+      const record = await this.holidayModel.findByPk(dto.id);
+      if (record) {
+        if (isCancelled && (record.organization_id || record.type === HolidayType.CLINIC)) {
+          await record.destroy();
+          return { deleted: true, id: dto.id, date: record.date };
+        }
+        record.is_cancelled = isCancelled;
+        await record.save();
+        return record;
+      }
+    }
+
+    // 2. If a date is provided
+    if (date) {
+      const where: any = { date };
+      if (organizationId) {
+        where[Op.or] = [
+          { organization_id: null },
+          { organization_id: organizationId },
+        ];
+      }
+      if (dto.branch_id && dto.branch_id !== 'all') {
+        where[Op.and] = [
+          where[Op.and] || {},
+          {
+            [Op.or]: [{ branch_id: null }, { branch_id: dto.branch_id }],
+          },
+        ];
+      }
+
+      const existing = await this.holidayModel.findOne({ where });
+      if (existing) {
+        if (isCancelled && (existing.organization_id || existing.type === HolidayType.CLINIC)) {
+          await existing.destroy();
+          return { deleted: true, id: existing.id, date: existing.date };
+        }
+        existing.is_cancelled = isCancelled;
+        await existing.save();
+        return existing;
+      }
+
+      // If not in DB yet (e.g. from static 5-year seed), create a record with is_cancelled set
+      const year = new Date(date).getFullYear();
+      return this.holidayModel.create({
+        date,
+        name: dto.name || 'Holiday',
+        type: HolidayType.CLINIC,
+        icon: dto.icon || '🏥',
+        is_gazetted: false,
+        year,
+        organization_id: organizationId || null,
+        branch_id: dto.branch_id && dto.branch_id !== 'all' ? dto.branch_id : null,
+        is_cancelled: isCancelled,
+      } as any);
+    }
+
+    throw new NotFoundException('Holiday date or ID must be provided');
+  }
+
+  /**
+   * Delete or cancel a holiday (handles UUIDs, date strings, and seed_ IDs)
    */
   async remove(id: string, organizationId?: string): Promise<boolean> {
+    const isDate = /^\d{4}-\d{2}-\d{2}$/.test(id);
+    const isSeed = id.startsWith('seed_');
+    const dateStr = isSeed ? id.replace('seed_', '') : isDate ? id : null;
+
+    if (dateStr) {
+      // Mark or delete for that date
+      const where: any = {
+        date: dateStr,
+      };
+      if (organizationId) {
+        where[Op.or] = [
+          { organization_id: null },
+          { organization_id: organizationId },
+        ];
+      }
+      const count = await this.holidayModel.destroy({ where });
+      if (!count) {
+        // If nothing was in DB, record a cancelled override so frontend knows clinic is open
+        await this.toggleCancelHoliday({ date: dateStr, is_cancelled: true }, organizationId);
+      }
+      return true;
+    }
+
     const where: any = { id };
     if (organizationId) {
-      where.organization_id = organizationId;
+      where[Op.or] = [
+        { organization_id: null },
+        { organization_id: organizationId },
+      ];
     }
     const count = await this.holidayModel.destroy({ where });
     if (!count) {

@@ -65,4 +65,9 @@ export class Holiday extends Model {
   @AllowNull(true)
   @Column(DataType.UUID)
   branch_id: string; // null = all branches
+
+  @AllowNull(false)
+  @Default(false)
+  @Column(DataType.BOOLEAN)
+  is_cancelled: boolean;
 }
