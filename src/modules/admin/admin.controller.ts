@@ -75,6 +75,32 @@ export class AdminController {
   }
 
   // ==========================================
+  // SUBSCRIPTION MANAGEMENT
+  // ==========================================
+
+  @Get('users/:id/subscription')
+  async getUserSubscription(@Param('id') userId: string) {
+    const data = await this.adminService.getUserSubscription(userId);
+    return { success: true, data };
+  }
+
+  @Post('users/:id/assign-plan')
+  async assignUserPlan(
+    @Param('id') userId: string,
+    @Body()
+    dto: {
+      plan_id: string;
+      start_date?: string;
+      end_date?: string;
+      status?: string;
+      is_trial?: boolean;
+    },
+  ) {
+    const data = await this.adminService.assignUserPlan(userId, dto);
+    return { success: true, data };
+  }
+
+  // ==========================================
   // DASHBOARD STATISTICS
   // ==========================================
 

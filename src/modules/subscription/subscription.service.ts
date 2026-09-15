@@ -134,7 +134,7 @@ export class SubscriptionService implements OnModuleInit {
         id: '4c1a55fb-fad8-4535-b683-14b853bae58a',
         name: 'Pro Plan',
         description:
-          'For growing clinics & single location practices. 1 Branch Mgmt, 300 Appointments, Finance Mgmt, Procedure Catalog Mgmt, WhatsApp SMS Integration, 100 Patients Mgmt, Invoice Mgmt, Staff Mgmt.',
+          'For growing clinics & single location practices. 1 Branch Mgmt, 100 Patients Mgmt, 300 Appointments, 10 AI Event Poster Credits, Finance Mgmt, Procedure Catalog Mgmt, WhatsApp SMS Integration, Invoice Mgmt, Staff Mgmt.',
         price_monthly: 1999.0,
         type: 'SOFTWARE',
         max_branches: 1,
@@ -160,35 +160,16 @@ export class SubscriptionService implements OnModuleInit {
           'patients_mgmt',
           'appointment_mgmt',
           'appointments_mgmt',
-        ],
-      },
-      {
-        id: '9a84beea-2e12-4b6a-bffd-662601d10dd6',
-        name: 'Digital Presence',
-        description:
-          'Perfect for doctors using another clinic software. Google Business Optimization, Instagram Setup, Facebook Setup, Monthly 8 Posters, 2 Educational Reels, Caption + Hashtags, Monthly Report.',
-        price_monthly: 1999.0,
-        type: 'MARKETING',
-        max_branches: null,
-        max_patients: null,
-        max_appointments: null,
-        is_active: true,
-        allowed_features: [
-          'google_business_optimization',
-          'instagram_setup',
-          'facebook_setup',
-          'monthly_posters',
-          'educational_reels',
-          'caption_hashtags',
-          'monthly_report',
+          'ai_event_poster_credits_10',
+          'ai_poster_credits',
         ],
       },
       {
         id: 'a839c741-b4a1-4f2e-8db2-8f600afec2bb',
         name: 'Ultra Pro Plan',
         description:
-          'For multi-branch dental practices & enterprise. 3 Branch Mgmt, Unlimited Appointments, Staff Mgmt, Procedure Catalog Mgmt, WhatsApp SMS Integration, Unlimited Patients Mgmt, Invoice Mgmt, Finance Mgmt.',
-        price_monthly: 3999.0,
+          'For multi-branch dental practices & enterprise. 3 Branch Mgmt, Unlimited Appointments, Unlimited Patients Mgmt, Custom Clinic Website Feature, 15 AI Event Poster Credits, Staff Mgmt, Procedure Catalog Mgmt, WhatsApp SMS Integration, Invoice Mgmt, Finance Mgmt.',
+        price_monthly: 4999.0,
         type: 'SOFTWARE',
         max_branches: 3,
         max_patients: null,
@@ -215,92 +196,43 @@ export class SubscriptionService implements OnModuleInit {
           'patients_mgmt',
           'appointment_mgmt',
           'appointments_mgmt',
-        ],
-      },
-      {
-        id: 'adc8ea3d-e4f3-4dd7-b1f1-67b1a5c9dbdd',
-        name: 'Premium Growth',
-        description:
-          'Everything in Plan 2 + complete growth system. DentCare360 Software, Website & Appointment Booking, Patient Review Automation, 12 Professional Reels, 20 Graphics, Google SEO, Instagram & Facebook Mgmt, Monthly Analytics.',
-        price_monthly: 9999.0,
-        type: 'BUNDLE',
-        max_branches: null,
-        max_patients: null,
-        max_appointments: null,
-        is_active: true,
-        allowed_features: [
-          'dashboard_access',
-          'dentcare360_software',
-          'branch_management',
-          'finance_mgmt',
-          'procedure_catalog',
-          'whatsapp_sms',
-          'invoice_mgmt',
-          'billing_mgmt',
-          'staff_mgmt',
-          'unlimited_patients',
-          'unlimited_appointments',
-          'settings_access',
-          'consultation_mgmt',
-          'prescription_mgmt',
-          'treatment_mgmt',
-          'doctor_mgmt',
-          'internship_mgmt',
-          'patient_mgmt',
-          'patients_mgmt',
-          'appointment_mgmt',
-          'appointments_mgmt',
-          'website_appointment_booking',
-          'patient_review_automation',
-          '12_professional_reels',
-          '20_graphics',
-          'google_seo',
-          'instagram_facebook_mgmt',
-          'monthly_analytics',
-        ],
-      },
-      {
-        id: 'b97b6a5d-bd2d-4ee3-92cd-f46f8ef98ece',
-        name: 'Growth Plan',
-        description:
-          'Everything in Plan 1 + more to grow faster. 8 Reels, 12 Posters, Weekly Stories, Review Collection Campaign, One-page Website, WhatsApp CTA, Monthly Strategy Call.',
-        price_monthly: 4999.0,
-        type: 'MARKETING',
-        max_branches: null,
-        max_patients: null,
-        max_appointments: null,
-        is_active: true,
-        allowed_features: [
-          'google_business_optimization',
-          'instagram_setup',
-          'facebook_setup',
-          'caption_hashtags',
-          'monthly_report',
-          '8_reels',
-          '12_posters',
-          'weekly_stories',
-          'review_collection_campaign',
-          'one_page_website',
-          'whatsapp_cta',
-          'monthly_strategy_call',
+          'website_feature',
+          'website_builder',
+          'ai_event_poster_credits_15',
+          'ai_poster_credits',
         ],
       },
     ];
 
     try {
-      const allowedIds = defaultPlans.map((p) => p.id);
-      await this.planModel.destroy({
-        where: {
-          id: {
-            [Op.notIn]: allowedIds,
+      // Deactivate obsolete plans: Digital Presence & Growth Plan
+      await this.planModel.update(
+        { is_active: false },
+        {
+          where: {
+            name: {
+              [Op.in]: ['Digital Presence', 'Growth Plan'],
+            },
           },
         },
-        force: true,
-      });
-    } catch (err) {
-      this.logger.warn(
-        'Could not delete old non-matching plans: ' + err.message,
       );
+
+      // Ensure Premium Growth remains active with updated reel-free description
+      await this.planModel.update(
+        {
+          is_active: true,
+          price_monthly: 9999.0,
+          description:
+            'DentCare360 Software, Website & Appointment Booking, Patient Review Automation, 20 Social Graphics, Google SEO, Monthly Analytics.',
+        },
+        {
+          where: {
+            name: 'Premium Growth',
+          },
+        },
+      );
+    } catch (err) {
+      this.logger.warn('Could not update plans status: ' + err.message);
     }
 
     for (const planData of defaultPlans) {

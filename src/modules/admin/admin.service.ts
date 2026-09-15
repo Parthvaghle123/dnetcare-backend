@@ -34,7 +34,10 @@ import { TreatmentPlanPhase } from '../treatment/entities/treatment-plan-phase.m
 import { InvoiceLineItem } from '../billing/entities/invoice-line-item.model';
 import { PatientMedicalCondition } from '../patient/entities/patient-medical-condition.model';
 import { SupportTicket } from '../support/entities/support.model';
-import { Subscription } from '../subscription/entities/subscription.model';
+import {
+  Subscription,
+  SubscriptionStatus,
+} from '../subscription/entities/subscription.model';
 import { SubscriptionPayment } from '../subscription/entities/subscription-payment.model';
 import { WebsiteConfig } from '../website/entities/website-config.model';
 import { InternshipInquiry } from '../internship/entities/internship-inquiry.model';
@@ -56,6 +59,8 @@ export class AdminService {
     @InjectModel(Appointment) private appointmentModel: typeof Appointment,
     @InjectModel(Patient) private patientModel: typeof Patient,
     @InjectModel(Plan) private planModel: typeof Plan,
+    @InjectModel(Subscription)
+    private subscriptionModel: typeof Subscription,
     @InjectModel(Invoice) private invoiceModel: typeof Invoice,
     @InjectModel(Consultation) private consultationModel: typeof Consultation,
     @InjectModel(TreatmentPlan)
@@ -694,6 +699,207 @@ export class AdminService {
       'Plans cannot be deleted or deactivated from the database.',
       StatusCode.FORBIDDEN,
     );
+  }
+
+  // ==========================================
+  // SUBSCRIPTION MANAGEMENT
+  // ==========================================
+
+  async getUserSubscription(userId: string) {
+    try {
+      const user = await this.userModel.findByPk(userId, {
+        include: [{ model: Organization }],
+      });
+      if (!user) {
+        throw new HttpException('User not found.', StatusCode.NOT_FOUND);
+      }
+
+      let activeSubscription: any = null;
+      let history: any[] = [];
+
+      if (user.organization_id) {
+        const foundSub = await this.subscriptionModel.findOne({
+          where: {
+            organization_id: user.organization_id,
+            status: SubscriptionStatus.ACTIVE,
+          },
+          include: [{ model: Plan }],
+          order: [['created_at', 'DESC']],
+        });
+
+        if (foundSub) {
+          activeSubscription = {
+            ...foundSub.toJSON(),
+            isTrial: user.isTrial,
+          };
+        }
+
+        history = await this.subscriptionModel.findAll({
+          where: { organization_id: user.organization_id },
+          include: [{ model: Plan }],
+          order: [['created_at', 'DESC']],
+          limit: 10,
+        });
+      }
+
+      // If active subscription record wasn't found in subscriptions table,
+      // check if user has plan field populated directly (e.g. trial or direct assign)
+      if (!activeSubscription && user.plan) {
+        const matchingPlan = await this.planModel.findOne({
+          where: { name: user.plan },
+        });
+
+        activeSubscription = {
+          id: 'user_assigned_plan',
+          organization_id: user.organization_id,
+          plan_id: matchingPlan ? matchingPlan.id : null,
+          status: user.planStatus || SubscriptionStatus.ACTIVE,
+          start_date: user.planStartedAt,
+          end_date: user.planExpiresAt,
+          isTrial: user.isTrial,
+          plan: matchingPlan || {
+            name: user.plan,
+            type: 'SOFTWARE',
+            price_monthly: 0,
+            description: 'Assigned Plan',
+          },
+        };
+      }
+
+      return {
+        user: {
+          id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+          role: user.role,
+          plan: user.plan,
+          planStatus: user.planStatus,
+          planStartedAt: user.planStartedAt,
+          planExpiresAt: user.planExpiresAt,
+          isTrial: user.isTrial,
+        },
+        organization: user.organization,
+        currentSubscription: activeSubscription,
+        history,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('[getUserSubscription] Error:', error);
+      throw new HttpException(
+        'Failed to fetch user subscription details.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  async assignUserPlan(
+    userId: string,
+    dto: {
+      plan_id: string;
+      start_date?: string;
+      end_date?: string;
+      status?: string;
+      is_trial?: boolean;
+    },
+  ) {
+    try {
+      const user = await this.userModel.findByPk(userId, {
+        include: [{ model: Organization }],
+      });
+      if (!user) {
+        throw new HttpException('User not found.', StatusCode.NOT_FOUND);
+      }
+
+      const plan = await this.planModel.findByPk(dto.plan_id);
+      if (!plan) {
+        throw new HttpException('Selected plan not found.', StatusCode.NOT_FOUND);
+      }
+
+      let orgId = user.organization_id;
+      if (!orgId) {
+        const org = await this.orgModel.create({
+          name: `${user.first_name}'s Clinic`,
+          is_active: true,
+        });
+        orgId = org.id;
+        await user.update({ organization_id: orgId });
+      }
+
+      const startDate = dto.start_date ? new Date(dto.start_date) : new Date();
+      let endDate: Date;
+      if (dto.end_date) {
+        endDate = new Date(dto.end_date);
+      } else {
+        endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + 1);
+      }
+
+      const status = (dto.status as SubscriptionStatus) || SubscriptionStatus.ACTIVE;
+
+      // Expire previous active subscriptions for this organization
+      await this.subscriptionModel.update(
+        { status: SubscriptionStatus.EXPIRED },
+        {
+          where: {
+            organization_id: orgId,
+            status: SubscriptionStatus.ACTIVE,
+          },
+        },
+      );
+
+      // Create new subscription record
+      const subscription = await this.subscriptionModel.create({
+        organization_id: orgId,
+        plan_id: plan.id,
+        status,
+        start_date: startDate,
+        end_date: endDate,
+      });
+
+      // Update all users belonging to this organization
+      await this.userModel.update(
+        {
+          plan: plan.name,
+          planStatus: status,
+          planStartedAt: startDate,
+          planExpiresAt: endDate,
+          isTrial: dto.is_trial ?? false,
+        },
+        {
+          where: { organization_id: orgId },
+        },
+      );
+
+      await user.update({
+        plan: plan.name,
+        planStatus: status,
+        planStartedAt: startDate,
+        planExpiresAt: endDate,
+        isTrial: dto.is_trial ?? false,
+      });
+
+      const fullSubscription = await this.subscriptionModel.findByPk(
+        subscription.id,
+        {
+          include: [{ model: Plan }],
+        },
+      );
+
+      return {
+        success: true,
+        message: `Plan "${plan.name}" successfully assigned.`,
+        subscription: fullSubscription || subscription,
+        plan,
+      };
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.error('[assignUserPlan] Error:', error);
+      throw new HttpException(
+        'Failed to assign plan to user.',
+        StatusCode.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
   // ==========================================
