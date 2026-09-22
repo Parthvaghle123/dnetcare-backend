@@ -62,6 +62,29 @@ export class UploadService {
     });
   }
 
+  async uploadBase64(
+    base64Data: string,
+    folder: string = 'dental-software/festival-posters',
+  ): Promise<string> {
+    if (!base64Data || !base64Data.startsWith('data:')) {
+      return base64Data;
+    }
+
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader.upload(
+        base64Data,
+        { folder, resource_type: 'auto' },
+        (error, result) => {
+          if (error) {
+            this.logger.error('[uploadBase64] Cloudinary base64 upload error:', error);
+            return reject(error);
+          }
+          resolve(result?.secure_url || '');
+        },
+      );
+    });
+  }
+
   async deleteFile(fileKey: string): Promise<any> {
     if (!fileKey) {
       throw new HttpException('No file key provided.', StatusCode.BAD_REQUEST);

@@ -20,6 +20,8 @@ import { WebsiteConfig } from '../modules/website/entities/website-config.model'
 import { SupportTicket } from '../modules/support/entities/support.model';
 import { PatientBranch } from '../modules/patient/entities/patient-branch.model';
 import { Holiday } from '../modules/holiday/entities/holiday.model';
+import { FestivalPosterSetting } from '../modules/festival-poster/entities/festival-poster-setting.model';
+import { FestivalPoster } from '../modules/festival-poster/entities/festival-poster.model';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { Holiday } from '../modules/holiday/entities/holiday.model';
       SupportTicket,
       PatientBranch,
       Holiday,
+      FestivalPosterSetting,
+      FestivalPoster,
     ]),
   ],
   exports: [SequelizeModule],

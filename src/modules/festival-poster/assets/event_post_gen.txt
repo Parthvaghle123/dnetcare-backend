@@ -1,0 +1,624 @@
+Create a premium, culturally authentic Indian festival greeting poster for a professional dental clinic.
+
+Use the supplied JSON data as the ONLY source of truth for all event, organization, doctor, clinic and contact information.
+
+==================================================
+EVENT INFORMATION
+==================================================
+
+Event Name:
+{{event.name}}
+
+Event Date:
+{{event.date}}
+
+Event Category:
+{{event.category}}
+
+Festival Visual Theme:
+{{event.visualTheme}}
+
+Festival Mood:
+{{event.mood}}
+
+Festival Color Direction:
+{{event.colorDirection}}
+
+Greeting:
+{{event.greeting}}
+
+==================================================
+ORGANIZATION INFORMATION
+==================================================
+
+Organization Name:
+{{organization.name}}
+
+Organization Logo:
+{{organization.logo}}
+
+Organization Tagline:
+{{organization.tagline}}
+
+==================================================
+CLINIC INFORMATION
+==================================================
+
+Clinic Name:
+{{clinic.name}}
+
+Branch Name:
+{{clinic.branchName}}
+
+Address:
+{{clinic.address}}
+
+City:
+{{clinic.city}}
+
+State:
+{{clinic.state}}
+
+Pincode:
+{{clinic.pincode}}
+
+==================================================
+DOCTOR INFORMATION
+==================================================
+
+Doctor Name:
+{{doctor.name}}
+
+Qualification:
+{{doctor.qualification}}
+
+Specialization:
+{{doctor.specialization}}
+
+Registration Number:
+{{doctor.registrationNumber}}
+
+Experience:
+{{doctor.experience}}
+
+==================================================
+CONTACT INFORMATION
+==================================================
+
+Mobile:
+{{contact.mobile}}
+
+WhatsApp:
+{{contact.whatsapp}}
+
+Email:
+{{contact.email}}
+
+Website:
+{{contact.website}}
+
+==================================================
+POSTER DISPLAY SETTINGS
+==================================================
+
+Language:
+{{poster.language}}
+
+Aspect Ratio:
+{{poster.aspectRatio}}
+
+Show Organization Logo:
+{{poster.showOrganizationLogo}}
+
+Show Organization Name:
+{{poster.showOrganizationName}}
+
+Show Tagline:
+{{poster.showTagline}}
+
+Show Clinic Name:
+{{poster.showClinicName}}
+
+Show Branch Name:
+{{poster.showBranchName}}
+
+Show Doctor:
+{{poster.showDoctor}}
+
+Show Qualification:
+{{poster.showQualification}}
+
+Show Specialization:
+{{poster.showSpecialization}}
+
+Show Registration Number:
+{{poster.showRegistrationNumber}}
+
+Show Experience:
+{{poster.showExperience}}
+
+Show Mobile:
+{{poster.showMobile}}
+
+Show WhatsApp:
+{{poster.showWhatsapp}}
+
+Show Email:
+{{poster.showEmail}}
+
+Show Website:
+{{poster.showWebsite}}
+
+Show Address:
+{{poster.showAddress}}
+
+Show Services:
+{{poster.showServices}}
+
+Show Date:
+{{poster.showDate}}
+
+Show Greeting:
+{{poster.showGreeting}}
+
+
+==================================================
+1. PRIMARY OBJECTIVE
+==================================================
+
+Create a high-end professional Indian festival greeting poster for the specified event.
+
+The festival must be the HERO of the design.
+
+The poster should look like it was created by an experienced professional Indian graphic designer for a premium dental clinic.
+
+The result must be suitable for:
+- WhatsApp
+- Instagram
+- Facebook
+- Dental clinic social media
+- Digital festival greetings
+
+Do not make the poster look like a generic AI-generated image.
+
+==================================================
+2. FESTIVAL VISUAL IDENTITY
+==================================================
+
+Build the visual composition specifically around:
+
+"{{event.name}}"
+
+Use the supplied:
+
+"{{event.visualTheme}}"
+
+"{{event.mood}}"
+
+"{{event.colorDirection}}"
+
+The festival artwork must immediately communicate the identity of the festival.
+
+Do not use unrelated religious symbols.
+
+Do not mix symbolism from different festivals.
+
+Do not use generic Hindu imagery when a specific festival identity is available.
+
+Use culturally appropriate:
+- Deities
+- Sacred objects
+- Traditional decorations
+- Flowers
+- Architecture
+- Clothing
+- Lighting
+- Festival objects
+- Indian cultural motifs
+
+The visual treatment should be respectful, elegant and authentic.
+
+==================================================
+3. FESTIVAL-SPECIFIC ARTWORK
+==================================================
+
+For Janmashtami:
+
+Create an elegant devotional Lord Krishna composition.
+
+Include appropriate elements such as:
+- Lord Krishna
+- Peacock feather
+- Flute
+- Matki / butter pot
+- Flowers
+- Traditional Indian temple environment
+- Vrindavan-inspired scenery
+- Soft divine lighting
+- Cows or calf when compositionally appropriate
+- Traditional Indian decorative elements
+
+Use a sophisticated combination of royal blue, saffron, gold and warm festive tones.
+
+Lord Krishna should be the main visual subject.
+
+Avoid excessive objects that make the composition cluttered.
+
+For other festivals, replace these elements with culturally appropriate visual elements for that specific festival.
+
+==================================================
+4. MAIN FESTIVAL TEXT
+==================================================
+
+The event name is the most important text element.
+
+Display:
+
+"{{event.name}}"
+
+If showGreeting is true, display:
+
+"{{event.greeting}}"
+
+If showDate is true, display:
+
+"{{event.date}}"
+
+Use elegant, premium Indian-inspired typography.
+
+The festival title should have strong visual hierarchy.
+
+Use typography that complements the artwork rather than competing with it.
+
+Do not generate unnecessary text.
+
+Do not generate paragraphs.
+
+Do not invent quotes.
+
+Do not invent slogans.
+
+Do not invent additional festival information.
+
+==================================================
+5. ORGANIZATION LOGO
+==================================================
+
+The organization logo is supplied by the system:
+
+{{organization.logo}}
+
+Use the supplied logo as the actual organization branding asset.
+
+IMPORTANT:
+
+- Do not redesign the logo.
+- Do not recreate the logo.
+- Do not replace the logo.
+- Do not generate a similar logo.
+- Do not modify the logo's identity.
+- Preserve the original logo proportions.
+- Preserve the original logo colors.
+- Keep the logo recognizable.
+- Do not add unnecessary visual effects to the logo.
+
+Place the logo in a premium position, preferably at the top area or within the clinic footer.
+
+The logo must be visible but must not overpower the festival artwork.
+
+==================================================
+6. ORGANIZATION NAME
+==================================================
+
+If:
+
+{{poster.showOrganizationName}}
+
+is true, display:
+
+"{{organization.name}}"
+
+Place it close to the organization logo.
+
+If the organization tagline is enabled:
+
+{{poster.showTagline}}
+
+display:
+
+"{{organization.tagline}}"
+
+Do not create a tagline if one is not supplied.
+
+==================================================
+7. DENTAL CLINIC FOOTER
+==================================================
+
+Reserve approximately 15–22% of the bottom area for the dental clinic information.
+
+The footer should look clean, premium and professional.
+
+The festival artwork remains the primary focus.
+
+The clinic information should feel like professional branding rather than an advertisement.
+
+Use a visually separated footer using:
+- Elegant divider
+- Subtle gradient
+- Premium panel
+- Soft background treatment
+- Fine decorative Indian pattern
+
+Do not make the footer visually heavy.
+
+==================================================
+8. DOCTOR INFORMATION
+==================================================
+
+If:
+
+{{poster.showDoctor}}
+
+is true, display:
+
+"{{doctor.name}}"
+
+If:
+
+{{poster.showQualification}}
+
+is true, display:
+
+"{{doctor.qualification}}"
+
+If:
+
+{{poster.showSpecialization}}
+
+is true, display:
+
+"{{doctor.specialization}}"
+
+If registration number is enabled:
+
+{{poster.showRegistrationNumber}}
+
+display the supplied registration number.
+
+If experience is enabled:
+
+{{poster.showExperience}}
+
+display the supplied experience.
+
+Never invent:
+- Doctor name
+- Degree
+- Qualification
+- Specialization
+- Registration number
+- Experience
+
+Only use supplied information.
+
+==================================================
+9. CONTACT INFORMATION
+==================================================
+
+If mobile is enabled:
+
+{{poster.showMobile}}
+
+display:
+
+"{{contact.mobile}}"
+
+If WhatsApp is enabled:
+
+{{poster.showWhatsapp}}
+
+display:
+
+"{{contact.whatsapp}}"
+
+If email is enabled:
+
+{{poster.showEmail}}
+
+display:
+
+"{{contact.email}}"
+
+If website is enabled:
+
+{{poster.showWebsite}}
+
+display:
+
+"{{contact.website}}"
+
+Only display fields that contain actual values.
+
+Never invent contact information.
+
+Never modify phone numbers.
+
+==================================================
+10. CLINIC ADDRESS
+==================================================
+
+If:
+
+{{poster.showAddress}}
+
+is true, display the supplied clinic address:
+
+"{{clinic.address}}"
+
+The address should be readable but secondary to the festival greeting.
+
+Do not invent or modify the address.
+
+==================================================
+11. BRANCH INFORMATION
+==================================================
+
+If:
+
+{{poster.showBranchName}}
+
+is true, display:
+
+"{{clinic.branchName}}"
+
+Do not display the branch name when disabled.
+
+==================================================
+12. SERVICES
+==================================================
+
+If:
+
+{{poster.showServices}}
+
+is false:
+
+Do not display services.
+
+If:
+
+{{poster.showServices}}
+
+is true:
+
+Display only the supplied services.
+
+Services:
+{{services.items}}
+
+Do not invent dental services.
+
+Keep services visually secondary to the festival.
+
+==================================================
+13. LAYOUT
+==================================================
+
+Use a premium 4:5 vertical social-media composition.
+
+Recommended visual hierarchy:
+
+TOP:
+Organization logo
+Organization name if enabled
+
+CENTER / HERO:
+Festival artwork
+Deity or festival-specific subject
+
+MIDDLE:
+Festival greeting
+Festival name
+Date if enabled
+
+BOTTOM:
+Dental clinic information
+Doctor name
+Qualification
+Specialization
+Contact
+Address
+
+Maintain generous spacing.
+
+Do not overcrowd the poster.
+
+Use strong visual hierarchy.
+
+==================================================
+14. DESIGN QUALITY
+==================================================
+
+Use:
+
+- Cinematic lighting
+- Premium composition
+- Rich Indian cultural details
+- Realistic materials
+- Detailed textures
+- Sophisticated typography
+- Elegant decorative elements
+- Depth and dimension
+- Professional color grading
+- Subtle shadows
+- Premium background treatment
+- High-end commercial poster aesthetics
+
+The artwork should feel polished and professionally art-directed.
+
+==================================================
+15. TEXT ACCURACY
+==================================================
+
+Only use text explicitly supplied in the JSON.
+
+Never invent:
+- Names
+- Phone numbers
+- Addresses
+- Qualifications
+- Specializations
+- Websites
+- Email addresses
+- Slogans
+- Quotes
+- Services
+
+If a field is empty, omit it.
+
+If a display option is false, omit it.
+
+Preserve supplied text exactly.
+
+==================================================
+16. WHAT TO AVOID
+==================================================
+
+Avoid:
+
+- Generic stock photography
+- Generic Hindu imagery
+- Incorrect religious symbols
+- Mixed festival themes
+- Western holiday decorations
+- Fake logos
+- Redesigned logos
+- Random text
+- Excessive text
+- Watermarks
+- Clutter
+- Poor typography
+- Low-quality backgrounds
+- Distorted faces
+- Anatomically incorrect people
+- Extra fingers
+- Deformed hands
+- Unnatural deity anatomy
+- Poorly rendered religious objects
+- Excessive decorative elements
+- Overly cartoonish appearance unless specifically appropriate
+
+==================================================
+17. FINAL OUTPUT
+==================================================
+
+Generate ONE premium vertical festival greeting poster.
+
+Aspect ratio:
+{{poster.aspectRatio}}
+
+The festival should remain the visual hero.
+
+The organization logo and dental clinic information should provide professional branding without overpowering the festival.
+
+The final result must look like a professionally designed Indian dental-clinic festival greeting suitable for immediate social-media publishing.

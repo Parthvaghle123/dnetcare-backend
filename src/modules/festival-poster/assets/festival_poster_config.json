@@ -1,0 +1,338 @@
+{
+  "version": "1.0.0",
+  "purpose": "Festival and event poster generation configuration",
+  "selection": {
+    "source": "holiday_database",
+    "matchBy": "date",
+    "dateFormat": "YYYY-MM-DD",
+    "ignoreCancelled": true,
+    "priority": [
+      "branch_id",
+      "organization_id",
+      "global"
+    ]
+  },
+  "systemFields": {
+    "organization": {
+      "name": "{{SYSTEM_ORGANIZATION_NAME}}",
+      "logo": "{{SYSTEM_ORGANIZATION_LOGO}}",
+      "tagline": "{{SYSTEM_ORGANIZATION_TAGLINE}}"
+    },
+    "clinic": {
+      "name": "{{SYSTEM_CLINIC_NAME}}",
+      "branchId": "{{SYSTEM_BRANCH_ID}}",
+      "branchName": "{{SYSTEM_BRANCH_NAME}}",
+      "address": "{{SYSTEM_CLINIC_ADDRESS}}",
+      "city": "{{SYSTEM_CITY}}",
+      "state": "{{SYSTEM_STATE}}",
+      "pincode": "{{SYSTEM_PINCODE}}"
+    },
+    "doctor": {
+      "name": "{{SYSTEM_DOCTOR_NAME}}",
+      "qualification": "{{SYSTEM_DOCTOR_QUALIFICATION}}",
+      "specialization": "{{SYSTEM_DOCTOR_SPECIALIZATION}}",
+      "registrationNumber": "{{SYSTEM_DOCTOR_REGISTRATION_NUMBER}}",
+      "experience": "{{SYSTEM_DOCTOR_EXPERIENCE}}"
+    },
+    "contact": {
+      "mobile": "{{SYSTEM_CLINIC_MOBILE}}",
+      "alternateMobile": "{{SYSTEM_ALTERNATE_MOBILE}}",
+      "whatsapp": "{{SYSTEM_WHATSAPP}}",
+      "email": "{{SYSTEM_EMAIL}}",
+      "website": "{{SYSTEM_WEBSITE}}"
+    }
+  },
+  "posterDefaults": {
+    "language": "English",
+    "aspectRatio": "4:5",
+    "showOrganizationLogo": true,
+    "showOrganizationName": true,
+    "showTagline": false,
+    "showClinicName": true,
+    "showBranchName": false,
+    "showDoctor": true,
+    "showQualification": true,
+    "showSpecialization": true,
+    "showRegistrationNumber": false,
+    "showExperience": false,
+    "showMobile": true,
+    "showWhatsapp": false,
+    "showEmail": false,
+    "showWebsite": false,
+    "showAddress": true,
+    "showServices": false,
+    "showDate": true,
+    "showGreeting": true
+  },
+  "festivalTemplates": [
+    {
+      "name": "Makar Sankranti / Pongal",
+      "category": "FESTIVAL",
+      "icon": "🪁",
+      "visualTheme": "Indian harvest festival, colorful kites, golden sunlight, sugarcane, harvest decorations, rangoli and traditional Indian cultural elements",
+      "mood": "joyful, festive, bright, prosperous",
+      "colorDirection": "saffron, yellow, orange, sky blue, gold",
+      "greeting": "Happy Makar Sankranti"
+    },
+    {
+      "name": "Republic Day",
+      "category": "NATIONAL",
+      "icon": "🇮🇳",
+      "visualTheme": "Indian Republic Day, Indian tricolor, Ashoka Chakra, elegant patriotic composition and Indian national symbolism",
+      "mood": "patriotic, proud, dignified, celebratory",
+      "colorDirection": "saffron, white, green, navy blue",
+      "greeting": "Happy Republic Day"
+    },
+    {
+      "name": "Maha Shivratri",
+      "category": "GAZETTED",
+      "icon": "🔱",
+      "visualTheme": "Lord Shiva, trishul, damru, crescent moon, rudraksha, bilva leaves, Shiva lingam and serene sacred temple or Himalayan atmosphere",
+      "mood": "devotional, peaceful, spiritual, powerful",
+      "colorDirection": "deep blue, indigo, saffron, silver, gold",
+      "greeting": "Har Har Mahadev"
+    },
+    {
+      "name": "Holi",
+      "category": "GAZETTED",
+      "icon": "🎨",
+      "visualTheme": "Vibrant Indian Holi celebration, colorful gulal clouds, joyful people, traditional clothing, flowers and energetic festive atmosphere",
+      "mood": "joyful, energetic, colorful, celebratory",
+      "colorDirection": "pink, yellow, green, blue, orange, purple",
+      "greeting": "Happy Holi"
+    },
+    {
+      "name": "Dhuleti",
+      "category": "FESTIVAL",
+      "icon": "🎨",
+      "visualTheme": "Gujarati and Indian Dhuleti celebration, vibrant gulal, colorful powder, traditional clothing and joyful outdoor festive environment",
+      "mood": "joyful, energetic, colorful, playful",
+      "colorDirection": "pink, yellow, green, blue, orange, purple",
+      "greeting": "Happy Dhuleti"
+    },
+    {
+      "name": "Eid-ul-Fitr",
+      "category": "GAZETTED",
+      "icon": "🌙",
+      "visualTheme": "Elegant Eid celebration, crescent moon, mosque architecture, lanterns, Islamic geometric patterns and soft festive illumination",
+      "mood": "peaceful, joyful, spiritual, celebratory",
+      "colorDirection": "emerald green, gold, cream, deep blue",
+      "greeting": "Eid Mubarak"
+    },
+    {
+      "name": "Ram Navami",
+      "category": "GAZETTED",
+      "icon": "🏹",
+      "visualTheme": "Lord Rama, bow and arrow, Ayodhya-inspired temple architecture, lotus and marigold flowers and traditional devotional setting",
+      "mood": "devotional, auspicious, peaceful, noble",
+      "colorDirection": "saffron, gold, warm orange, cream, royal blue",
+      "greeting": "Happy Ram Navami"
+    },
+    {
+      "name": "Mahavir Jayanti",
+      "category": "GAZETTED",
+      "icon": "🕊️",
+      "visualTheme": "Respectful Jain spiritual setting, Lord Mahavira, lotus flowers, peaceful temple architecture and subtle Jain motifs",
+      "mood": "peaceful, spiritual, serene, contemplative",
+      "colorDirection": "white, cream, gold, soft saffron, light blue",
+      "greeting": "Mahavir Jayanti"
+    },
+    {
+      "name": "Good Friday",
+      "category": "GAZETTED",
+      "icon": "✝️",
+      "visualTheme": "Respectful Christian Good Friday composition, cross, soft church interior, subtle candlelight and peaceful sacred atmosphere",
+      "mood": "solemn, peaceful, reflective, spiritual",
+      "colorDirection": "deep purple, white, gold, soft gray",
+      "greeting": "Good Friday"
+    },
+    {
+      "name": "Maharashtra / Gujarat Day",
+      "category": "FESTIVAL",
+      "icon": "🏛️",
+      "visualTheme": "Regional Indian cultural celebration representing Maharashtra and Gujarat, traditional architecture, regional cultural motifs and Indian tricolor accents",
+      "mood": "proud, cultural, joyful, celebratory",
+      "colorDirection": "saffron, green, white, gold",
+      "greeting": "Happy Maharashtra / Gujarat Day"
+    },
+    {
+      "name": "Buddha Purnima",
+      "category": "GAZETTED",
+      "icon": "🪷",
+      "visualTheme": "Serene Buddha in meditation, lotus flowers, Bodhi tree, peaceful temple environment and soft spiritual illumination",
+      "mood": "peaceful, serene, spiritual, contemplative",
+      "colorDirection": "white, gold, soft blue, lotus pink, warm cream",
+      "greeting": "Happy Buddha Purnima"
+    },
+    {
+      "name": "Bakrid / Eid-al-Adha",
+      "category": "GAZETTED",
+      "icon": "🌙",
+      "visualTheme": "Respectful Eid al-Adha celebration, crescent moon, elegant mosque architecture, Islamic geometric patterns and warm festive illumination",
+      "mood": "peaceful, devotional, warm, celebratory",
+      "colorDirection": "emerald green, gold, cream, deep blue",
+      "greeting": "Eid Mubarak"
+    },
+    {
+      "name": "Muharram",
+      "category": "GAZETTED",
+      "icon": "🌙",
+      "visualTheme": "Respectful Muharram-inspired spiritual composition, Islamic architectural elements, crescent moon, elegant ceremonial atmosphere and subtle geometric patterns",
+      "mood": "solemn, respectful, spiritual, contemplative",
+      "colorDirection": "deep green, black, gold, cream",
+      "greeting": "Muharram"
+    },
+    {
+      "name": "Independence Day",
+      "category": "NATIONAL",
+      "icon": "🇮🇳",
+      "visualTheme": "Indian Independence Day, Indian tricolor, Ashoka Chakra, Indian flag and elegant patriotic composition",
+      "mood": "patriotic, proud, uplifting, celebratory",
+      "colorDirection": "saffron, white, green, navy blue",
+      "greeting": "Happy Independence Day"
+    },
+    {
+      "name": "Raksha Bandhan",
+      "category": "FESTIVAL",
+      "icon": "🧵",
+      "visualTheme": "Indian brother and sister celebrating Raksha Bandhan, elegant rakhi ceremony, traditional clothing, sweets and flowers",
+      "mood": "warm, joyful, emotional, familial",
+      "colorDirection": "red, pink, saffron, gold, cream",
+      "greeting": "Happy Raksha Bandhan"
+    },
+    {
+      "name": "Janmashtami",
+      "category": "GAZETTED",
+      "icon": "🦚",
+      "visualTheme": "Lord Krishna, peacock feather, flute, matki, butter, Vrindavan-inspired temple setting, flowers and devotional festive environment",
+      "mood": "joyful, devotional, auspicious",
+      "colorDirection": "royal blue, saffron, gold, warm orange",
+      "greeting": "Happy Janmashtami"
+    },
+    {
+      "name": "Ganesh Chaturthi",
+      "category": "GAZETTED",
+      "icon": "🐘",
+      "visualTheme": "Lord Ganesha, modaks, durva grass, marigold flowers, traditional Ganesh decoration, diyas and ornate Indian festive setting",
+      "mood": "joyful, devotional, auspicious, prosperous",
+      "colorDirection": "saffron, vermilion, gold, warm orange, cream",
+      "greeting": "Happy Ganesh Chaturthi"
+    },
+    {
+      "name": "Milad-un-Nabi",
+      "category": "GAZETTED",
+      "icon": "🌙",
+      "visualTheme": "Respectful Islamic devotional celebration, illuminated mosque architecture, crescent moon, elegant lanterns and Islamic geometric patterns",
+      "mood": "peaceful, devotional, respectful, celebratory",
+      "colorDirection": "emerald green, gold, cream, deep blue",
+      "greeting": "Milad-un-Nabi"
+    },
+    {
+      "name": "Mahatma Gandhi Jayanti",
+      "category": "NATIONAL",
+      "icon": "🇮🇳",
+      "visualTheme": "Respectful Indian national tribute, Mahatma Gandhi-inspired historical imagery, spinning wheel symbolism and peaceful national atmosphere",
+      "mood": "peaceful, respectful, reflective, dignified",
+      "colorDirection": "white, cream, saffron, green, muted brown",
+      "greeting": "Gandhi Jayanti"
+    },
+    {
+      "name": "Dussehra / Vijayadashami",
+      "category": "GAZETTED",
+      "icon": "🏹",
+      "visualTheme": "Lord Rama with bow and arrow, traditional Indian festive setting and symbolic victory of good over evil",
+      "mood": "victorious, auspicious, devotional, celebratory",
+      "colorDirection": "saffron, red, gold, orange, deep blue",
+      "greeting": "Happy Dussehra"
+    },
+    {
+      "name": "Dussehra",
+      "category": "GAZETTED",
+      "icon": "🏹",
+      "visualTheme": "Lord Rama with bow and arrow, traditional Indian festive setting and symbolic victory of good over evil",
+      "mood": "victorious, auspicious, devotional, celebratory",
+      "colorDirection": "saffron, red, gold, orange, deep blue",
+      "greeting": "Happy Dussehra"
+    },
+    {
+      "name": "Dhanteras",
+      "category": "FESTIVAL",
+      "icon": "🪙",
+      "visualTheme": "Traditional Indian Dhanteras celebration, glowing diyas, prosperity symbolism, lotus flowers, elegant rangoli and marigold decorations",
+      "mood": "prosperous, auspicious, elegant, celebratory",
+      "colorDirection": "gold, saffron, orange, red, deep maroon",
+      "greeting": "Happy Dhanteras"
+    },
+    {
+      "name": "Kali Chaudas",
+      "category": "FESTIVAL",
+      "icon": "🪔",
+      "visualTheme": "Traditional Gujarati Kali Chaudas atmosphere with diyas, oil lamps, subtle traditional decorations, rangoli and elegant night-time festive setting",
+      "mood": "traditional, auspicious, spiritual, festive",
+      "colorDirection": "deep maroon, gold, saffron, orange, dark blue",
+      "greeting": "Happy Kali Chaudas"
+    },
+    {
+      "name": "Diwali / Deepavali",
+      "category": "GAZETTED",
+      "icon": "🪔",
+      "visualTheme": "Luxurious Indian Diwali celebration, glowing diyas, elegant rangoli, marigold flowers, traditional architecture and warm golden illumination",
+      "mood": "joyful, prosperous, elegant, auspicious",
+      "colorDirection": "gold, saffron, red, maroon, warm orange",
+      "greeting": "Happy Diwali"
+    },
+    {
+      "name": "Vikram Samvat New Year",
+      "category": "FESTIVAL",
+      "icon": "✨",
+      "visualTheme": "Gujarati New Year celebration, auspicious kalash, diyas, rangoli, marigold flowers, traditional Indian decorations and prosperity symbolism",
+      "mood": "auspicious, prosperous, joyful, celebratory",
+      "colorDirection": "saffron, gold, red, orange, cream",
+      "greeting": "Happy New Year"
+    },
+    {
+      "name": "Govardhan Puja / New Year",
+      "category": "FESTIVAL",
+      "icon": "✨",
+      "visualTheme": "Govardhan Puja-inspired devotional Indian celebration, Govardhan mountain symbolism, Lord Krishna, flowers, diyas and traditional festive decorations",
+      "mood": "devotional, auspicious, joyful, prosperous",
+      "colorDirection": "green, saffron, gold, royal blue, warm orange",
+      "greeting": "Happy New Year"
+    },
+    {
+      "name": "Bhai Dooj",
+      "category": "FESTIVAL",
+      "icon": "🪔",
+      "visualTheme": "Indian brother and sister celebrating Bhai Dooj, traditional tilak ceremony, sweets, diyas, flowers and elegant family festive environment",
+      "mood": "warm, joyful, familial, auspicious",
+      "colorDirection": "red, saffron, gold, pink, cream",
+      "greeting": "Happy Bhai Dooj"
+    },
+    {
+      "name": "Guru Nanak Jayanti",
+      "category": "GAZETTED",
+      "icon": "☬",
+      "visualTheme": "Respectful Sikh devotional setting associated with Guru Nanak Jayanti, illuminated gurdwara-inspired architecture, Khanda symbol and peaceful spiritual atmosphere",
+      "mood": "peaceful, devotional, spiritual, celebratory",
+      "colorDirection": "saffron, gold, white, royal blue",
+      "greeting": "Happy Guru Nanak Jayanti"
+    },
+    {
+      "name": "Christmas Day",
+      "category": "GAZETTED",
+      "icon": "🎄",
+      "visualTheme": "Elegant Christmas celebration, decorated Christmas tree, warm lights, subtle nativity-inspired elements, stars and festive church atmosphere",
+      "mood": "joyful, warm, peaceful, celebratory",
+      "colorDirection": "red, green, gold, cream, warm white",
+      "greeting": "Merry Christmas"
+    }
+  ],
+  "generationRules": {
+    "useOnlySuppliedBusinessData": true,
+    "omitEmptyFields": true,
+    "neverInventBusinessInformation": true,
+    "preserveLogo": true,
+    "festivalIsVisualHero": true,
+    "recommendedFooterPercent": "15-22%"
+  }
+}

@@ -28,6 +28,7 @@ import { WebsiteModule } from './modules/website/website.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { SupportModule } from './modules/support/support.module';
 import { HolidayModule } from './modules/holiday/holiday.module';
+import { FestivalPosterModule } from './modules/festival-poster/festival-poster.module';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { HolidayModule } from './modules/holiday/holiday.module';
     WebsiteModule,
     SupportModule,
     HolidayModule,
+    FestivalPosterModule,
   ],
   controllers: [AppController],
   providers: [

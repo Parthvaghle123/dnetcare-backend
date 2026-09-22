@@ -1,0 +1,45 @@
+[
+  {
+    "id": "642cf0b5-5331-4ddd-b2c4-f40beb7abda8",
+    "name": "Holi",
+    "date": "2026-03-03",
+    "icon": "🎨",
+    "artworkUrl": "https://res.cloudinary.com/dve9etzft/image/upload/v1790077148/dental-software/generated-posters/lkmobakadvafv6wqhewu.png",
+    "doctorName": "Dr. Parth V.",
+    "createdAt": "17:09",
+    "organizationId": "6041e86b-e9da-4615-ad82-0c3eb976c808"
+  },
+  {
+    "id": "f5c9df4b-67ff-49e3-9ed9-1638cc909cee",
+    "name": "Holi",
+    "date": "2026-03-03",
+    "icon": "🎨",
+    "artworkUrl": "https://images.unsplash.com/photo-1616428236109-17d59858348d?q=80&w=1080&auto=format&fit=crop",
+    "doctorName": "Dr. Parth V.",
+    "createdAt": "05:09 pm",
+    "organizationId": "6041e86b-e9da-4615-ad82-0c3eb976c808",
+    "provider": "curated-art-engine"
+  },
+  {
+    "id": "2df108d2-68dd-4d5e-95a2-4f5cebc38ad7",
+    "name": "Holi",
+    "date": "2026-03-03",
+    "icon": "🎨",
+    "artworkUrl": "https://images.unsplash.com/photo-1616428236109-17d59858348d?q=80&w=1080&auto=format&fit=crop",
+    "doctorName": "Dr. Parth V.",
+    "createdAt": "05:06 pm",
+    "organizationId": "6041e86b-e9da-4615-ad82-0c3eb976c808",
+    "provider": "curated-art-engine"
+  },
+  {
+    "id": "7106813a-0235-4d06-9fe1-73529c5e49da",
+    "name": "Holi",
+    "date": "2026-03-03",
+    "icon": "🎨",
+    "artworkUrl": "https://images.unsplash.com/photo-1616428236109-17d59858348d?q=80&w=1080&auto=format&fit=crop",
+    "doctorName": "Dr. Parth V.",
+    "createdAt": "04:48 pm",
+    "organizationId": "6041e86b-e9da-4615-ad82-0c3eb976c808",
+    "provider": "curated-art-engine"
+  }
+]

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { json, urlencoded } from 'express';
 
 export const corsOptions = {
   origin: (origin: string, callback: any) => {
@@ -81,6 +82,9 @@ async function bootstrapServer() {
     app.enableCors(corsOptions);
     app.setGlobalPrefix('api/v1');
 
+    app.use(json({ limit: '50mb' }));
+    app.use(urlencoded({ extended: true, limit: '50mb' }));
+
     app.useGlobalPipes(
       new ValidationPipe({
         whitelist: true,
@@ -120,6 +124,9 @@ if (!process.env.VERCEL) {
 
     app.enableCors(corsOptions);
     app.setGlobalPrefix('api/v1');
+
+    app.use(json({ limit: '50mb' }));
+    app.use(urlencoded({ extended: true, limit: '50mb' }));
 
     app.useGlobalPipes(
       new ValidationPipe({
