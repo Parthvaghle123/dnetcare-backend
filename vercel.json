@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "buildCommand": "npm run build",
   "rewrites": [
     {
       "source": "/api/v1/(.*)",
@@ -16,6 +17,7 @@
   ],
   "functions": {
     "api/index.ts": {
+      "includeFiles": "dist/**",
       "maxDuration": 60
     }
   }
