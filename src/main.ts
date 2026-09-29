@@ -1,9 +1,11 @@
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import * as fs from 'fs';
 import { json, urlencoded } from 'express';
 
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -91,8 +93,11 @@ export async function createNestApp(): Promise<NestExpressApplication> {
     next();
   });
 
-  // 3. Static assets
-  app.useStaticAssets(join(__dirname, '..', 'public'));
+  // 3. Static assets if directory exists
+  const publicPath = join(__dirname, '..', 'public');
+  if (fs.existsSync(publicPath)) {
+    app.useStaticAssets(publicPath);
+  }
 
   // 4. Root health-check endpoint
   app.use('/', (req: any, res: any, next: any) => {
