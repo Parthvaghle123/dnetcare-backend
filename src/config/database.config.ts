@@ -1,6 +1,7 @@
 import { SequelizeModuleOptions } from '@nestjs/sequelize';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
+import pg from 'pg';
 
 export const getDatabaseConfig = (
   configService: ConfigService,
@@ -10,7 +11,7 @@ export const getDatabaseConfig = (
 
   return {
     dialect: 'postgres',
-    dialectModule: require('pg'),
+    dialectModule: pg,
     uri: configService.get<string>('DATABASE_URL'),
     dialectOptions: {
       ssl: {

@@ -142,7 +142,7 @@ export async function bootstrapServer() {
 }
 
 // Start local server if not running in Vercel environment
-if (!process.env.VERCEL) {
+if (!process.env.VERCEL && !process.env.NOW_REGION && !process.env.VERCEL_ENV) {
   async function startLocal() {
     const app = await createNestApp();
     const configService = app.get(ConfigService);
