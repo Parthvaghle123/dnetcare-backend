@@ -30,10 +30,15 @@ export const corsOptions = {
       });
     }
 
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.dentcare360.in')
+    ) {
       callback(null, true);
     } else {
-      callback(null, false);
+      callback(null, true);
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
