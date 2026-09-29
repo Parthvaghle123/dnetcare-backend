@@ -42,7 +42,14 @@ export const corsOptions = {
     const allowedOrigins = getAllowedOrigins();
     const normalizedOrigin = origin.trim().replace(/\/$/, '');
 
-    if (allowedOrigins.includes(normalizedOrigin) || allowedOrigins.includes(origin)) {
+    const isAllowed =
+      allowedOrigins.includes(normalizedOrigin) ||
+      allowedOrigins.includes(origin) ||
+      normalizedOrigin.endsWith('.dentcare360.in') ||
+      normalizedOrigin === 'https://dentcare360.in' ||
+      /^https:\/\/dental-frontend[a-zA-Z0-9-]*\.vercel\.app$/.test(normalizedOrigin);
+
+    if (isAllowed) {
       return callback(null, true);
     }
 
